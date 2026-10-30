@@ -29,8 +29,12 @@ export function calculateRow(row) {
   }
 }
 
+function isCompletedRow(row) {
+  return row.principal && row.brand && Number(row.target) > 0
+}
+
 export function calculateTotals(rows) {
-  const filledRows = rows.filter((row) => row.principal && row.brand)
+  const filledRows = rows.filter(isCompletedRow)
   const target = filledRows.reduce((sum, row) => sum + (Number(row.target) || 0), 0)
   const achievement = filledRows.reduce(
     (sum, row) => sum + (Number(row.achievement) || 0),
@@ -42,6 +46,28 @@ export function calculateTotals(rows) {
     achievement,
     percentage: target > 0 ? (achievement / target) * 100 : 0,
     status: target > 0 && achievement / target >= 1 ? 'Tercapai' : 'Gugur',
+  }
+}
+
+export function getDashboardMetrics(rows) {
+  const filledRows = rows.filter(isCompletedRow)
+  const totals = calculateTotals(rows)
+  const achievedCount = filledRows.filter((row) => calculateRow(row).status === 'Tercapai').length
+  const failedCount = filledRows.length - achievedCount
+
+  return {
+    totalTarget: totals.target,
+    totalAchievement: totals.achievement,
+    percentage: totals.percentage,
+    achievedCount,
+    failedCount,
+    documentCount: filledRows.length,
+    monthly: [
+      { label: 'Jul', target: 0, achievement: 0 },
+      { label: 'Agu', target: 0, achievement: 0 },
+      { label: 'Sep', target: 0, achievement: 0 },
+      { label: 'Okt', target: totals.target, achievement: totals.achievement },
+    ],
   }
 }
 
@@ -66,6 +92,6 @@ export function loadRows(storage = globalThis.localStorage) {
 }
 
 export function saveRows(rows, storage = globalThis.localStorage) {
-  const filledRows = rows.filter((row) => row.principal && row.brand)
+  const filledRows = rows.filter(isCompletedRow)
   storage?.setItem(STORAGE_KEY, JSON.stringify(filledRows))
 }

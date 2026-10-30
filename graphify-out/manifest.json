@@ -1,0 +1,134 @@
+{
+  "client/.oxlintrc.json": {
+    "mtime": 1793345925.7785854,
+    "seen": 1793365769.220197,
+    "ast_hash": "5e6e3cea3e89137071c142dd7835b0ef",
+    "semantic_hash": ""
+  },
+  "client/package.json": {
+    "mtime": 1793346440.0530627,
+    "seen": 1793365769.2202024,
+    "ast_hash": "14040e29f5f9977141f374caecd2604c",
+    "semantic_hash": ""
+  },
+  "client/src/App.jsx": {
+    "mtime": 1793366413.5461862,
+    "seen": 1793366520.5248501,
+    "ast_hash": "3b69e3a54b17b635673c8a16c185c3c6",
+    "semantic_hash": ""
+  },
+  "client/src/incentive.js": {
+    "mtime": 1793366495.7292902,
+    "seen": 1793366520.5248525,
+    "ast_hash": "8be4f74ae35e015a5a0b9e054ce8d12e",
+    "semantic_hash": ""
+  },
+  "client/src/incentive.test.js": {
+    "mtime": 1793366495.681029,
+    "seen": 1793366520.5248542,
+    "ast_hash": "a8d06e2fc2a7e0d03e771e7a94438b99",
+    "semantic_hash": ""
+  },
+  "client/src/main.jsx": {
+    "mtime": 1793345925.9163413,
+    "seen": 1793365769.220209,
+    "ast_hash": "e13723e2574429d9a6d849727e3ff695",
+    "semantic_hash": ""
+  },
+  "client/vite.config.js": {
+    "mtime": 1793345925.7531998,
+    "seen": 1793365769.22021,
+    "ast_hash": "5d54447744c19ccd28638a5c668d15ea",
+    "semantic_hash": ""
+  },
+  "server/index.js": {
+    "mtime": 1793362788.3032315,
+    "seen": 1793365769.2202117,
+    "ast_hash": "800d262449cdbe438cc8ff72ce617061",
+    "semantic_hash": ""
+  },
+  "server/package.json": {
+    "mtime": 1793346877.26937,
+    "seen": 1793365769.2202127,
+    "ast_hash": "1ce79895ca3402a0a95efe8cedf7293d",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1793363585.0153751,
+    "seen": 1793365769.2202141,
+    "ast_hash": "0f14797b55a109150fc6fef20c4e337b",
+    "semantic_hash": ""
+  },
+  "client/README.md": {
+    "mtime": 1793345925.9233944,
+    "seen": 1793365769.220215,
+    "ast_hash": "75eb386f17caf77fd6fe3ce1d90968ee",
+    "semantic_hash": ""
+  },
+  "client/index.html": {
+    "mtime": 1793346614.5042462,
+    "seen": 1793365769.2202165,
+    "ast_hash": "77e8b92d206ec2ab7defb7ceaa2e8ab0",
+    "semantic_hash": ""
+  },
+  "docs/PRD-design.md": {
+    "mtime": 1793251805.338176,
+    "seen": 1793365769.2202177,
+    "ast_hash": "da521e0b0d340401dd087a84215fb725",
+    "semantic_hash": ""
+  },
+  "docs/PRD-insistif-web.md": {
+    "mtime": 1793251621.9547815,
+    "seen": 1793365769.220219,
+    "ast_hash": "dba429229c45358afd76c4a566b838ce",
+    "semantic_hash": ""
+  },
+  "docs/PRD-requirements.md": {
+    "mtime": 1793251746.3504288,
+    "seen": 1793365769.2202199,
+    "ast_hash": "5a8805d52545a6632c2209b10d448a05",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/plans/2026-10-30-dashboard-home-plan.md": {
+    "mtime": 1793365265.3645542,
+    "seen": 1793365769.2202213,
+    "ast_hash": "790112eea6d18834ad0dda4c03cc4d53",
+    "semantic_hash": ""
+  },
+  "docs/superpowers/specs/2026-10-30-dashboard-home-design.md": {
+    "mtime": 1793365078.467054,
+    "seen": 1793365769.2202222,
+    "ast_hash": "254fd2781a9e67f9c000fab9e6622b55",
+    "semantic_hash": ""
+  },
+  "client/public/favicon.svg": {
+    "mtime": 1793345926.0003912,
+    "seen": 1793365769.2202234,
+    "ast_hash": "7e840862161341271697daa99a40d76b",
+    "semantic_hash": ""
+  },
+  "client/public/icons.svg": {
+    "mtime": 1793345926.033274,
+    "seen": 1793365769.2202249,
+    "ast_hash": "3b4fcfcf393eca4d264dca4a4663bc37",
+    "semantic_hash": ""
+  },
+  "client/src/assets/hero.png": {
+    "mtime": 1793345925.9558578,
+    "seen": 1793365769.220226,
+    "ast_hash": "aead493361b27e7510691c5d7072dfc1",
+    "semantic_hash": ""
+  },
+  "client/src/assets/react.svg": {
+    "mtime": 1793345926.0634656,
+    "seen": 1793365769.220227,
+    "ast_hash": "f0402b67b6ce880f65666bb49e841696",
+    "semantic_hash": ""
+  },
+  "client/src/assets/vite.svg": {
+    "mtime": 1793345926.085421,
+    "seen": 1793365769.2202284,
+    "ast_hash": "9960a24288958394ac50e57ff638b036",
+    "semantic_hash": ""
+  }
+}
