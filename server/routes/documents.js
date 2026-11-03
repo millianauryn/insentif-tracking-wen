@@ -157,25 +157,20 @@ function upsertCriteriaRows(db, documentId, rows) {
   if (!Array.isArray(rows)) return;
   const existing = db.prepare('SELECT criteria_id FROM document_criteria_rows WHERE document_id = ?').all(documentId);
   const existingIds = new Set(existing.map(r => r.criteria_id));
-  const insert = db.prepare(`
-    INSERT INTO document_criteria_rows (document_id, criteria_id, label, target_unit, formula, target_value, achievement_value, percentage, status, incentive_amount, sort_order)
-    VALUES (?, ?, (SELECT label FROM criteria_definitions WHERE id = ?), (SELECT target_unit FROM criteria_definitions WHERE id = ?), (SELECT formula FROM criteria_definitions WHERE id = ?), ?, ?, ?, ?, ?, (SELECT sort_order FROM criteria_definitions WHERE id = ?))
-  `);
   const update = db.prepare(`
     UPDATE document_criteria_rows SET target_value = ?, achievement_value = ?, percentage = ?, status = ?, incentive_amount = ?
     WHERE document_id = ? AND criteria_id = ?
   `);
   rows.forEach(row => {
-    const target = Number(row.target_value) || 0;
-    const achievement = Number(row.achievement_value) || 0;
-    const percentage = target > 0 ? (achievement / target) * 100 : 0;
-    const status = target > 0 && percentage >= 100 ? 'Tercapai' : 'Gugur';
-    const incentive = Number(row.incentive_amount) || 0;
-    if (existingIds.has(row.criteria_id)) {
-      update.run(target, achievement, percentage, status, incentive, documentId, row.criteria_id);
-    } else {
-      insert.run(documentId, row.criteria_id, row.criteria_id, row.criteria_id, row.criteria_id, target, achievement, percentage, status, incentive, row.criteria_id);
-    }
+    if (!existingIds.has(row.criteria_id)) return; // snapshot: only update existing, never insert new
+    const target = row.target_value != null && row.target_value !== '' ? Number(row.target_value) : null;
+    const achievement = row.achievement_value != null && row.achievement_value !== '' ? Number(row.achievement_value) : null;
+    const incentive = row.incentive_amount != null && row.incentive_amount !== '' ? Number(row.incentive_amount) : null;
+    const pctTarget = target ?? 0;
+    const pctAchievement = achievement ?? 0;
+    const percentage = pctTarget > 0 ? (pctAchievement / pctTarget) * 100 : 0;
+    const status = pctTarget > 0 && percentage >= 100 ? 'Tercapai' : 'Gugur';
+    update.run(target, achievement, percentage, status, incentive, documentId, row.criteria_id);
   });
 }
 

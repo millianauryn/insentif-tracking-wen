@@ -100,16 +100,26 @@ function App() {
     setSaved(false);
   };
 
-  const buildGolonganRows = () =>
-    golonganRows
-      .filter((row) => row.label || row.target || row.achievement)
-      .map((row, index) => ({
+  const buildGolonganRows = () => {
+    const filtered = golonganRows.filter((row) => row.label || row.target || row.achievement);
+    const parentStack = [];
+    return filtered.map((row, index) => {
+      const result = {
         label: row.label || null,
         is_group: row.isGroup || false,
         target: row.target !== undefined && row.target !== '' ? Number(row.target) : null,
         achievement: row.achievement !== undefined && row.achievement !== '' ? Number(row.achievement) : null,
         sort_order: index,
-      }));
+      };
+      if (row.isGroup) {
+        parentStack.push(index);
+        result.parent_index = parentStack.length > 1 ? parentStack[parentStack.length - 2] : undefined;
+      } else {
+        result.parent_index = parentStack.length > 0 ? parentStack[parentStack.length - 1] : undefined;
+      }
+      return result;
+    });
+  };
 
   const buildCriteriaRows = () =>
     criteriaRows
@@ -185,12 +195,23 @@ function App() {
       setDocumentFormatId(full.format_id);
       setGolonganRows(
         full.golongan_rows?.length
-          ? full.golongan_rows.map((row) => makeRow({
-              label: row.label || '',
-              isGroup: !!row.is_group,
-              target: row.target ?? '',
-              achievement: row.achievement ?? '',
-            }))
+          ? full.golongan_rows.map((row) => {
+              let type = 'brand';
+              if (row.is_group) {
+                const label = (row.label || '').toUpperCase();
+                if (label.includes('TOTAL DIVISI')) type = 'total-divisi';
+                else if (label === 'TOTAL') type = 'total';
+                else if (label.includes('GROUP') || label.includes('PRINCIPAL')) type = 'principal';
+                else type = 'divisi';
+              }
+              return makeRow({
+                label: row.label || '',
+                isGroup: !!row.is_group,
+                type,
+                target: row.target ?? '',
+                achievement: row.achievement ?? '',
+              });
+            })
           : [makeRow({ label: '', target: '', achievement: '' })]
       );
       setCriteriaRows(
@@ -216,7 +237,7 @@ function App() {
     setDocumentId(null);
     setDocumentStatus('Draft');
     setGolonganRows([makeRow({ label: '', target: '', achievement: '' })]);
-    setCriteriaRows([]);
+    setCriteriaRows(criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', incentive_amount: '' })));
     setSales(INITIAL_SALES);
     setSaved(false);
   };

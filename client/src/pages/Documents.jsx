@@ -5,7 +5,7 @@ import { useToast } from '../components/Toast';
 import { errMsg } from '../lib/api';
 import Icon from '../components/Icon';
 
-function GolonganRow({ row, index, onUpdate, onRemove, canEdit }) {
+function GolonganRow({ row, index, allRows, onUpdate, onRemove, canEdit }) {
   const isGroup = row.isGroup;
   const rowType = row.type || (isGroup ? 'group' : 'item');
   const cssClass = `golongan-${rowType === 'divisi' ? 'divisi' : rowType === 'principal' ? 'principal' : rowType === 'total-divisi' ? 'total-divisi' : rowType === 'total' ? 'total' : 'brand'}`;
@@ -17,9 +17,23 @@ function GolonganRow({ row, index, onUpdate, onRemove, canEdit }) {
   const status = target > 0 && percentage >= 100 ? 'Tercapai' : 'Gugur';
 
   if (isGroup) {
+    const isTotal = rowType === 'total-divisi' || rowType === 'total';
+    let sumTarget = '';
+    let sumAchievement = '';
+    let totalPct = '';
+    let totalStatus = '';
+    if (isTotal) {
+      const children = allRows.filter((r) => !r.isGroup && (rowType === 'total' || r.parentRowId === row.id));
+      const t = children.reduce((s, r) => s + (Number(r.target) || 0), 0);
+      const a = children.reduce((s, r) => s + (Number(r.achievement) || 0), 0);
+      sumTarget = t ? t.toLocaleString('id-ID') : '';
+      sumAchievement = a ? a.toLocaleString('id-ID') : '';
+      totalPct = t > 0 ? ((a / t) * 100).toFixed(1) + '%' : '';
+      totalStatus = t > 0 && a / t >= 1 ? 'Tercapai' : 'Gugur';
+    }
     return (
       <tr className={`${cssClass} ${indent}`}>
-        <td colSpan={5} style={{ fontWeight: 600 }}>
+        <td style={{ fontWeight: 600 }}>
           {row.label}
           {canEdit && (
             <button className="delete-button ml-2" onClick={() => onRemove(row.id)} aria-label={`Hapus ${row.label}`}>
@@ -27,6 +41,10 @@ function GolonganRow({ row, index, onUpdate, onRemove, canEdit }) {
             </button>
           )}
         </td>
+        <td>{sumTarget}</td>
+        <td>{sumAchievement}</td>
+        <td>{totalPct}</td>
+        <td>{isTotal && totalStatus ? <span className={`result-badge ${totalStatus === 'Tercapai' ? 'success' : 'warning'}`}>{totalStatus}</span> : ''}</td>
       </tr>
     );
   }
@@ -91,6 +109,7 @@ function GolonganTable({ rows, onUpdate, onRemove, onAdd, canEdit }) {
               key={row.id}
               row={row}
               index={index}
+              allRows={rows}
               onUpdate={onUpdate}
               onRemove={onRemove}
               canEdit={canEdit}
