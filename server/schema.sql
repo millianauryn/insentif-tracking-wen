@@ -166,6 +166,13 @@ CREATE TABLE IF NOT EXISTS positions (
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Position criteria junction (each position has its own kriteria set)
+CREATE TABLE IF NOT EXISTS position_criteria (
+    position_id INTEGER NOT NULL REFERENCES positions(id) ON DELETE CASCADE,
+    criteria_id INTEGER NOT NULL REFERENCES criteria_definitions(id) ON DELETE CASCADE,
+    PRIMARY KEY (position_id, criteria_id)
+);
+
 -- User-branch junction (many-to-many for Akun)
 CREATE TABLE IF NOT EXISTS user_branches (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -194,3 +201,5 @@ CREATE INDEX IF NOT EXISTS idx_user_branches_user ON user_branches(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_branches_branch ON user_branches(branch_id);
 CREATE INDEX IF NOT EXISTS idx_position_branches_position ON position_branches(position_id);
 CREATE INDEX IF NOT EXISTS idx_position_branches_branch ON position_branches(branch_id);
+CREATE INDEX IF NOT EXISTS idx_position_criteria_position ON position_criteria(position_id);
+CREATE INDEX IF NOT EXISTS idx_position_criteria_criteria ON position_criteria(criteria_id);

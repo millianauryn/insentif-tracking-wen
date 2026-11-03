@@ -52,6 +52,7 @@ export default function Dashboard({ documents, user, period, setPeriod, onNewDoc
 
   const toggle = (key) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
 
+
   // Build visible user set: current user's chain + their subordinates
   const visibleUserIds = new Set();
   const chainUsers = hierarchy?.chain || [];

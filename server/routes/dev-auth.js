@@ -17,7 +17,9 @@ function createDevAuthRouter(db) {
   const router = express.Router();
 
   router.post('/dev-login', async (req, res) => {
-    if (process.env.NODE_ENV === 'production') {
+    // Fail closed: only explicit dev/test runtimes get this route (unset NODE_ENV = not dev).
+    const nodeEnv = process.env.NODE_ENV;
+    if (nodeEnv !== 'development' && nodeEnv !== 'test') {
       return notFound(res);
     }
 
@@ -39,6 +41,22 @@ function createDevAuthRouter(db) {
       }
 
       const session = createSession(db, user.id);
+      const userBranchIds = db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?').all(user.id).map((r) => r.branch_id);
+      // Same jabatan → kriteria bridge as /auth/login (superadmin → null → all criteria)
+      let userCriteriaIds = null;
+      if (role !== 'superadmin' && userBranchIds.length) {
+        const ph = userBranchIds.map(() => '?').join(',');
+        userCriteriaIds = db.prepare(`
+          SELECT DISTINCT pc.criteria_id FROM position_criteria pc
+          JOIN position_branches pb ON pb.position_id = pc.position_id
+          JOIN positions p ON p.id = pc.position_id AND p.active = 1
+          WHERE pb.branch_id IN (${ph})
+          UNION
+          SELECT DISTINCT pc.criteria_id FROM position_criteria pc
+          JOIN positions p ON p.id = pc.position_id AND p.active = 1
+          WHERE p.branch_id IN (${ph})
+        `).all(...userBranchIds, ...userBranchIds).map((r) => r.criteria_id);
+      }
       res.cookie('session_token', session.token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -50,7 +68,9 @@ function createDevAuthRouter(db) {
         user: {
           id: user.id,
           username: user.username,
-          role
+          role,
+          branch_ids: userBranchIds,
+          criteria_ids: userCriteriaIds
         }
       });
     } catch (err) {

@@ -59,6 +59,19 @@ function migrateDatabase(db) {
   if (!userCols.includes('parent_id')) {
     db.exec('ALTER TABLE users ADD COLUMN parent_id INTEGER REFERENCES users(id) ON DELETE SET NULL');
   }
+
+  // Ensure position_criteria table exists (each position has own kriteria set)
+  if (!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='position_criteria'").get()) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS position_criteria (
+        position_id INTEGER NOT NULL REFERENCES positions(id) ON DELETE CASCADE,
+        criteria_id INTEGER NOT NULL REFERENCES criteria_definitions(id) ON DELETE CASCADE,
+        PRIMARY KEY (position_id, criteria_id)
+      )
+    `);
+    db.exec("CREATE INDEX IF NOT EXISTS idx_position_criteria_position ON position_criteria(position_id)");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_position_criteria_criteria ON position_criteria(criteria_id)");
+  }
 }
 
 async function hashPassword(password) {

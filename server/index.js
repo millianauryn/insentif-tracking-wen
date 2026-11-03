@@ -40,6 +40,26 @@ const authLimiter = rateLimit({
 });
 
 // Auth routes
+// Jabatan → kriteria bridge: officer's criteria = union of criteria from positions at their branches.
+// superadmin (or unconfigured) → null → client shows all criteria.
+function criteriaIdsForUser(userId, role) {
+  if (role === 'superadmin') return null;
+  const branchIds = db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?').all(userId).map((r) => r.branch_id);
+  if (!branchIds.length) return [];
+  const ph = branchIds.map(() => '?').join(',');
+  const rows = db.prepare(`
+    SELECT DISTINCT pc.criteria_id FROM position_criteria pc
+    JOIN position_branches pb ON pb.position_id = pc.position_id
+    JOIN positions p ON p.id = pc.position_id AND p.active = 1
+    WHERE pb.branch_id IN (${ph})
+    UNION
+    SELECT DISTINCT pc.criteria_id FROM position_criteria pc
+    JOIN positions p ON p.id = pc.position_id AND p.active = 1
+    WHERE p.branch_id IN (${ph})
+  `).all(...branchIds, ...branchIds);
+  return rows.map((r) => r.criteria_id);
+}
+
 app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -59,6 +79,8 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     }
 
     const session = createSession(db, user.id);
+    const userBranchIds = db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?').all(user.id).map((r) => r.branch_id);
+    const userCriteriaIds = criteriaIdsForUser(user.id, user.role);
     res.cookie('session_token', session.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -70,7 +92,9 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
       user: {
         id: user.id,
         username: user.username,
-        role: user.role
+        role: user.role,
+        branch_ids: userBranchIds,
+        criteria_ids: userCriteriaIds
       }
     });
   } catch (err) {
@@ -89,7 +113,9 @@ app.post('/api/auth/logout', authLimiter, (req, res) => {
 });
 
 app.get('/api/auth/me', requireAuth, (req, res) => {
-  res.json({ user: req.user });
+  const userBranchIds = db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?').all(req.user.id).map((r) => r.branch_id);
+  const userCriteriaIds = criteriaIdsForUser(req.user.id, req.user.role);
+  res.json({ user: { id: req.user.id, username: req.user.username, role: req.user.role, branch_ids: userBranchIds, criteria_ids: userCriteriaIds } });
 });
 
 // Dev-only quick login (404 in production, handled inside the router)

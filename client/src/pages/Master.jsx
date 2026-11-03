@@ -6,7 +6,7 @@ import {
   createRegion, updateRegion, deleteRegion,
   createBranch, updateBranch, deleteBranch,
   createUser, updateUser, deleteUser, updateCriteria,
-  listPositions, createPosition, updatePosition, deletePosition,
+  listPositions, createPosition, updatePosition, deletePosition, listCriteria,
 } from '../api';
 import Icon from '../components/Icon';
 
@@ -28,16 +28,19 @@ export default function Master({ data, onRefresh, user }) {
 
   // Jabatan User tab state
   const [positions, setPositions] = useState([]);
-  const [posForm, setPosForm] = useState(null); // null = closed, { _isNew, id, name, position_type, join_date, parent_position_id, branch_ids }
+  const [posForm, setPosForm] = useState(null); // null = closed, { _isNew, id, name, position_type, join_date, parent_position_id, branch_ids, criteria_ids }
   const [posError, setPosError] = useState('');
   const [posBusy, setPosBusy] = useState(false);
+  const [criteria, setCriteria] = useState([]); // criteria_definitions for position assignment
 
   const masterData = data?.masterData || EMPTY_MASTER;
 
-  // Load positions when tab is active
+  // Load positions + criteria when tab is active
   useEffect(() => {
     if (tab === 'positions') {
-      listPositions().then((r) => setPositions(r.positions || [])).catch(() => setPositions([]));
+      Promise.all([listPositions(), listCriteria()])
+        .then(([r, c]) => { setPositions(r.positions || []); setCriteria(c.criteria || []); })
+        .catch(() => { setPositions([]); setCriteria([]); });
     }
   }, [tab]);
 
@@ -226,9 +229,9 @@ export default function Master({ data, onRefresh, user }) {
   const openPosForm = (item = null) => {
     setPosError('');
     if (item) {
-      setPosForm({ _isNew: false, id: item.id, name: item.name, position_type: item.position_type, join_date: item.join_date || '', parent_position_id: item.parent_position_id || '', branch_ids: item.branch_ids || [] });
+      setPosForm({ _isNew: false, id: item.id, name: item.name, position_type: item.position_type, join_date: item.join_date || '', parent_position_id: item.parent_position_id || '', branch_ids: item.branch_ids || [], criteria_ids: item.criteria_ids || [] });
     } else {
-      setPosForm({ _isNew: true, name: '', position_type: 'BM', join_date: '', parent_position_id: '', branch_ids: [] });
+      setPosForm({ _isNew: true, name: '', position_type: 'BM', join_date: '', parent_position_id: '', branch_ids: [], criteria_ids: [] });
     }
   };
 
@@ -246,6 +249,7 @@ export default function Master({ data, onRefresh, user }) {
         join_date: posForm.join_date || null,
         parent_position_id: posForm.parent_position_id ? Number(posForm.parent_position_id) : null,
         branch_ids: posForm.branch_ids.map(Number),
+        criteria_ids: posForm.criteria_ids.map(Number),
       };
       if (posForm._isNew) await createPosition(payload);
       else await updatePosition(posForm.id, payload);
@@ -636,6 +640,25 @@ export default function Master({ data, onRefresh, user }) {
                         })}
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+            </div>
+            {/* Kriteria multi-select for position */}
+            <div>
+              <label className="text-[13px] font-semibold">Kriteria Dokumen *</label>
+              <div className="flex gap-1.5 mt-1 mb-2">
+                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, criteria_ids: criteria.map((c) => c.id) })}>Semua</button>
+                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, criteria_ids: [] })}>Kosongkan</button>
+              </div>
+              <div className="max-h-[200px] overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-2">
+                {criteria.map((c) => {
+                  const checked = posForm.criteria_ids.includes(c.id);
+                  return (
+                    <label key={c.id} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[12px] cursor-pointer transition ${checked ? 'bg-brand-50 border-brand-600 text-brand-800 font-semibold' : 'bg-white border-slate-200 text-ink-700 hover:bg-slate-50'}`}>
+                      <input type="checkbox" checked={checked} onChange={(e) => { if (e.target.checked) setPosForm({ ...posForm, criteria_ids: [...posForm.criteria_ids, c.id] }); else setPosForm({ ...posForm, criteria_ids: posForm.criteria_ids.filter((id) => id !== c.id) }); }} className="sr-only" />
+                      {c.label} {c.target_unit ? <span className="text-[11px] text-ink-500">({c.target_unit})</span> : null}
+                    </label>
                   );
                 })}
               </div>

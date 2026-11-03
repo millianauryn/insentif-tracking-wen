@@ -180,6 +180,13 @@ export default function Documents({
   const canEdit = ['superadmin', 'officer'].includes(user.role) && documentStatus === 'Draft';
   const canFinalize = canFinalizeDocument(user, documentStatus);
 
+  // Jabatan-specific kriteria: superadmin / unconfigured jabatan → all criteria visible
+  const myCriteriaIds = user.criteria_ids;
+  const showAllCriteria = user.role === 'superadmin' || !myCriteriaIds || myCriteriaIds.length === 0;
+  const visibleCriteriaRows = showAllCriteria
+    ? criteriaRows
+    : criteriaRows.filter((r) => myCriteriaIds.includes(r.criteria_id));
+
   const refreshList = async () => {
     setRefreshing(true);
     try {
@@ -234,7 +241,7 @@ export default function Documents({
         />
 
         <KriteriaTable
-          rows={criteriaRows}
+          rows={visibleCriteriaRows}
           onUpdate={updateCriteriaRow}
           canEdit={canEdit}
         />

@@ -8,15 +8,16 @@ function createPositionsRouter(db, options = {}) {
   const auth = options.requireAuth || requireAuth;
   const role = options.requireRole || requireRole;
 
-  // List all positions with their branches
+  // List all positions with their branches and criteria
   router.get('/', auth, role('superadmin'), (req, res) => {
     try {
       const positions = db.prepare('SELECT id, name, position_type, join_date, parent_position_id, branch_id, active FROM positions ORDER BY position_type, name').all();
-      // Attach branches for each position
       const branchStmt = db.prepare('SELECT branch_id FROM position_branches WHERE position_id = ?');
+      const criteriaStmt = db.prepare('SELECT criteria_id FROM position_criteria WHERE position_id = ?');
       const result = positions.map((p) => ({
         ...p,
         branch_ids: branchStmt.all(p.id).map((r) => r.branch_id),
+        criteria_ids: criteriaStmt.all(p.id).map((r) => r.criteria_id),
       }));
       res.json({ positions: result });
     } catch (err) {
@@ -28,11 +29,10 @@ function createPositionsRouter(db, options = {}) {
   // Create position
   router.post('/', auth, role('superadmin'), (req, res) => {
     try {
-      const { name, position_type, join_date, parent_position_id, branch_ids } = req.body;
+      const { name, position_type, join_date, parent_position_id, branch_ids, criteria_ids } = req.body;
       if (!name || !position_type || !VALID_TYPES.includes(position_type)) {
         return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Name and valid position_type (BM/SPV/SALES) required' } });
       }
-      // Hierarchy validation: SPV must have BM parent, SALES must have SPV parent
       if (position_type === 'SPV') {
         if (!parent_position_id) {
           return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'SPV must be linked to a BM' } });
@@ -59,16 +59,19 @@ function createPositionsRouter(db, options = {}) {
         `).run(name.trim(), position_type, join_date || null, parent_position_id || null, branch_ids?.[0] || null);
         const positionId = info.lastInsertRowid;
 
-        // Insert position-branch junctions
         if (Array.isArray(branch_ids) && branch_ids.length > 0) {
           const insBranch = db.prepare('INSERT OR IGNORE INTO position_branches (position_id, branch_id) VALUES (?, ?)');
           branch_ids.forEach((bid) => insBranch.run(positionId, bid));
+        }
+        if (Array.isArray(criteria_ids) && criteria_ids.length > 0) {
+          const insCrit = db.prepare('INSERT OR IGNORE INTO position_criteria (position_id, criteria_id) VALUES (?, ?)');
+          criteria_ids.forEach((cid) => insCrit.run(positionId, cid));
         }
         return positionId;
       });
 
       const positionId = create();
-      res.status(201).json({ message: 'Position created', position: { id: positionId, name, position_type, join_date, parent_position_id, branch_ids: branch_ids || [] } });
+      res.status(201).json({ message: 'Position created', position: { id: positionId, name, position_type, join_date, parent_position_id, branch_ids: branch_ids || [], criteria_ids: criteria_ids || [] } });
     } catch (err) {
       console.error('POST /api/positions error:', err);
       res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Internal server error' } });
@@ -79,7 +82,7 @@ function createPositionsRouter(db, options = {}) {
   router.patch('/:id', auth, role('superadmin'), (req, res) => {
     try {
       const { id } = req.params;
-      const { name, position_type, join_date, parent_position_id, branch_ids, active } = req.body;
+      const { name, position_type, join_date, parent_position_id, branch_ids, criteria_ids, active } = req.body;
       const position = db.prepare('SELECT id, position_type FROM positions WHERE id = ?').get(id);
       if (!position) {
         return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Position not found' } });
@@ -101,11 +104,15 @@ function createPositionsRouter(db, options = {}) {
           values.push(id);
           db.prepare(`UPDATE positions SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
         }
-        // Update branches if provided
         if (Array.isArray(branch_ids)) {
           db.prepare('DELETE FROM position_branches WHERE position_id = ?').run(id);
           const insBranch = db.prepare('INSERT OR IGNORE INTO position_branches (position_id, branch_id) VALUES (?, ?)');
           branch_ids.forEach((bid) => insBranch.run(id, bid));
+        }
+        if (Array.isArray(criteria_ids)) {
+          db.prepare('DELETE FROM position_criteria WHERE position_id = ?').run(id);
+          const insCrit = db.prepare('INSERT OR IGNORE INTO position_criteria (position_id, criteria_id) VALUES (?, ?)');
+          criteria_ids.forEach((cid) => insCrit.run(id, cid));
         }
       })();
 
