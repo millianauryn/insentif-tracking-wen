@@ -8,8 +8,9 @@ function createPositionsRouter(db, options = {}) {
   const auth = options.requireAuth || requireAuth;
   const role = options.requireRole || requireRole;
 
-  // List all positions with their branches and criteria
-  router.get('/', auth, role('superadmin'), (req, res) => {
+  // List all positions with their branches and criteria.
+  // Any authed user (officer picks salesman names for document header).
+  router.get('/', auth, (req, res) => {
     try {
       const positions = db.prepare('SELECT id, name, position_type, join_date, parent_position_id, branch_id, active FROM positions ORDER BY position_type, name').all();
       const branchStmt = db.prepare('SELECT branch_id FROM position_branches WHERE position_id = ?');

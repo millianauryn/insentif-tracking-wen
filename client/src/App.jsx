@@ -16,9 +16,9 @@ import './App.css';
 import './auth.css';
 
 const INITIAL_SALES = {
-  name: 'Rina Kusuma',
-  region: 'KOTABARU',
-  product: 'UNIVENUS, ENESIS, & PHILIPS',
+  name: '',
+  region: '',
+  product: '',
   branch: 'Cabang Jakarta Selatan',
   division: 'General Trade',
   period: 'Oktober 2026',
@@ -31,7 +31,7 @@ function App() {
   const { user, loading: authLoading } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
-  const [golonganRows, setGolonganRows] = useState(() => [makeRow({ label: '', target: '', achievement: '' })]);
+  const [golonganRows, setGolonganRows] = useState(() => [makeRow({ label: '', target: '', achievement: '', type: 'brand', isGroup: false })]);
   const [criteriaRows, setCriteriaRows] = useState([]);
   const [criteria, setCriteria] = useState([]);
   const [sales, setSales] = useState(INITIAL_SALES);
@@ -82,16 +82,16 @@ function App() {
     if (user?.role === 'observer') return;
     setGolonganRows((current) => {
       const next = current.filter((row) => row.id !== id);
-      return next.length ? next : [makeRow({ label: '', target: '', achievement: '' })];
+      return next.length ? next : [makeRow({ label: '', target: '', achievement: '', type: 'brand', isGroup: false })];
     });
     setSaved(false);
   };
 
-  const addGolonganRow = (type) => {
+  const addGolonganRow = (type = 'brand') => {
     if (user?.role === 'observer') return;
-    const row = type === 'divisi' || type === 'principal' || type === 'total-divisi' || type === 'total'
-      ? makeRow({ label: '', isGroup: true, type })
-      : makeRow({ label: '', target: '', achievement: '' });
+    const isGroup = type === 'principal' || type === 'total-divisi' || type === 'total';
+    const label = type === 'total-divisi' ? 'TOTAL DIVISI' : type === 'total' ? 'TOTAL' : '';
+    const row = makeRow({ label, isGroup, type, target: '', achievement: '' });
     setGolonganRows((current) => [...current, row]);
     setSaved(false);
   };
@@ -104,7 +104,7 @@ function App() {
 
   const buildGolonganRows = () => {
     const filtered = golonganRows.filter((row) => row.label || row.target || row.achievement);
-    const parentStack = [];
+    let lastPrincipalIndex;
     return filtered.map((row, index) => {
       const result = {
         label: row.label || null,
@@ -113,12 +113,9 @@ function App() {
         achievement: row.achievement !== undefined && row.achievement !== '' ? Number(row.achievement) : null,
         sort_order: index,
       };
-      if (row.isGroup) {
-        parentStack.push(index);
-        result.parent_index = parentStack.length > 1 ? parentStack[parentStack.length - 2] : undefined;
-      } else {
-        result.parent_index = parentStack.length > 0 ? parentStack[parentStack.length - 1] : undefined;
-      }
+      // Only principal rows act as parents (divisi type removed)
+      if (row.type === 'principal') lastPrincipalIndex = index;
+      else if (lastPrincipalIndex !== undefined) result.parent_index = lastPrincipalIndex;
       return result;
     });
   };
@@ -143,9 +140,8 @@ function App() {
       const result = await createDocument({
         format_id: documentFormatId,
         salesman: sales.name,
-        product: sales.branch,
+        product: sales.product || '',
         period: toApiPeriod(period),
-        division_id: sales.division ? Number(sales.division) || null : null,
         golongan_rows: buildGolonganRows(),
         criteria_rows: buildCriteriaRows(),
       });
@@ -164,7 +160,7 @@ function App() {
     try {
       const result = await updateDocument(documentId, {
         salesman: sales.name,
-        product: sales.branch,
+        product: sales.product || '',
         period: toApiPeriod(period),
         golongan_rows: buildGolonganRows(),
         criteria_rows: buildCriteriaRows(),
@@ -204,8 +200,7 @@ function App() {
                 const label = (row.label || '').toUpperCase();
                 if (label.includes('TOTAL DIVISI')) type = 'total-divisi';
                 else if (label === 'TOTAL') type = 'total';
-                else if (label.includes('GROUP') || label.includes('PRINCIPAL')) type = 'principal';
-                else type = 'divisi';
+                else type = 'principal';
               }
               return makeRow({
                 label: row.label || '',
@@ -215,7 +210,7 @@ function App() {
                 achievement: row.achievement ?? '',
               });
             })
-          : [makeRow({ label: '', target: '', achievement: '' })]
+          : [makeRow({ label: '', target: '', achievement: '', type: 'brand', isGroup: false })]
       );
       setCriteriaRows(
         full.criteria_rows?.length
@@ -228,7 +223,7 @@ function App() {
             }))
           : criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', incentive_amount: '' }))
       );
-      setSales({ ...INITIAL_SALES, name: full.salesman || INITIAL_SALES.name, branch: full.product || INITIAL_SALES.branch });
+      setSales({ ...INITIAL_SALES, name: full.salesman || '', product: full.product || '' });
       setPeriod(fromApiPeriod(full.period));
       setSaved(true);
     } catch (err) {
@@ -239,7 +234,7 @@ function App() {
   const cancelEdit = () => {
     setDocumentId(null);
     setDocumentStatus('Draft');
-    setGolonganRows([makeRow({ label: '', target: '', achievement: '' })]);
+    setGolonganRows([makeRow({ label: '', target: '', achievement: '', type: 'brand', isGroup: false })]);
     setCriteriaRows(criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', incentive_amount: '' })));
     setSales(INITIAL_SALES);
     setSaved(false);
