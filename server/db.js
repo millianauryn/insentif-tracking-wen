@@ -102,6 +102,18 @@ async function seedDatabase(db) {
   db.prepare("INSERT OR IGNORE INTO document_formats (name, version, active) VALUES ('SPV', '1', 1)").run();
   db.prepare("INSERT OR IGNORE INTO document_formats (name, version, active) VALUES ('BM', '1', 1)").run();
 
+  const critCount = db.prepare('SELECT COUNT(*) as count FROM criteria_definitions').get().count;
+  if (critCount === 0) {
+    const insertCrit = db.prepare('INSERT INTO criteria_definitions (label, target_unit, sort_order) VALUES (?, ?, ?)');
+    insertCrit.run('EFFECTIVE CALLS', 'calls', 1);
+    insertCrit.run('ITEM / FAKTOR', 'items', 2);
+    insertCrit.run('LANGGANAN TRANSAKSI', 'transactions', 3);
+    insertCrit.run('TOTAL OMZET', 'Rp', 4);
+    insertCrit.run('GOLONGAN PRODUK', 'products', 5);
+    insertCrit.run('GOL YG GUGUR KURANG DARI 50%', 'count', 6);
+    insertCrit.run('CALL COMPLIANCE', '%', 7);
+  }
+
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
   if (userCount > 0) {
     return;
