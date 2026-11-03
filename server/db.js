@@ -60,6 +60,12 @@ function migrateDatabase(db) {
     db.exec('ALTER TABLE users ADD COLUMN parent_id INTEGER REFERENCES users(id) ON DELETE SET NULL');
   }
 
+  // Migrate incentive_documents: kwitansi JSON (per-document receipt fields)
+  const docCols = db.prepare('PRAGMA table_info(incentive_documents)').all().map((c) => c.name);
+  if (!docCols.includes('kwitansi')) {
+    db.exec('ALTER TABLE incentive_documents ADD COLUMN kwitansi TEXT');
+  }
+
   // Ensure position_criteria table exists (each position has own kriteria set)
   if (!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='position_criteria'").get()) {
     db.exec(`

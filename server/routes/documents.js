@@ -29,9 +29,9 @@ function createDocumentsRouter(db, options = {}) {
     const create = db.transaction(() => {
       const ownerId = req.user.id;
       const result = db.prepare(`
-        INSERT INTO incentive_documents (owner_id, format_id, division_id, salesman, product, period, status)
-        VALUES (?, ?, ?, ?, ?, ?, 'Draft')
-      `).run(ownerId, input.format_id, input.division_id || null, input.salesman || null, input.product || null, input.period);
+        INSERT INTO incentive_documents (owner_id, format_id, division_id, salesman, product, period, status, kwitansi)
+        VALUES (?, ?, ?, ?, ?, ?, 'Draft', ?)
+      `).run(ownerId, input.format_id, input.division_id || null, input.salesman || null, input.product || null, input.period, encodeKwitansi(input.kwitansi));
       const documentId = result.lastInsertRowid;
       const criteria = db.prepare(`
         SELECT id, label, target_unit, formula, sort_order
@@ -101,6 +101,7 @@ function getDocument(db, id) {
   if (!document) return null;
   return {
     ...document,
+    kwitansi: decodeKwitansi(document.kwitansi),
     golongan_rows: db.prepare('SELECT * FROM golongan_rows WHERE document_id = ? ORDER BY sort_order, id').all(id),
     criteria_rows: db.prepare('SELECT * FROM document_criteria_rows WHERE document_id = ? ORDER BY sort_order, id').all(id)
   };
@@ -115,6 +116,10 @@ function updateDocument(db, document, input) {
       fields.push(`${field} = ?`);
       values.push(input[field]);
     }
+  }
+  if (input.kwitansi !== undefined) {
+    fields.push('kwitansi = ?');
+    values.push(encodeKwitansi(input.kwitansi));
   }
   const update = db.transaction(() => {
     if (fields.length) {
@@ -176,6 +181,24 @@ function upsertCriteriaRows(db, documentId, rows) {
 
 function isValidPeriod(value) {
   return typeof value === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+}
+
+// Kwitansi stored as JSON TEXT; only the five receipt fields are kept
+function encodeKwitansi(k) {
+  if (!k || typeof k !== 'object') return null;
+  const clean = {
+    penerima: typeof k.penerima === 'string' ? k.penerima : '',
+    jumlahUang: typeof k.jumlahUang === 'string' ? k.jumlahUang : '',
+    keterangan: typeof k.keterangan === 'string' ? k.keterangan : '',
+    terbilang: typeof k.terbilang === 'string' ? k.terbilang : '',
+    nominal: typeof k.nominal === 'string' ? k.nominal : '',
+  };
+  return JSON.stringify(clean);
+}
+
+function decodeKwitansi(value) {
+  if (!value) return null;
+  try { return JSON.parse(value); } catch { return null; }
 }
 
 function writeAudit(db, actorId, action, entityType, entityId, oldValue, newValue) {

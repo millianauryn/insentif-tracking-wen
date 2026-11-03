@@ -42,6 +42,13 @@ function App() {
   const [adminData, setAdminData] = useState({ users: [], criteria: [], masterData: { divisions: [], principals: [], brands: [], regions: [], branches: [] } });
   const [period, setPeriod] = useState('Oktober 2026');
   const [saved, setSaved] = useState(false);
+  const [kwitansi, setKwitansi] = useState({
+    penerima: 'PT. BINTANG SINAR JAYA',
+    jumlahUang: '',
+    keterangan: '',
+    terbilang: '',
+    nominal: '',
+  });
   const metrics = useMemo(() => getDashboardMetrics(golonganRows.filter(r => !r.isGroup)), [golonganRows]);
 
   const reloadAdminData = useCallback(async () => {
@@ -144,6 +151,7 @@ function App() {
         period: toApiPeriod(period),
         golongan_rows: buildGolonganRows(),
         criteria_rows: buildCriteriaRows(),
+        kwitansi,
       });
       setDocumentId(result.document.id);
       setDocuments((current) => [result.document, ...current.filter((d) => d.id !== result.document.id)]);
@@ -164,6 +172,7 @@ function App() {
         period: toApiPeriod(period),
         golongan_rows: buildGolonganRows(),
         criteria_rows: buildCriteriaRows(),
+        kwitansi,
       });
       setDocuments((current) => current.map((d) => d.id === result.document.id ? result.document : d));
       setSaved(true);
@@ -225,6 +234,13 @@ function App() {
       );
       setSales({ ...INITIAL_SALES, name: full.salesman || '', product: full.product || '' });
       setPeriod(fromApiPeriod(full.period));
+      setKwitansi({
+        penerima: full.kwitansi?.penerima || 'PT. BINTANG SINAR JAYA',
+        jumlahUang: full.kwitansi?.jumlahUang || '',
+        keterangan: full.kwitansi?.keterangan || '',
+        terbilang: full.kwitansi?.terbilang || '',
+        nominal: full.kwitansi?.nominal || '',
+      });
       setSaved(true);
     } catch (err) {
       toast('error', errMsg(err));
@@ -237,6 +253,7 @@ function App() {
     setGolonganRows([makeRow({ label: '', target: '', achievement: '', type: 'brand', isGroup: false })]);
     setCriteriaRows(criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', incentive_amount: '' })));
     setSales(INITIAL_SALES);
+    setKwitansi({ penerima: 'PT. BINTANG SINAR JAYA', jumlahUang: '', keterangan: '', terbilang: '', nominal: '' });
     setSaved(false);
   };
 
@@ -293,6 +310,8 @@ function App() {
                 sales={sales}
                 period={period}
                 setPeriod={setPeriod}
+                kwitansi={kwitansi}
+                setKwitansi={setKwitansi}
                 documentStatus={documentStatus}
                 saved={saved}
               />

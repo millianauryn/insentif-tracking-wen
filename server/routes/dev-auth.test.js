@@ -76,6 +76,14 @@ describe('Dev quick-login API', () => {
     await request.post('/api/auth/dev-login?user=super').expect(404);
   });
 
+  it('rejects when NODE_ENV is not an explicit dev/test value', async () => {
+    process.env.NODE_ENV = '';
+    await request.post('/api/auth/dev-login?user=super').expect(404);
+
+    process.env.NODE_ENV = 'staging';
+    await request.post('/api/auth/dev-login?user=super').expect(404);
+  });
+
   it('is not blocked after more than ten attempts', async () => {
     for (let i = 0; i < 12; i += 1) {
       await request.post('/api/auth/dev-login?user=super').expect(200);

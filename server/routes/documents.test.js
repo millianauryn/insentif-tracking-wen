@@ -97,6 +97,31 @@ describe('Documents API', () => {
     expect(rows[0].status).toBe('Tercapai');
   });
 
+  it('persists kwitansi on create and update', async () => {
+    const kwitansi = {
+      penerima: 'PT. BINTANG SINAR JAYA',
+      jumlahUang: '862.000',
+      keterangan: 'Incentive penjualan bulan September 2026',
+      terbilang: 'Delapan ratus enam puluh dua ribu rupiah',
+      nominal: '862.000',
+    };
+    const res = await officer.post('/api/documents').send({
+      format_id: 1,
+      period: '2026-09',
+      golongan_rows: [],
+      kwitansi,
+    }).expect(201);
+    const id = res.body.document.id;
+
+    const get1 = await officer.get(`/api/documents/${id}`).expect(200);
+    expect(get1.body.document.kwitansi).toEqual(kwitansi);
+
+    await officer.patch(`/api/documents/${id}`).send({ kwitansi: { ...kwitansi, nominal: '900.000' } }).expect(200);
+    const get2 = await officer.get(`/api/documents/${id}`).expect(200);
+    expect(get2.body.document.kwitansi.nominal).toBe('900.000');
+    expect(get2.body.document.kwitansi.penerima).toBe('PT. BINTANG SINAR JAYA');
+  });
+
   it('updates criteria_rows values on patch', async () => {
     const created = await officer.post('/api/documents').send({
       format_id: 1,

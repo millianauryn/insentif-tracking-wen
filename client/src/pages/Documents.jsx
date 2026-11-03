@@ -18,93 +18,27 @@ const EMPTY_MASTER = { principals: [], brands: [], regions: [], branches: [] };
 const parseBrands = (s) => (s ? s.split(',').map((t) => t.replace(/^\s*&\s*/, '').trim()).filter(Boolean) : []);
 const joinBrands = (arr) => (arr.length <= 1 ? (arr[0] || '') : `${arr.slice(0, -1).join(', ')}, & ${arr[arr.length - 1]}`);
 
-function computeTotalFor(rows, rowIndex) {
-  const row = rows[rowIndex];
-  const items = row.type === 'total'
-    ? rows.filter((r) => r.type === 'brand')
-    : (() => {
-        let prev = -1;
-        for (let i = rowIndex - 1; i >= 0; i--) {
-          if (rows[i].type === 'total-divisi' || rows[i].type === 'total') { prev = i; break; }
-        }
-        return rows.slice(prev + 1, rowIndex).filter((r) => r.type === 'brand');
-      })();
-  return {
-    target: items.reduce((s, r) => s + (Number(r.target) || 0), 0),
-    achievement: items.reduce((s, r) => s + (Number(r.achievement) || 0), 0),
-  };
-}
-
-function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit }) {
+function GolonganRow({ row, index, onUpdate, onRemove, onJenisChange, canEdit }) {
   const target = Number(row.target) || 0;
   const achievement = Number(row.achievement) || 0;
-  const isTotal = row.type === 'total-divisi' || row.type === 'total';
-  const isPrincipal = row.type === 'principal';
+  const pct = target > 0 ? (achievement / target) * 100 : 0;
+  const status = target > 0 && pct >= 100 ? 'Tercapai' : 'Gugur';
+  const statusLabel = target > 0 ? status : '';
 
-  const total = isTotal ? computeTotalFor(allRows, index) : null;
-  const pct = total
-    ? (total.target > 0 ? (total.achievement / total.target) * 100 : 0)
-    : (target > 0 ? (achievement / target) * 100 : 0);
-  const status = (total ? total.target : target) > 0 && pct >= 100 ? 'Tercapai' : 'Gugur';
-  const statusLabel = total ? status : (target > 0 ? status : '');
-
-  const jenisSelect = (
-    <select
-      aria-label={`Jenis baris ${index + 1}`}
-      value={row.type || 'brand'}
-      onChange={(e) => onJenisChange(row, e.target.value)}
-      disabled={!canEdit}
-      className="input text-[12px] py-1.5 w-full"
-    >
-      {JENIS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  );
-
-  if (isPrincipal) {
-    return (
-      <tr>
-        <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} placeholder="Nama principal" /></td>
-        <td>{jenisSelect}</td>
-        <td />
-        <td />
-        <td />
-        <td />
-        <td className="text-center">
-          {canEdit && (
-            <button className="delete-button" onClick={() => onRemove(row.id)} aria-label={`Hapus baris ${index + 1}`}>
-              <Icon size={15}><path d="M3 6h18M8 6V4h8v2M19 6l1-14H6L5 6"/></Icon>
-            </button>
-          )}
-        </td>
-      </tr>
-    );
-  }
-
-  if (isTotal) {
-    return (
-      <tr className="font-semibold">
-        <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} /></td>
-        <td>{jenisSelect}</td>
-        <td className="text-right">{total.target ? total.target.toLocaleString('id-ID') : '—'}</td>
-        <td className="text-right">{total.achievement ? total.achievement.toLocaleString('id-ID') : '—'}</td>
-        <td className="text-right">{pct.toFixed(1)}%</td>
-        <td><span className={`result-badge ${status === 'Tercapai' ? 'success' : 'warning'}`}>{statusLabel}</span></td>
-        <td className="text-center">
-          {canEdit && (
-            <button className="delete-button" onClick={() => onRemove(row.id)} aria-label={`Hapus baris ${index + 1}`}>
-              <Icon size={15}><path d="M3 6h18M8 6V4h8v2M19 6l1-14H6L5 6"/></Icon>
-            </button>
-          )}
-        </td>
-      </tr>
-    );
-  }
-
-  // brand row
   return (
     <tr>
       <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} placeholder="Nama golongan" /></td>
-      <td>{jenisSelect}</td>
+      <td>
+        <select
+          aria-label={`Jenis baris ${index + 1}`}
+          value={row.type || 'brand'}
+          onChange={(e) => onJenisChange(row, e.target.value)}
+          disabled={!canEdit}
+          className="input text-[12px] py-1.5 w-full"
+        >
+          {JENIS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </td>
       <td><input type="number" min="0" value={row.target ?? ''} onChange={(e) => onUpdate(row.id, 'target', e.target.value)} disabled={!canEdit} /></td>
       <td><input type="number" min="0" value={row.achievement ?? ''} onChange={(e) => onUpdate(row.id, 'achievement', e.target.value)} disabled={!canEdit} /></td>
       <td className="text-right">{target > 0 ? `${pct.toFixed(1)}%` : '0.0%'}</td>
@@ -141,7 +75,6 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, canEdit
               key={row.id}
               row={row}
               index={index}
-              allRows={rows}
               onUpdate={onUpdate}
               onRemove={onRemove}
               onJenisChange={onJenisChange}
@@ -209,19 +142,13 @@ export default function Documents({
   documentId, golonganRows, updateGolonganRow, removeGolonganRow, addGolonganRow,
   criteriaRows, updateCriteriaRow,
   updateSales, sales, period, setPeriod,
+  kwitansi, setKwitansi,
   documentStatus, saved,
 }) {
   const toast = useToast();
   const [refreshing, setRefreshing] = useState(false);
   const [positions, setPositions] = useState([]);
   const [masterData, setMasterData] = useState(EMPTY_MASTER);
-  const [kwitansi, setKwitansi] = useState({
-    penerima: 'PT. BINTANG SINAR JAYA',
-    jumlahUang: '',
-    keterangan: '',
-    terbilang: '',
-    nominal: '',
-  });
   const canEdit = ['superadmin', 'officer'].includes(user.role) && documentStatus === 'Draft';
   const canFinalize = canFinalizeDocument(user, documentStatus);
 
