@@ -17,6 +17,8 @@ import './auth.css';
 
 const INITIAL_SALES = {
   name: 'Rina Kusuma',
+  region: 'KOTABARU',
+  product: 'UNIVENUS, ENESIS, & PHILIPS',
   branch: 'Cabang Jakarta Selatan',
   division: 'General Trade',
   period: 'Oktober 2026',
@@ -143,6 +145,7 @@ function App() {
         salesman: sales.name,
         product: sales.branch,
         period: toApiPeriod(period),
+        division_id: sales.division ? Number(sales.division) || null : null,
         golongan_rows: buildGolonganRows(),
         criteria_rows: buildCriteriaRows(),
       });

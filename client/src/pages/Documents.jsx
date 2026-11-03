@@ -60,22 +60,10 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, canEdit }) {
         />
       </td>
       <td>
-        <input
-          type="number"
-          min="0"
-          value={row.target ?? ''}
-          onChange={(e) => onUpdate(row.id, 'target', e.target.value)}
-          disabled={!canEdit}
-        />
+        <input type="number" min="0" value={row.target ?? ''} onChange={(e) => onUpdate(row.id, 'target', e.target.value)} disabled={!canEdit} />
       </td>
       <td>
-        <input
-          type="number"
-          min="0"
-          value={row.achievement ?? ''}
-          onChange={(e) => onUpdate(row.id, 'achievement', e.target.value)}
-          disabled={!canEdit}
-        />
+        <input type="number" min="0" value={row.achievement ?? ''} onChange={(e) => onUpdate(row.id, 'achievement', e.target.value)} disabled={!canEdit} />
       </td>
       <td>{target > 0 ? `${percentage.toFixed(1)}%` : ''}</td>
       <td>
@@ -105,15 +93,7 @@ function GolonganTable({ rows, onUpdate, onRemove, onAdd, canEdit }) {
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <GolonganRow
-              key={row.id}
-              row={row}
-              index={index}
-              allRows={rows}
-              onUpdate={onUpdate}
-              onRemove={onRemove}
-              canEdit={canEdit}
-            />
+            <GolonganRow key={row.id} row={row} index={index} allRows={rows} onUpdate={onUpdate} onRemove={onRemove} canEdit={canEdit} />
           ))}
         </tbody>
       </table>
@@ -140,35 +120,17 @@ function KriteriaRow({ row, onUpdate, canEdit }) {
     <tr className="kriteria-row">
       <td>{row.label}</td>
       <td>
-        <input
-          type="number"
-          min="0"
-          value={row.target_value ?? ''}
-          onChange={(e) => onUpdate(row.criteria_id, 'target_value', e.target.value)}
-          disabled={!canEdit}
-        />
+        <input type="number" min="0" value={row.target_value ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'target_value', e.target.value)} disabled={!canEdit} />
       </td>
       <td>
-        <input
-          type="number"
-          min="0"
-          value={row.achievement_value ?? ''}
-          onChange={(e) => onUpdate(row.criteria_id, 'achievement_value', e.target.value)}
-          disabled={!canEdit}
-        />
+        <input type="number" min="0" value={row.achievement_value ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'achievement_value', e.target.value)} disabled={!canEdit} />
       </td>
       <td>{target > 0 ? `${percentage.toFixed(1)}%` : ''}</td>
       <td>
         <span className={`result-badge ${status === 'Tercapai' ? 'success' : 'warning'}`}>{status}</span>
       </td>
       <td>
-        <input
-          type="number"
-          min="0"
-          value={row.incentive_amount ?? ''}
-          onChange={(e) => onUpdate(row.criteria_id, 'incentive_amount', e.target.value)}
-          disabled={!canEdit}
-        />
+        <input type="number" min="0" value={row.incentive_amount ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'incentive_amount', e.target.value)} disabled={!canEdit} />
       </td>
     </tr>
   );
@@ -198,10 +160,6 @@ function KriteriaTable({ rows, onUpdate, canEdit }) {
   );
 }
 
-function Summary({ label, value, helper, accent = false }) {
-  return <div className={`summary-card ${accent ? 'accent' : ''}`}><span className="summary-label">{label}</span><strong>{value}</strong><span className="summary-copy">{helper}</span></div>;
-}
-
 export default function Documents({
   user, documents, onRefresh, setDocuments,
   onCreate, onUpdate, onSubmit, onLoad, onCancel,
@@ -212,6 +170,13 @@ export default function Documents({
 }) {
   const toast = useToast();
   const [refreshing, setRefreshing] = useState(false);
+  const [kwitansi, setKwitansi] = useState({
+    penerima: 'PT. BINTANG SINAR JAYA',
+    jumlahUang: '',
+    keterangan: '',
+    terbilang: '',
+    nominal: '',
+  });
   const canEdit = ['superadmin', 'officer'].includes(user.role) && documentStatus === 'Draft';
   const canFinalize = canFinalizeDocument(user, documentStatus);
 
@@ -236,13 +201,76 @@ export default function Documents({
   totals.percentage = totals.target > 0 ? (totals.achievement / totals.target) * 100 : 0;
   totals.status = totals.target > 0 && totals.percentage >= 100 ? 'Tercapai' : 'Gugur';
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <>
+      <div className="print-header">
+        <div className="print-title">
+          <h1>PERHITUNGAN INSENTIF</h1>
+          <button className="button primary" onClick={handlePrint}>Cetak</button>
+        </div>
+      </div>
+
+      <section className="content-card info-card print-section">
+        <div className="doc-header">
+          <div className="doc-meta">
+            <div><strong>WILAYAH</strong><span>{sales.region || 'KOTABARU'}</span></div>
+            <div><strong>SALESMAN</strong><span>{sales.name || ''}</span></div>
+            <div><strong>PRODUK</strong><span>{sales.product || ''}</span></div>
+            <div><strong>DIVISI</strong><span>{sales.division || ''}</span></div>
+            <div><strong>BULAN</strong><span>{period}</span></div>
+          </div>
+        </div>
+
+        <GolonganTable
+          rows={golonganRows}
+          onUpdate={updateGolonganRow}
+          onRemove={removeGolonganRow}
+          onAdd={addGolonganRow}
+          canEdit={canEdit}
+        />
+
+        <KriteriaTable
+          rows={criteriaRows}
+          onUpdate={updateCriteriaRow}
+          canEdit={canEdit}
+        />
+
+        <div className="kwitansi-card">
+          <h3>KWITANSI</h3>
+          <div className="kwitansi-grid">
+            <div className="kw-row"><label>Sudah terima dari :</label><span>{kwitansi.penerima}</span></div>
+            <div className="kw-row"><label>Jumlah Uang</label><input value={kwitansi.jumlahUang} onChange={(e) => setKwitansi({ ...kwitansi, jumlahUang: e.target.value })} disabled={!canEdit} placeholder="Rp." /></div>
+            <div className="kw-row"><label>Bayar PemBayaran</label><input value={kwitansi.keterangan} onChange={(e) => setKwitansi({ ...kwitansi, keterangan: e.target.value })} disabled={!canEdit} placeholder="Contoh: Incentive penjualan bulan September 2026" /></div>
+            <div className="kw-row"><label>Terbilang</label><input value={kwitansi.terbilang} onChange={(e) => setKwitansi({ ...kwitansi, terbilang: e.target.value })} disabled={!canEdit} placeholder="Contoh: Delapan ratus delapan puluh dua ribu rupiah" /></div>
+            <div className="kw-row"><label>Rp.</label><input value={kwitansi.nominal} onChange={(e) => setKwitansi({ ...kwitansi, nominal: e.target.value })} disabled={!canEdit} placeholder="882.000" /></div>
+            <div className="kw-sign"><span className="sig-label">Terbilang</span><span className="sig-sales">ALDIANSYAH</span><span className="sig-role">SALESMAN</span></div>
+          </div>
+          <div className="kw-total">
+            <span>Total Keseluruhan</span>
+            <strong>{totals.achievement.toLocaleString('id-ID')}</strong>
+          </div>
+        </div>
+
+        {canEdit && (
+          <div className="flex gap-2 mt-3">
+            <button className="button secondary" onClick={() => onAdd('divisi')}>Tambah Divisi</button>
+            <button className="button secondary" onClick={() => onAdd('principal')}>Tambah Principal</button>
+            <button className="button secondary" onClick={() => onAdd('brand')}>Tambah Brand</button>
+            <button className="button secondary" onClick={() => onAdd('total-divisi')}>Tambah Total Divisi</button>
+            <button className="button secondary" onClick={() => onAdd('total')}>Tambah Total</button>
+          </div>
+        )}
+      </section>
+
       <section className="content-card info-card">
         <div className="section-heading heading-with-action">
           <div>
             <h2>Dokumen Tersimpan</h2>
-            <p>Buka dokumen lama untuk dilanjutkan, atau mulai draft baru.</p>
+            <p>Buka dokumen lama untuk dilanjutkan.</p>
           </div>
           <div className="flex gap-2">
             <button className="button secondary" type="button" onClick={refreshList} disabled={refreshing}>{refreshing ? 'Memuat...' : 'Muat Ulang'}</button>
@@ -273,46 +301,10 @@ export default function Documents({
         </div>
         <div className="form-grid">
           <label>Nama Sales<input value={sales.name} onChange={(e) => updateSales('name', e.target.value)} disabled={!canEdit} /></label>
-          <label>Cabang<select value={sales.branch} onChange={(e) => updateSales('branch', e.target.value)} disabled={!canEdit}><option>Cabang Jakarta Selatan</option><option>Cabang Jakarta Pusat</option><option>Cabang Bandung</option></select></label>
-          <label>Divisi<select value={sales.division} onChange={(e) => updateSales('division', e.target.value)} disabled={!canEdit}><option>General Trade</option><option>Modern Trade</option><option>Pharmacy</option></select></label>
+          <label>Wilayah<input value={sales.region || ''} onChange={(e) => updateSales('region', e.target.value)} disabled={!canEdit} placeholder="KOTABARU" /></label>
+          <label>Produk<input value={sales.product || ''} onChange={(e) => updateSales('product', e.target.value)} disabled={!canEdit} placeholder="UNIVENUS, ENESIS, & PHILIPS" /></label>
+          <label>Divisi<select value={sales.division} onChange={(e) => updateSales('division', e.target.value)} disabled={!canEdit}><option>JUNIOR SALES</option><option>General Trade</option><option>Modern Trade</option><option>Pharmacy</option></select></label>
           <label>Periode<select value={period} onChange={(e) => setPeriod(e.target.value)} disabled={!canEdit}>{PERIOD_OPTIONS.map((option) => <option key={option}>{option}</option>)}</select></label>
-        </div>
-      </section>
-
-      <section className="content-card achievement-card">
-        <div className="section-heading">
-          <div className="section-icon orange"><Icon><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h4"/></Icon></div>
-          <div><h2>Tabel Golongan</h2><p>Input target dan capaian per golongan.</p></div>
-        </div>
-        <GolonganTable
-          rows={golonganRows}
-          onUpdate={updateGolonganRow}
-          onRemove={removeGolonganRow}
-          onAdd={addGolonganRow}
-          canEdit={canEdit}
-        />
-      </section>
-
-      <section className="content-card achievement-card">
-        <div className="section-heading">
-          <div className="section-icon blue"><Icon><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></Icon></div>
-          <div><h2>Tabel Kriteria</h2><p>Input target, capaian, dan insentif per kriteria.</p></div>
-        </div>
-        <KriteriaTable
-          rows={criteriaRows}
-          onUpdate={updateCriteriaRow}
-          canEdit={canEdit}
-        />
-      </section>
-
-      <section className="summary-grid">
-        <Summary label="Total Target" value={totals.target.toLocaleString('id-ID')} helper="Rp." />
-        <Summary label="Total Capaian" value={totals.achievement.toLocaleString('id-ID')} helper="Rp." />
-        <Summary label="Persentase Total" value={`${totals.percentage.toFixed(1)}%`} helper="Dari target keseluruhan" accent />
-        <div className={`summary-card status-summary ${totals.status === 'Tercapai' ? 'success' : 'warning'}`}>
-          <span className="summary-label">Status Keseluruhan</span>
-          <strong>{totals.status}</strong>
-          <span className="status-copy">{totals.status === 'Tercapai' ? 'Target terpenuhi' : 'Target belum terpenuhi'}</span>
         </div>
       </section>
 

@@ -102,3 +102,41 @@
 /* Indentation for hierarchy */
 .golongan-indent-1 { padding-left: 24px; }
 .golongan-indent-2 { padding-left: 48px; }
+
+/* Print styles — paper format */
+@media print {
+  .print-header { display: block; }
+  .sidebar, .topbar-actions, .action-bar, .content-card:not(.print-section), .dashboard-header, .kpi-grid, nav, aside, header, footer { display: none !important; }
+  .main-content, .app-shell { padding: 0 !important; margin: 0 !important; width: 100% !important; }
+  .print-section { display: block !important; border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .doc-header h2 { font-size: 20px; margin-bottom: 10px; }
+  .doc-meta { display: flex; gap: 20px; font-size: 12px; margin-bottom: 15px; }
+  .doc-meta div { flex: 1; }
+  .doc-meta strong { display: block; font-size: 10px; color: #666; text-transform: uppercase; }
+  .doc-meta span { font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+  th, td { border: 1px solid #000; padding: 4px 6px; font-size: 11px; text-align: left; }
+  th { background: #d6eaf8; font-weight: 600; }
+  .golongan-divisi { background: #fef9e7 !important; font-weight: 600; }
+  .golongan-principal { background: #d5f5e3 !important; font-weight: 600; }
+  .golongan-brand { background: #fff !important; }
+  .golongan-total-divisi { background: #d6eaf8 !important; font-weight: 600; }
+  .golongan-total { background: #fcf3cf !important; font-weight: 700; }
+  .kriteria-header { background: #d6eaf8 !important; font-weight: 600; }
+  .kwitansi-card { border: 1px solid #000; padding: 15px; margin-top: 20px; page-break-inside: avoid; }
+  .kwitansi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px; }
+  .kw-row { display: contents; }
+  .kw-row label { font-weight: 600; font-size: 11px; }
+  .kw-total { margin-top: 15px; font-size: 12px; font-weight: 600; display: flex; justify-content: space-between; }
+  .kw-sign { margin-top: 20px; display: flex; gap: 40px; font-size: 11px; }
+  .sig-sales { font-weight: 700; }
+  input { border: none; border-bottom: 1px solid #000; font-size: 11px; background: transparent !important; }
+  input:disabled { color: #000; }
+  .result-badge { display: inline-block; padding: 1px 4px; border: 1px solid #000; font-size: 10px; font-weight: 600; margin-top: 2px; }
+  .delete-button, button { display: none !important; }
+  .save-dot, .autosave { display: none !important; }
+  .draft-badge { display: none !important; }
+  .section-heading { margin-bottom: 10px; }
+  .section-icon { display: none; }
+}
