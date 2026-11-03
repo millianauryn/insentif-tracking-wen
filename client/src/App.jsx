@@ -263,6 +263,7 @@ function App() {
                 period={period}
                 setPeriod={setPeriod}
                 onNewDoc={() => { cancelEdit(); navigate('/documents'); }}
+                onLoadDoc={(doc) => { loadDocument(doc); navigate('/documents'); }}
               />
             </Layout>
           ) : (

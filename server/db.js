@@ -53,6 +53,12 @@ function migrateDatabase(db) {
 
   const golCols = db.prepare('PRAGMA table_info(golongan_rows)').all().map((column) => column.name);
   if (!golCols.includes('label')) db.exec('ALTER TABLE golongan_rows ADD COLUMN label TEXT');
+
+  // Migrate users: add parent_id for hierarchy (BM → SPV → Sales)
+  const userCols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+  if (!userCols.includes('parent_id')) {
+    db.exec('ALTER TABLE users ADD COLUMN parent_id INTEGER REFERENCES users(id) ON DELETE SET NULL');
+  }
 }
 
 async function hashPassword(password) {
