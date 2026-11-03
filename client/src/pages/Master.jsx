@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
   createDivision, updateDivision, deleteDivision,
   createPrincipal, updatePrincipal, deletePrincipal,
@@ -6,6 +6,7 @@ import {
   createRegion, updateRegion, deleteRegion,
   createBranch, updateBranch, deleteBranch,
   createUser, updateUser, deleteUser, updateCriteria,
+  listPositions, createPosition, updatePosition, deletePosition,
 } from '../api';
 import Icon from '../components/Icon';
 
@@ -19,13 +20,26 @@ export default function Master({ data, onRefresh, user }) {
   const [masterPage, setMasterPage] = useState(1);
   const [masterLimit, setMasterLimit] = useState(10);
 
-  // Pengguna tab state
-  const [form, setForm] = useState({ username: '', password: '', role: 'officer', parent_id: '' });
+  // Akun tab state
+  const [form, setForm] = useState({ username: '', password: '', role: 'officer', branch_ids: [] });
   const [editingUser, setEditingUser] = useState(null);
   const [userError, setUserError] = useState('');
   const usernameRef = useRef(null);
 
+  // Jabatan User tab state
+  const [positions, setPositions] = useState([]);
+  const [posForm, setPosForm] = useState(null); // null = closed, { _isNew, id, name, position_type, join_date, parent_position_id, branch_ids }
+  const [posError, setPosError] = useState('');
+  const [posBusy, setPosBusy] = useState(false);
+
   const masterData = data?.masterData || EMPTY_MASTER;
+
+  // Load positions when tab is active
+  useEffect(() => {
+    if (tab === 'positions') {
+      listPositions().then((r) => setPositions(r.positions || [])).catch(() => setPositions([]));
+    }
+  }, [tab]);
 
   const masterTabs = [
     { key: 'division', label: 'Divisi', icon: <Icon><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></Icon> },
@@ -33,7 +47,8 @@ export default function Master({ data, onRefresh, user }) {
     { key: 'brand', label: 'Brand', icon: <Icon><path d="M4 5h16v14H4z"/><path d="M8 10h8M8 14h5"/></Icon> },
     { key: 'region', label: 'Region', icon: <Icon><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></Icon> },
     { key: 'branch', label: 'Cabang', icon: <Icon><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></Icon> },
-    { key: 'users', label: 'Pengguna', icon: <Icon><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></Icon> },
+    { key: 'positions', label: 'Jabatan User', icon: <Icon><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></Icon> },
+    { key: 'users', label: 'Akun', icon: <Icon><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></Icon> },
     { key: 'criteria', label: 'Kriteria Dokumen', icon: <Icon><path d="M4 5h16v14H4z"/><path d="M8 10h8M8 14h5"/></Icon> },
   ];
 
@@ -137,8 +152,8 @@ export default function Master({ data, onRefresh, user }) {
     }
   };
 
-  // ---------- Pengguna tab ----------
-  const resetUserForm = () => setForm({ username: '', password: '', role: 'officer', parent_id: '' });
+  // ---------- Akun tab ----------
+  const resetUserForm = () => setForm({ username: '', password: '', role: 'officer', branch_ids: [] });
 
   const cancelEdit = () => {
     setEditingUser(null);
@@ -150,10 +165,14 @@ export default function Master({ data, onRefresh, user }) {
   const submitUser = async (event) => {
     event.preventDefault();
     if (masterBusy) return;
+    if (form.role === 'officer' && form.branch_ids.length === 0) {
+      setUserError('Wajib pilih minimal satu cabang untuk Officer.');
+      return;
+    }
     setMasterBusy(true);
     setUserError('');
     try {
-      const payload = { username: form.username.trim(), role: form.role, parent_id: form.parent_id ? Number(form.parent_id) : null };
+      const payload = { username: form.username.trim(), role: form.role, branch_ids: form.branch_ids.map(Number) };
       if (editingUser) {
         await updateUser(editingUser.id, { ...payload, password: form.password || undefined });
         setEditingUser(null);
@@ -171,7 +190,7 @@ export default function Master({ data, onRefresh, user }) {
 
   const startEdit = (target) => {
     setEditingUser({ id: target.id, username: target.username, role: target.role });
-    setForm({ username: target.username, password: '', role: target.role, parent_id: target.parent_id || '' });
+    setForm({ username: target.username, password: '', role: target.role, branch_ids: (target.branch_ids || []).map(Number) });
     setUserError('');
     usernameRef.current?.focus();
     usernameRef.current?.scrollIntoView({ block: 'center' });
@@ -184,7 +203,7 @@ export default function Master({ data, onRefresh, user }) {
       return;
     }
     const target = data.users.find((u) => u.id === id);
-    if (!window.confirm(`Hapus pengguna ${target?.username}?`)) return;
+    if (!window.confirm(`Hapus akun ${target?.username}?`)) return;
     try {
       await deleteUser(id);
       await onRefresh();
@@ -201,6 +220,62 @@ export default function Master({ data, onRefresh, user }) {
     } catch (requestError) {
       setUserError(requestError.message);
     }
+  };
+
+  // ---------- Jabatan User (positions) ----------
+  const openPosForm = (item = null) => {
+    setPosError('');
+    if (item) {
+      setPosForm({ _isNew: false, id: item.id, name: item.name, position_type: item.position_type, join_date: item.join_date || '', parent_position_id: item.parent_position_id || '', branch_ids: item.branch_ids || [] });
+    } else {
+      setPosForm({ _isNew: true, name: '', position_type: 'BM', join_date: '', parent_position_id: '', branch_ids: [] });
+    }
+  };
+
+  const closePosForm = () => setPosForm(null);
+
+  const savePosForm = async (e) => {
+    e.preventDefault();
+    if (!posForm || posBusy) return;
+    setPosBusy(true);
+    setPosError('');
+    try {
+      const payload = {
+        name: posForm.name.trim(),
+        position_type: posForm.position_type,
+        join_date: posForm.join_date || null,
+        parent_position_id: posForm.parent_position_id ? Number(posForm.parent_position_id) : null,
+        branch_ids: posForm.branch_ids.map(Number),
+      };
+      if (posForm._isNew) await createPosition(payload);
+      else await updatePosition(posForm.id, payload);
+      closePosForm();
+      const r = await listPositions();
+      setPositions(r.positions || []);
+    } catch (requestError) {
+      setPosError(requestError.message);
+    } finally {
+      setPosBusy(false);
+    }
+  };
+
+  const removePosition = async (id) => {
+    setPosError('');
+    if (!window.confirm('Hapus jabatan ini?')) return;
+    try {
+      await deletePosition(id);
+      const r = await listPositions();
+      setPositions(r.positions || []);
+    } catch (requestError) {
+      setPosError(requestError.message);
+    }
+  };
+
+  // Get filtered parent options based on position_type
+  const getParentOptions = (type) => {
+    if (type === 'SPV') return positions.filter((p) => p.position_type === 'BM' && p.active);
+    if (type === 'SALES') return positions.filter((p) => p.position_type === 'SPV' && p.active);
+    return [];
   };
 
   // ---------- Master list rendering ----------
@@ -402,22 +477,67 @@ export default function Master({ data, onRefresh, user }) {
     );
   };
 
-  // ---------- Pengguna section ----------
+  // ---------- Akun section ----------
   const renderUserSection = () => (
     <>
       <section className="content-card info-card">
         <div className="section-heading">
           <div>
-            <h2>{editingUser ? 'Edit Pengguna' : 'Tambah Pengguna'}</h2>
-            <p>{editingUser ? `Mengubah ${editingUser.username}.` : 'Berikan akses sesuai peran kerja.'}</p>
+            <h2>{editingUser ? 'Edit Akun' : 'Tambah Akun'}</h2>
+            <p>{editingUser ? `Mengubah ${editingUser.username}.` : 'Buat akun officer atau observer dengan akses cabang.'}</p>
           </div>
         </div>
         <form className="form-grid" onSubmit={submitUser}>
           <label>Username<input ref={usernameRef} value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} pattern="[a-z ]*" title="Username harus huruf kecil" required /></label>
           <label>Password<input type="password" minLength={editingUser ? undefined : 6} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder={editingUser ? 'Biarkan kosong jika tidak diubah' : undefined} required={!editingUser} /></label>
-          <label>Peran<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}><option value="officer">Officer</option><option value="observer">Observer</option><option value="superadmin">Super Admin</option></select></label>
-          <label>Atasan (BM/SPV)<select value={form.parent_id} onChange={(event) => setForm({ ...form, parent_id: event.target.value })}><option value="">- Tanpa Atasan -</option>{data.users.filter((u) => u.id !== editingUser?.id).map((u) => <option key={u.id} value={u.id}>{u.username} ({u.role})</option>)}</select></label>
-          <button className="button primary" type="submit" disabled={masterBusy}>{masterBusy ? 'Menyimpan...' : editingUser ? 'Simpan Perubahan' : 'Tambah Pengguna'}</button>
+          <label>Role *<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}><option value="officer">Officer</option><option value="observer">Observer</option><option value="superadmin">Super Admin</option></select></label>
+
+          {/* Branch multi-select */}
+          <div className="col-span-2">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-[13px] font-semibold">Cabang yang diurus {form.role === 'officer' ? '*' : ''} <span className="text-ink-400 font-normal">(minimal {form.role === 'officer' ? 1 : 0})</span></label>
+              <div className="flex gap-1.5">
+                <span className="text-[12px] text-ink-500 self-center">{form.branch_ids.length} cabang dipilih</span>
+                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setForm({ ...form, branch_ids: masterData.branches.filter((b) => b.is_active !== 0 && b.active !== 0).map((b) => b.id) })}>Semua</button>
+                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setForm({ ...form, branch_ids: [] })}>Kosongkan</button>
+              </div>
+            </div>
+            <div className="max-h-[300px] overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-3">
+              {masterData.regions.filter((r) => r.is_active !== 0 && r.active !== 0).map((region) => {
+                const regionBranches = masterData.branches.filter((b) => b.region_id === region.id && b.is_active !== 0 && b.active !== 0);
+                if (regionBranches.length === 0) return null;
+                return (
+                  <div key={region.id}>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-ink-400 mb-1.5">{region.name}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {regionBranches.map((branch) => {
+                        const checked = form.branch_ids.includes(branch.id);
+                        return (
+                          <label key={branch.id} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[12px] cursor-pointer transition ${checked ? 'bg-brand-50 border-brand-600 text-brand-800 font-semibold' : 'bg-white border-slate-200 text-ink-700 hover:bg-slate-50'}`}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                if (e.target.checked) setForm({ ...form, branch_ids: [...form.branch_ids, branch.id] });
+                                else setForm({ ...form, branch_ids: form.branch_ids.filter((id) => id !== branch.id) });
+                              }}
+                              className="sr-only"
+                            />
+                            {branch.name}
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {form.role === 'officer' && form.branch_ids.length === 0 && (
+              <p className="text-[12px] text-rose-600 mt-1 font-semibold">Wajib pilih minimal satu cabang untuk Officer.</p>
+            )}
+          </div>
+
+          <button className="button primary" type="submit" disabled={masterBusy}>{masterBusy ? 'Menyimpan...' : editingUser ? 'Simpan Perubahan' : 'Tambah Akun'}</button>
           {editingUser && <button className="text-button" type="button" onClick={cancelEdit}>Batal</button>}
         </form>
       </section>
@@ -425,25 +545,128 @@ export default function Master({ data, onRefresh, user }) {
       <section className="content-card info-card">
         <div className="section-heading">
           <div>
-            <h2>Pengguna</h2>
-            <p>Akun aktif dan nonaktif.</p>
+            <h2>Akun</h2>
+            <p>Daftar akun aktif dan nonaktif.</p>
           </div>
         </div>
         <div className="admin-list">
-          {data.users.map((row) => {
-            const parent = data.users.find((u) => u.id === row.parent_id);
-            return (
-              <div className="admin-row" key={row.id}>
-                <strong>{row.username}</strong>
-                <span>{row.role}</span>
-                <span className="text-[11px] text-ink-400">{parent ? `← ${parent.username}` : '—'}</span>
-                <span>{row.active ? 'Aktif' : 'Nonaktif'}</span>
-                <button className="icon-button" type="button" aria-label={`Edit ${row.username}`} onClick={() => startEdit(row)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-                <button className="icon-button" type="button" aria-label={`Hapus ${row.username}`} onClick={() => removeUser(row.id)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1-14H6L5 6"/></svg></button>
-              </div>
-            );
-          })}
+          {data.users.map((row) => (
+            <div className="admin-row" key={row.id}>
+              <strong>{row.username}</strong>
+              <span>{row.role}</span>
+              <span className="text-[11px] text-ink-400">{(row.branch_ids || []).length} cabang</span>
+              <span>{row.active ? 'Aktif' : 'Nonaktif'}</span>
+              <button className="icon-button" type="button" aria-label={`Edit ${row.username}`} onClick={() => startEdit(row)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+              <button className="icon-button" type="button" aria-label={`Hapus ${row.username}`} onClick={() => removeUser(row.id)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1-14H6L5 6"/></svg></button>
+            </div>
+          ))}
         </div>
+      </section>
+    </>
+  );
+
+  // ---------- Jabatan User (positions) section ----------
+  const renderPositionsSection = () => (
+    <>
+      <section className="content-card info-card">
+        <div className="section-heading heading-with-action">
+          <div>
+            <h2>{posForm?._isNew ? 'Tambah Jabatan' : posForm ? 'Edit Jabatan' : 'Jabatan User'}</h2>
+            <p>Kelola jabatan BM, SPV, dan SALES dengan hierarki dan cabang.</p>
+          </div>
+          {!posForm && (
+            <button className="button primary" onClick={() => openPosForm()}>
+              <Icon size={15}><path d="M12 5v14M5 12h14"/></Icon> Tambah Jabatan
+            </button>
+          )}
+        </div>
+
+        {posForm && (
+          <form onSubmit={savePosForm} className="space-y-3 border border-slate-200 rounded-xl p-4 mb-4">
+            <div>
+              <label className="text-[13px] font-semibold">Jabatan *</label>
+              <select className="input w-full mt-1" value={posForm.position_type} onChange={(e) => setPosForm({ ...posForm, position_type: e.target.value, parent_position_id: '' })} required>
+                <option value="BM">BM (Bisnis Manager)</option>
+                <option value="SPV">SPV (Supervisor)</option>
+                <option value="SALES">SALES</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-[13px] font-semibold">Nama *</label>
+              <input className="input w-full mt-1" value={posForm.name} onChange={(e) => setPosForm({ ...posForm, name: e.target.value })} required placeholder="Nama lengkap" />
+            </div>
+            <div>
+              <label className="text-[13px] font-semibold">Tanggal Masuk *</label>
+              <input className="input w-full mt-1" type="date" value={posForm.join_date} onChange={(e) => setPosForm({ ...posForm, join_date: e.target.value })} required />
+            </div>
+            {posForm.position_type !== 'BM' && (
+              <div>
+                <label className="text-[13px] font-semibold">{posForm.position_type === 'SPV' ? 'Atasan BM' : 'Atasan SPV'} *</label>
+                <select className="input w-full mt-1" value={posForm.parent_position_id} onChange={(e) => setPosForm({ ...posForm, parent_position_id: e.target.value })} required>
+                  <option value="">Pilih {posForm.position_type === 'SPV' ? 'BM' : 'SPV'}</option>
+                  {getParentOptions(posForm.position_type).map((p) => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.position_type})</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {/* Branch multi-select for position */}
+            <div>
+              <label className="text-[13px] font-semibold">Cabang / Distributor</label>
+              <div className="flex gap-1.5 mt-1 mb-2">
+                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, branch_ids: masterData.branches.filter((b) => b.is_active !== 0 && b.active !== 0).map((b) => b.id) })}>Semua</button>
+                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, branch_ids: [] })}>Kosongkan</button>
+              </div>
+              <div className="max-h-[250px] overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-3">
+                {masterData.regions.filter((r) => r.is_active !== 0 && r.active !== 0).map((region) => {
+                  const regionBranches = masterData.branches.filter((b) => b.region_id === region.id && b.is_active !== 0 && b.active !== 0);
+                  if (regionBranches.length === 0) return null;
+                  return (
+                    <div key={region.id}>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-ink-400 mb-1.5">{region.name}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {regionBranches.map((branch) => {
+                          const checked = posForm.branch_ids.includes(branch.id);
+                          return (
+                            <label key={branch.id} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[12px] cursor-pointer transition ${checked ? 'bg-brand-50 border-brand-600 text-brand-800 font-semibold' : 'bg-white border-slate-200 text-ink-700 hover:bg-slate-50'}`}>
+                              <input type="checkbox" checked={checked} onChange={(e) => { if (e.target.checked) setPosForm({ ...posForm, branch_ids: [...posForm.branch_ids, branch.id] }); else setPosForm({ ...posForm, branch_ids: posForm.branch_ids.filter((id) => id !== branch.id) }); }} className="sr-only" />
+                              {branch.name}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {posError && <p className="form-error" role="alert">{posError}</p>}
+            <div className="flex justify-end gap-2">
+              <button type="button" className="button" onClick={closePosForm}>Batal</button>
+              <button type="submit" className="button primary" disabled={posBusy}>{posBusy ? 'Menyimpan...' : 'Simpan'}</button>
+            </div>
+          </form>
+        )}
+
+        {!posForm && (
+          <div className="admin-list">
+            {positions.length ? positions.map((p) => {
+              const parent = positions.find((x) => x.id === p.parent_position_id);
+              const branchNames = (p.branch_ids || []).map((bid) => masterData.branches.find((b) => b.id === bid)?.name).filter(Boolean);
+              return (
+                <div className="admin-row" key={p.id}>
+                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${p.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : p.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{p.position_type}</span>
+                  <div className="min-w-0 flex-1">
+                    <strong>{p.name}</strong>
+                    <p className="text-[11px] text-ink-400">{p.join_date ? `Masuk: ${new Date(p.join_date).toLocaleDateString('id-ID')}` : '—'}{parent ? ` · ← ${parent.name}` : ''}{branchNames.length ? ` · ${branchNames.length} cabang` : ''}</p>
+                  </div>
+                  <button className="icon-button" type="button" aria-label={`Edit ${p.name}`} onClick={() => openPosForm(p)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button className="icon-button" type="button" aria-label={`Hapus ${p.name}`} onClick={() => removePosition(p.id)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1-14H6L5 6"/></svg></button>
+                </div>
+              );
+            }) : <p className="text-center py-8 text-[13px] text-ink-400">Belum ada jabatan. Klik "Tambah Jabatan" untuk mulai.</p>}
+          </div>
+        )}
       </section>
     </>
   );
@@ -476,8 +699,8 @@ export default function Master({ data, onRefresh, user }) {
       <section className="content-card info-card">
         <div className="section-heading">
           <div>
-            <h2>{config ? config.title : (tab === 'users' ? 'Pengguna' : 'Kriteria Dokumen')}</h2>
-            <p>{config ? config.desc : tab === 'users' ? 'Berikan akses sesuai peran kerja.' : 'Label tersimpan sebagai snapshot saat Draft dibuat.'}</p>
+            <h2>{config ? config.title : tab === 'users' ? 'Akun' : tab === 'positions' ? 'Jabatan User' : 'Kriteria Dokumen'}</h2>
+            <p>{config ? config.desc : tab === 'users' ? 'Buat akun officer atau observer dengan akses cabang.' : tab === 'positions' ? 'Kelola jabatan BM, SPV, dan SALES.' : 'Label tersimpan sebagai snapshot saat Draft dibuat.'}</p>
           </div>
         </div>
 
@@ -497,7 +720,7 @@ export default function Master({ data, onRefresh, user }) {
           </div>
         )}
 
-        {tab === 'users' ? renderUserSection() : tab === 'criteria' ? renderCriteriaSection() : (
+        {tab === 'users' ? renderUserSection() : tab === 'positions' ? renderPositionsSection() : tab === 'criteria' ? renderCriteriaSection() : (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <input type="text" className="input flex-1 min-w-[200px]" placeholder="Cari nama, kode, alamat…" value={masterSearch} onChange={(e) => { setMasterSearch(e.target.value); setMasterPage(1); }} />

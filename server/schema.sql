@@ -153,6 +153,33 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Jabatan User (positions: BM/SPV/SALES with hierarchy and branch)
+CREATE TABLE IF NOT EXISTS positions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    position_type TEXT NOT NULL CHECK (position_type IN ('BM', 'SPV', 'SALES')),
+    join_date TEXT,
+    parent_position_id INTEGER REFERENCES positions(id) ON DELETE SET NULL,
+    branch_id INTEGER REFERENCES branches(id) ON DELETE SET NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- User-branch junction (many-to-many for Akun)
+CREATE TABLE IF NOT EXISTS user_branches (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    branch_id INTEGER NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, branch_id)
+);
+
+-- Position-branch junction (many-to-many for Jabatan User)
+CREATE TABLE IF NOT EXISTS position_branches (
+    position_id INTEGER NOT NULL REFERENCES positions(id) ON DELETE CASCADE,
+    branch_id INTEGER NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+    PRIMARY KEY (position_id, branch_id)
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
@@ -161,3 +188,9 @@ CREATE INDEX IF NOT EXISTS idx_golongan_rows_document_id ON golongan_rows(docume
 CREATE INDEX IF NOT EXISTS idx_golongan_rows_parent_id ON golongan_rows(parent_id);
 CREATE INDEX IF NOT EXISTS idx_document_criteria_rows_document_id ON document_criteria_rows(document_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_positions_parent ON positions(parent_position_id);
+CREATE INDEX IF NOT EXISTS idx_positions_branch ON positions(branch_id);
+CREATE INDEX IF NOT EXISTS idx_user_branches_user ON user_branches(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_branches_branch ON user_branches(branch_id);
+CREATE INDEX IF NOT EXISTS idx_position_branches_position ON position_branches(position_id);
+CREATE INDEX IF NOT EXISTS idx_position_branches_branch ON position_branches(branch_id);

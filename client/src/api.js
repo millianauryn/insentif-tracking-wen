@@ -86,6 +86,22 @@ export function deleteUser(id) {
   return apiRequest(`/api/users/${id}`, { method: 'DELETE' })
 }
 
+export function listPositions() {
+  return apiRequest('/api/positions')
+}
+
+export function createPosition(input) {
+  return apiRequest('/api/positions', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export function updatePosition(id, input) {
+  return apiRequest(`/api/positions/${id}`, { method: 'PATCH', body: JSON.stringify(input) })
+}
+
+export function deletePosition(id) {
+  return apiRequest(`/api/positions/${id}`, { method: 'DELETE' })
+}
+
 export function listCriteria() {
   return apiRequest('/api/criteria-definitions')
 }

@@ -12,7 +12,13 @@ function createUsersRouter(db, options = {}) {
   router.get('/', auth, role('superadmin'), (req, res) => {
     try {
       const users = db.prepare('SELECT id, username, role, parent_id, active FROM users').all();
-      res.json({ users });
+      // Attach branch_ids for each user
+      const branchStmt = db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?');
+      const result = users.map((u) => ({
+        ...u,
+        branch_ids: branchStmt.all(u.id).map((r) => r.branch_id),
+      }));
+      res.json({ users: result });
     } catch (err) {
       console.error('GET /api/users error:', err);
       res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Internal server error' } });
@@ -47,21 +53,34 @@ function createUsersRouter(db, options = {}) {
 
   router.post('/', auth, role('superadmin'), async (req, res) => {
     try {
-      const { username, password, role: userRole } = req.body;
+      const { username, password, role: userRole, branch_ids } = req.body;
       if (!validateUsername(username) || !validatePassword(password) || !userRole || !VALID_ROLES.includes(userRole)) {
         return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Username must be lowercase and password must contain at least 6 characters' } });
       }
       if (db.prepare('SELECT id FROM users WHERE username = ?').get(username)) {
         return res.status(409).json({ error: { code: 'CONFLICT', message: 'Username already exists' } });
       }
+      // Officer must have at least 1 branch
+      if (userRole === 'officer' && (!Array.isArray(branch_ids) || branch_ids.length === 0)) {
+        return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Officer must have at least one branch' } });
+      }
 
       const passwordHash = await hashPassword(password);
-      const info = db.prepare(`
-        INSERT INTO users (username, password_hash, role, created_by, active)
-        VALUES (?, ?, ?, ?, 1)
-      `).run(username, passwordHash, userRole, req.user.id);
+      const create = db.transaction(() => {
+        const info = db.prepare(`
+          INSERT INTO users (username, password_hash, role, created_by, active)
+          VALUES (?, ?, ?, ?, 1)
+        `).run(username, passwordHash, userRole, req.user.id);
+        const userId = info.lastInsertRowid;
+        if (Array.isArray(branch_ids) && branch_ids.length > 0) {
+          const insBranch = db.prepare('INSERT OR IGNORE INTO user_branches (user_id, branch_id) VALUES (?, ?)');
+          branch_ids.forEach((bid) => insBranch.run(userId, bid));
+        }
+        return userId;
+      });
 
-      res.status(201).json({ message: 'User created', user: { id: info.lastInsertRowid, username, role: userRole } });
+      const userId = create();
+      res.status(201).json({ message: 'User created', user: { id: userId, username, role: userRole, branch_ids: branch_ids || [] } });
     } catch (err) {
       console.error('POST /api/users error:', err);
       res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Internal server error' } });
@@ -71,7 +90,7 @@ function createUsersRouter(db, options = {}) {
   router.patch('/:id', auth, role('superadmin'), async (req, res) => {
     try {
       const { id } = req.params;
-      const { username, password, role: userRole, active, parent_id } = req.body;
+      const { username, password, role: userRole, active, parent_id, branch_ids } = req.body;
       const user = db.prepare('SELECT id, role FROM users WHERE id = ?').get(id);
       if (!user) {
         return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
@@ -114,6 +133,19 @@ function createUsersRouter(db, options = {}) {
       if (updates.length > 0) {
         values.push(id);
         db.prepare(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
+      }
+      // Update branches if provided
+      if (Array.isArray(branch_ids)) {
+        // Validate: officer must have at least 1 branch
+        const finalRole = userRole !== undefined ? userRole : user.role;
+        if (finalRole === 'officer' && branch_ids.length === 0) {
+          return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Officer must have at least one branch' } });
+        }
+        db.transaction(() => {
+          db.prepare('DELETE FROM user_branches WHERE user_id = ?').run(id);
+          const insBranch = db.prepare('INSERT OR IGNORE INTO user_branches (user_id, branch_id) VALUES (?, ?)');
+          branch_ids.forEach((bid) => insBranch.run(id, bid));
+        })();
       }
 
       res.json({ message: 'User updated' });
