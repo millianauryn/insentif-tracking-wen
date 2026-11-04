@@ -41,4 +41,9 @@ export default defineConfig({
       '/api': 'http://localhost:3002',
     },
   },
+  test: {
+    // render smoke tests import Chakra; 5s default flakes on a loaded machine
+    testTimeout: 15000,
+    hookTimeout: 15000,
+  },
 })
