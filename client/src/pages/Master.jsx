@@ -451,7 +451,7 @@ export default function Master({ data, onRefresh, user }) {
 
   const renderItem = (item) => {
     const isActive = item.is_active !== 0 && item.active !== 0;
-    const statusColor = isActive ? 'text-emerald-600' : 'text-slate-400';
+    const statusColor = isActive ? 'text-emerald-700' : 'text-slate-500';
     const statusText = isActive ? 'Aktif' : 'Nonaktif';
 
     let subtitle = '';
@@ -474,7 +474,7 @@ export default function Master({ data, onRefresh, user }) {
         <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[14px] font-bold text-ink-900">{item.name}</p>
-          {subtitle && <p className="truncate text-[12px] text-ink-400">{subtitle}</p>}
+          {subtitle && <p className="truncate text-[13px] text-ink-400">{subtitle}</p>}
         </div>
         <span className={`text-[12px] font-medium ${statusColor}`}>{statusText}</span>
         <button className="rounded-lg p-2 text-ink-400 hover:bg-slate-100 hover:text-ink-800" onClick={() => openEditForm(item, tab)} aria-label={`Edit ${item.name}`}>
@@ -722,10 +722,10 @@ export default function Master({ data, onRefresh, user }) {
               )}
             </ul>
 
-            <div className="flex items-center justify-between text-sm text-ink-500">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-ink-500">
               <span>Halaman {masterPage} dari {totalPages} · Total {filteredItems.length} data</span>
-              <div className="flex items-center gap-2">
-                <select className="input text-[12px] w-auto" value={masterLimit} onChange={(e) => { setMasterLimit(Number(e.target.value)); setMasterPage(1); }}>
+              <div className="flex flex-wrap items-center gap-2">
+                <select className="input w-auto" value={masterLimit} onChange={(e) => { setMasterLimit(Number(e.target.value)); setMasterPage(1); }}>
                   <option value={10}>10 per halaman</option>
                   <option value={25}>25 per halaman</option>
                   <option value={50}>50 per halaman</option>

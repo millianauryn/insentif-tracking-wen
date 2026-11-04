@@ -409,10 +409,10 @@ export default function Documents({
       <section className="content-card info-card print-section">
         <div className="doc-header">
           <div className="doc-meta">
-            <div><strong>WILAYAH:</strong><span>{wilayah}</span></div>
-            <div><strong>SALESMAN:</strong><span>{sales.name || '-'}</span></div>
-            <div><strong>PRODUK:</strong><span>{sales.product || '-'}</span></div>
-            <div><strong>BULAN:</strong><span>{period || '-'}</span></div>
+            <div><strong>Wilayah:</strong><span>{wilayah}</span></div>
+            <div><strong>Salesman:</strong><span>{sales.name || '-'}</span></div>
+            <div><strong>Produk:</strong><span>{sales.product || '-'}</span></div>
+            <div><strong>Bulan:</strong><span>{period || '-'}</span></div>
           </div>
         </div>
 

@@ -3,7 +3,7 @@
 .auth-card h1 { font-size: 25px; }
 .auth-card .button { margin-top: 5px; }
 .form-error { margin: 0; color: #b42318; font-size: 11px; }
-.auth-card label { display: grid; gap: 6px; color: var(--text); font-size: 11px; font-weight: 500; }
+.auth-card label { display: grid; gap: 6px; color: var(--text); font-size: 13px; font-weight: 500; }
 .auth-card input { min-height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 7px; font-size: 13px; color: var(--text); background: #fff; }
 .auth-card input:focus { outline: 2px solid var(--blue-soft); outline-offset: 1px; border-color: var(--blue); }
 .password-wrapper { position: relative; display: flex; align-items: center; }

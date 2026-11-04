@@ -266,7 +266,7 @@ function App() {
   };
 
   const renderDocuments = (type) => (
-    <Layout title="Dokumen Insentif" breadcrumb={['Dokumen', type === 'sales' ? 'Sales' : type.toUpperCase()]}>
+    <Layout breadcrumb={['Dokumen', type === 'sales' ? 'Sales' : type.toUpperCase()]}>
       <Documents
         docType={type}
         user={user}

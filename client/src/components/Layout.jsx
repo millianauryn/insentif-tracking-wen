@@ -261,11 +261,6 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
                     </Span>
                   ))}
                 </Text>
-                {title && (
-                  <Box as="h1" truncate fontSize="16px" fontWeight="800" letterSpacing="-0.02em" color="fg.default" display={{ base: 'block', lg: 'none' }}>
-                    {title}
-                  </Box>
-                )}
               </Box>
             </Flex>
             <Flex shrink={0} alignItems="center" gap={2}>
@@ -274,32 +269,29 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
               <Avatar name={user?.name || user?.username} color={user?.avatar_color} emoji={user?.avatar_key} size="sm" ring />
             </Flex>
           </Flex>
-
-          {(title || actions) && (
-            <Flex
-              display={{ base: 'none', lg: 'flex' }}
-              flexWrap="wrap"
-              alignItems="flex-end"
-              justifyContent="space-between"
-              gap={3}
-              borderTopWidth={1}
-              borderTopColor="border.default"
-              px={6}
-              py={5}
-            >
-              <Box as="h1" fontSize="19px" fontWeight="800" letterSpacing="-0.02em" color="fg.default">{title}</Box>
-              <Flex flexWrap="wrap" alignItems="center" gap={2}>{actions}</Flex>
-            </Flex>
-          )}
-          {actions && (
-            <Flex flexWrap="wrap" gap={2} borderTopWidth={1} borderTopColor="gray.100" px={4} py={3} display={{ base: 'flex', lg: 'none' }}>
-              {actions}
-            </Flex>
-          )}
         </Box>
 
         <Box as="main" minW={0} w="full" maxW="full" flex="1" overflowX="hidden" px={{ base: 4, lg: 6 }} py={{ base: 4, lg: 6 }} pb={{ base: 24, lg: 6 }}>
-          <Box mx="auto" w="full" maxW="1440px">{children}</Box>
+          <Box mx="auto" w="full" maxW="1440px">
+            {/* Title row lives on the canvas (taste sheet), not in the top bar */}
+            {(title || actions) && (
+              <Flex
+                direction={{ base: 'column', lg: 'row' }}
+                align={{ lg: 'flex-end' }}
+                justify="space-between"
+                flexWrap="wrap"
+                gap={3}
+                mt={1}
+                mb={5}
+              >
+                <Box as="h1" fontSize={{ base: '18px', lg: '19px' }} fontWeight="800" letterSpacing="-0.02em" color="fg.default">
+                  {title}
+                </Box>
+                <Flex flexWrap="wrap" alignItems="center" gap={2}>{actions}</Flex>
+              </Flex>
+            )}
+            {children}
+          </Box>
         </Box>
 
         <Box as="footer" display={{ base: 'none', lg: 'block' }} px={6} pb={5} textAlign="center" fontSize="11.5px" color="fg.subtle">

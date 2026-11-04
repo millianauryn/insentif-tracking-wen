@@ -22,7 +22,7 @@ function TreeNode({ label, role, count, open, onToggle, depth }) {
 }
 
 function DocRow({ doc, onClick }) {
-  const statusColor = doc.status === 'Final' ? 'text-emerald-600' : 'text-slate-400';
+  const statusColor = doc.status === 'Final' ? 'text-emerald-700' : 'text-slate-500';
   return (
     <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 bg-white px-3 py-2 hover:bg-slate-50 cursor-pointer" onClick={onClick}>
       <div className="min-w-0 flex-1">

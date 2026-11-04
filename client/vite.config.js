@@ -6,20 +6,24 @@ import { defineConfig } from 'vite'
 // Set-Cookie through, so headless tooling (taste inspect, screenshots) can render
 // authenticated screens without a login flow. configureServer = dev server only.
 function authSeed() {
+  const middleware = async (req, res, next) => {
+    if (!req.url || !req.url.includes('__seed')) return next()
+    try {
+      const r = await fetch('http://localhost:3002/api/auth/dev-login?user=super', { method: 'POST' })
+      const cookies = typeof r.headers.getSetCookie === 'function' ? r.headers.getSetCookie() : []
+      if (cookies.length) res.setHeader('Set-Cookie', cookies)
+    } catch {
+      /* API down — page will render logged out */
+    }
+    next()
+  }
   return {
     name: 'inspect-auth-seed',
     configureServer(server) {
-      server.middlewares.use(async (req, res, next) => {
-        if (!req.url || !req.url.includes('__seed')) return next()
-        try {
-          const r = await fetch('http://localhost:3002/api/auth/dev-login?user=super', { method: 'POST' })
-          const cookies = typeof r.headers.getSetCookie === 'function' ? r.headers.getSetCookie() : []
-          if (cookies.length) res.setHeader('Set-Cookie', cookies)
-        } catch {
-          /* API down — page will render logged out */
-        }
-        next()
-      })
+      server.middlewares.use(middleware)
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(middleware)
     },
   }
 }
