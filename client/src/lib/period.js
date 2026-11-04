@@ -19,6 +19,11 @@ export function currentPeriodLabel(date = new Date()) {
   return `${name} ${date.getFullYear()}`;
 }
 
+// All 12 month labels of a year (dropdown options; other years via free typing)
+export function monthsOfYear(year = new Date().getFullYear()) {
+  return Object.keys(MONTHS).map((name) => `${name} ${year}`);
+}
+
 // Dynamic: previous, current and next month (generated once at module load)
 export const PERIOD_OPTIONS = [-1, 0, 1].map((off) => currentPeriodLabel(new Date(new Date().getFullYear(), new Date().getMonth() + off, 1)));
 

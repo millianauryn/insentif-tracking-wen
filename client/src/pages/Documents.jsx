@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { canFinalizeDocument } from '../access';
-import { PERIOD_OPTIONS, fromApiPeriod } from '../lib/period';
+import { fromApiPeriod } from '../lib/period';
 import { useToast } from '../components/Toast';
 import { errMsg } from '../lib/api';
 import Icon from '../components/Icon';
 import PickerChips from '../components/PickerChips';
+import ComboSelect from '../components/ComboSelect';
 import { listPositions, listMasterData } from '../api';
 import { computeTotalFor, computeGrandTotal, principalValueFor } from '../lib/golongan';
+import { monthsOfYear } from '../lib/period';
 
 const JENIS_OPTIONS = [
   { value: 'brand', label: 'Brand' },
@@ -199,8 +201,6 @@ export default function Documents({
   const [refreshing, setRefreshing] = useState(false);
   const [positions, setPositions] = useState([]);
   const [masterData, setMasterData] = useState(EMPTY_MASTER);
-  const [salesOpen, setSalesOpen] = useState(false);
-  const [salesQuery, setSalesQuery] = useState('');
   const canEdit = ['superadmin', 'officer'].includes(user.role) && documentStatus === 'Draft';
   const canFinalize = canFinalizeDocument(user, documentStatus);
 
@@ -307,58 +307,40 @@ export default function Documents({
         <div className="form-grid">
           <label className="block">
             Salesman
-            <span className="relative block">
-              <input
-                value={sales.name}
-                onChange={(e) => { setSalesQuery(e.target.value); updateSales('name', e.target.value); setSalesOpen(true); }}
-                onFocus={() => { setSalesOpen(true); setSalesQuery(''); }}
-                onBlur={() => setSalesOpen(false)}
-                onKeyDown={(e) => { if (e.key === 'Escape') setSalesOpen(false); }}
-                disabled={!canEdit}
-                placeholder={isSuper && !sales.region ? 'Pilih wilayah dulu' : 'Cari nama sales...'}
-                autoComplete="off"
-              />
-              {salesOpen && (
-                <span className="absolute left-0 right-0 top-full mt-1 z-20 block max-h-[240px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
-                  {salesList
-                    .filter((p) => p.name.toLowerCase().includes(salesQuery.toLowerCase()))
-                    .map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onMouseDown={(e) => { e.preventDefault(); updateSales('name', p.name); setSalesOpen(false); }}
-                        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-slate-50"
-                      >
-                        <span className="font-medium text-ink-900">{p.name}</span>
-                        <span className="text-[11px] text-ink-400">{p.position_type}</span>
-                      </button>
-                    ))}
-                  {!salesList.filter((p) => p.name.toLowerCase().includes(salesQuery.toLowerCase())).length && (
-                    <span className="block px-3 py-3 text-[12px] text-ink-400">
-                      {salesList.length ? 'Tidak ada sales cocok.' : isSuper && !sales.region ? 'Pilih wilayah dulu.' : 'Belum ada sales di cabang Anda.'}
-                    </span>
-                  )}
-                </span>
-              )}
-            </span>
+            <ComboSelect
+              value={sales.name}
+              onChange={(v) => updateSales('name', v)}
+              options={salesList.map((p) => ({ value: p.name, hint: p.position_type }))}
+              placeholder={isSuper && !sales.region ? 'Pilih wilayah dulu' : 'Pilih atau ketik nama sales...'}
+              disabled={!canEdit}
+              emptyHint={salesList.length ? 'Tidak ada sales cocok.' : isSuper && !sales.region ? 'Pilih wilayah dulu.' : 'Belum ada sales di cabang Anda.'}
+            />
           </label>
-          <label>
+          <label className="block">
             Wilayah (Kota)
             {isSuper ? (
-              <select value={sales.region} onChange={(e) => updateSales('region', e.target.value)} disabled={!canEdit}>
-                <option value="">{kotaOptions.length ? 'Pilih wilayah' : 'Belum ada kota di cabang'}</option>
-                {kotaOptions.map((k) => <option key={k} value={k}>{k}</option>)}
-              </select>
+              <ComboSelect
+                value={sales.region}
+                onChange={(v) => updateSales('region', v)}
+                options={kotaOptions.map((k) => ({ value: k }))}
+                placeholder={kotaOptions.length ? 'Pilih atau ketik wilayah...' : 'Belum ada kota di cabang'}
+                disabled={!canEdit}
+                emptyHint={kotaOptions.length ? 'Tidak ada wilayah cocok.' : 'Belum ada kota di cabang.'}
+              />
             ) : (
               <input value={wilayah} readOnly disabled />
             )}
           </label>
-          <label>
+          <label className="block">
             Bulan
-            <input list="bulan-list" value={period} onChange={(e) => setPeriod(e.target.value)} disabled={!canEdit} placeholder="Contoh: September 2026" />
-            <datalist id="bulan-list">
-              {PERIOD_OPTIONS.map((o) => <option key={o} value={o} />)}
-            </datalist>
+            <ComboSelect
+              value={period}
+              onChange={setPeriod}
+              options={monthsOfYear().map((m) => ({ value: m }))}
+              placeholder="Pilih atau ketik bulan..."
+              disabled={!canEdit}
+              emptyHint="Tidak ada bulan cocok."
+            />
           </label>
           <div className="col-span-2">
             <PickerChips
