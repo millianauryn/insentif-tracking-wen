@@ -260,6 +260,39 @@ function App() {
     setSaved(false);
   };
 
+  const renderDocuments = (type) => (
+    <Layout title="Dokumen Insentif" breadcrumb={['Dokumen', type === 'sales' ? 'Sales' : type.toUpperCase()]}>
+      <Documents
+        docType={type}
+        user={user}
+        documents={documents}
+        onRefresh={listDocuments}
+        setDocuments={setDocuments}
+        onCreate={saveDraft}
+        onUpdate={updateDraft}
+        onSubmit={submitForApproval}
+        onLoad={loadDocument}
+        onCancel={cancelEdit}
+        documentId={documentId}
+        golonganRows={golonganRows}
+        updateGolonganRow={updateGolonganRow}
+        removeGolonganRow={removeGolonganRow}
+        addGolonganRow={addGolonganRow}
+        criteria={criteria}
+        criteriaRows={criteriaRows}
+        updateCriteriaRow={updateCriteriaRow}
+        updateSales={updateSales}
+        sales={sales}
+        period={period}
+        setPeriod={setPeriod}
+        kwitansi={kwitansi}
+        setKwitansi={setKwitansi}
+        documentStatus={documentStatus}
+        saved={saved}
+      />
+    </Layout>
+  );
+
   if (authLoading) return <div className="auth-shell" role="status">Memuat sesi...</div>;
 
   return (
@@ -288,41 +321,19 @@ function App() {
       />
       <Route
         path="/documents"
-        element={
-          user ? (
-            <Layout title="Dokumen Insentif" breadcrumb={['Dokumen']}>
-              <Documents
-                user={user}
-                documents={documents}
-                onRefresh={listDocuments}
-                setDocuments={setDocuments}
-                onCreate={saveDraft}
-                onUpdate={updateDraft}
-                onSubmit={submitForApproval}
-                onLoad={loadDocument}
-                onCancel={cancelEdit}
-                documentId={documentId}
-                golonganRows={golonganRows}
-                updateGolonganRow={updateGolonganRow}
-                removeGolonganRow={removeGolonganRow}
-                addGolonganRow={addGolonganRow}
-                criteria={criteria}
-                criteriaRows={criteriaRows}
-                updateCriteriaRow={updateCriteriaRow}
-                updateSales={updateSales}
-                sales={sales}
-                period={period}
-                setPeriod={setPeriod}
-                kwitansi={kwitansi}
-                setKwitansi={setKwitansi}
-                documentStatus={documentStatus}
-                saved={saved}
-              />
-            </Layout>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
+        element={<Navigate to="/documents/sales" replace />}
+      />
+      <Route
+        path="/documents/sales"
+        element={user ? renderDocuments('sales') : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/documents/spv"
+        element={user ? renderDocuments('spv') : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/documents/bm"
+        element={user ? renderDocuments('bm') : <Navigate to="/login" replace />}
       />
       <Route
         path="/master"
