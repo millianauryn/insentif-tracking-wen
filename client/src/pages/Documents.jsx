@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast';
 import { errMsg } from '../lib/api';
 import Icon from '../components/Icon';
 import { listPositions, listMasterData } from '../api';
+import { computeTotalFor } from '../lib/golongan';
 
 const JENIS_OPTIONS = [
   { value: 'brand', label: 'Brand' },
@@ -18,38 +19,58 @@ const EMPTY_MASTER = { principals: [], brands: [], regions: [], branches: [] };
 const parseBrands = (s) => (s ? s.split(',').map((t) => t.replace(/^\s*&\s*/, '').trim()).filter(Boolean) : []);
 const joinBrands = (arr) => (arr.length <= 1 ? (arr[0] || '') : `${arr.slice(0, -1).join(', ')}, & ${arr[arr.length - 1]}`);
 
-function GolonganRow({ row, index, onUpdate, onRemove, onJenisChange, canEdit }) {
+function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit }) {
   const target = Number(row.target) || 0;
   const achievement = Number(row.achievement) || 0;
   const pct = target > 0 ? (achievement / target) * 100 : 0;
   const status = target > 0 && pct >= 100 ? 'Tercapai' : 'Gugur';
   const statusLabel = target > 0 ? status : '';
 
+  const jenisSelect = (
+    <select
+      aria-label={`Jenis baris ${index + 1}`}
+      value={row.type || 'brand'}
+      onChange={(e) => onJenisChange(row, e.target.value)}
+      disabled={!canEdit}
+      className="input text-[12px] py-1.5 w-full"
+    >
+      {JENIS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+
+  const deleteBtn = canEdit ? (
+    <button className="delete-button" onClick={() => onRemove(row.id)} aria-label={`Hapus baris ${index + 1}`}>
+      <Icon size={15}><path d="M3 6h18M8 6V4h8v2M19 6l1-14H6L5 6"/></Icon>
+    </button>
+  ) : null;
+
+  // Total rows: auto-computed from principal + brand rows (not editable)
+  if (row.type === 'total-divisi' || row.type === 'total') {
+    const total = computeTotalFor(allRows, index);
+    const tPct = total.target > 0 ? (total.achievement / total.target) * 100 : 0;
+    const tStatus = total.target > 0 && tPct >= 100 ? 'Tercapai' : 'Gugur';
+    return (
+      <tr className="font-semibold">
+        <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} /></td>
+        <td>{jenisSelect}</td>
+        <td className="text-right">{total.target.toLocaleString('id-ID')}</td>
+        <td className="text-right">{total.achievement.toLocaleString('id-ID')}</td>
+        <td className="text-right">{tPct.toFixed(1)}%</td>
+        <td><span className={`result-badge ${tStatus === 'Tercapai' ? 'success' : 'warning'}`}>{total.target > 0 ? tStatus : ''}</span></td>
+        <td className="text-center">{deleteBtn}</td>
+      </tr>
+    );
+  }
+
   return (
     <tr>
       <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} placeholder="Nama golongan" /></td>
-      <td>
-        <select
-          aria-label={`Jenis baris ${index + 1}`}
-          value={row.type || 'brand'}
-          onChange={(e) => onJenisChange(row, e.target.value)}
-          disabled={!canEdit}
-          className="input text-[12px] py-1.5 w-full"
-        >
-          {JENIS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      </td>
+      <td>{jenisSelect}</td>
       <td><input type="number" min="0" value={row.target ?? ''} onChange={(e) => onUpdate(row.id, 'target', e.target.value)} disabled={!canEdit} /></td>
       <td><input type="number" min="0" value={row.achievement ?? ''} onChange={(e) => onUpdate(row.id, 'achievement', e.target.value)} disabled={!canEdit} /></td>
       <td className="text-right">{target > 0 ? `${pct.toFixed(1)}%` : '0.0%'}</td>
       <td><span className={`result-badge ${status === 'Tercapai' ? 'success' : 'warning'}`}>{statusLabel}</span></td>
-      <td className="text-center">
-        {canEdit && (
-          <button className="delete-button" onClick={() => onRemove(row.id)} aria-label={`Hapus baris ${index + 1}`}>
-            <Icon size={15}><path d="M3 6h18M8 6V4h8v2M19 6l1-14H6L5 6"/></Icon>
-          </button>
-        )}
-      </td>
+      <td className="text-center">{deleteBtn}</td>
     </tr>
   );
 }
@@ -75,6 +96,7 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, canEdit
               key={row.id}
               row={row}
               index={index}
+              allRows={rows}
               onUpdate={onUpdate}
               onRemove={onRemove}
               onJenisChange={onJenisChange}
@@ -191,8 +213,8 @@ export default function Documents({
   const save = () => (documentId ? onUpdate() : onCreate());
 
   const totals = {
-    target: golonganRows.filter((r) => r.type === 'brand').reduce((s, r) => s + (Number(r.target) || 0), 0),
-    achievement: golonganRows.filter((r) => r.type === 'brand').reduce((s, r) => s + (Number(r.achievement) || 0), 0),
+    target: golonganRows.filter((r) => r.type === 'brand' || r.type === 'principal').reduce((s, r) => s + (Number(r.target) || 0), 0),
+    achievement: golonganRows.filter((r) => r.type === 'brand' || r.type === 'principal').reduce((s, r) => s + (Number(r.achievement) || 0), 0),
   };
   totals.percentage = totals.target > 0 ? (totals.achievement / totals.target) * 100 : 0;
   totals.status = totals.target > 0 && totals.percentage >= 100 ? 'Tercapai' : 'Gugur';
@@ -200,11 +222,12 @@ export default function Documents({
   const handlePrint = () => window.print();
 
   const changeJenis = (row, type) => {
+    const isAutoLabel = row.label === 'TOTAL DIVISI' || row.label === 'TOTAL';
     updateGolonganRow(row.id, 'type', type);
     updateGolonganRow(row.id, 'isGroup', type !== 'brand');
-    if (type === 'total-divisi' && !row.label) updateGolonganRow(row.id, 'label', 'TOTAL DIVISI');
-    if (type === 'total' && !row.label) updateGolonganRow(row.id, 'label', 'TOTAL');
-    if (type === 'brand' && (row.label === 'TOTAL DIVISI' || row.label === 'TOTAL')) updateGolonganRow(row.id, 'label', '');
+    if (type === 'total-divisi' && (!row.label || isAutoLabel)) updateGolonganRow(row.id, 'label', 'TOTAL DIVISI');
+    if (type === 'total' && (!row.label || isAutoLabel)) updateGolonganRow(row.id, 'label', 'TOTAL');
+    if ((type === 'brand' || type === 'principal') && isAutoLabel) updateGolonganRow(row.id, 'label', '');
   };
 
   const toggleBrand = (name) => {
