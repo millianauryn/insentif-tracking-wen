@@ -188,6 +188,22 @@ function KriteriaTable({ rows, onUpdate, canEdit }) {
   );
 }
 
+function TypeRow({ title, desc, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="ml-6 flex w-[calc(100%-1.5rem)] items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 text-left transition hover:border-brand-200 hover:bg-brand-50/40"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13.5px] font-bold text-ink-900">{title}</span>
+        <span className="block text-[11.5px] text-ink-500">{desc}</span>
+      </span>
+      <Icon size={15}><path d="M9 6l6 6-6 6"/></Icon>
+    </button>
+  );
+}
+
 export default function Documents({
   user, documents, onRefresh, setDocuments,
   onCreate, onUpdate, onSubmit, onLoad, onCancel,
@@ -199,6 +215,7 @@ export default function Documents({
 }) {
   const toast = useToast();
   const [refreshing, setRefreshing] = useState(false);
+  const [docType, setDocType] = useState(null); // null = type picker, 'sales' | 'spv' | 'bm'
   const [positions, setPositions] = useState([]);
   const [masterData, setMasterData] = useState(EMPTY_MASTER);
   const canEdit = ['superadmin', 'officer'].includes(user.role) && documentStatus === 'Draft';
@@ -288,8 +305,58 @@ export default function Documents({
     if ((type === 'brand' || type === 'principal') && isAutoLabel) updateGolonganRow(row.id, 'label', '');
   };
 
+  // Tree-level picker: choose document type first (remounts on every visit to /documents)
+  if (docType === null) {
+    return (
+      <section className="content-card info-card">
+        <div className="section-heading">
+          <div>
+            <h2>Jenis Dokumen</h2>
+            <p>Pilih tipe dokumen yang akan diinput.</p>
+          </div>
+        </div>
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/70 px-4 py-2.5 text-[13.5px] font-bold text-ink-900">
+            <Icon size={15}><path d="M6 3h9l3 3v15H6z"/><path d="M9 11h6M9 15h6"/></Icon>
+            DOKUMEN
+          </div>
+          <div className="space-y-2 p-3">
+            <TypeRow title="Sales" desc="Dokumen insentif salesman — PERHITUNGAN INSENTIF" onClick={() => setDocType('sales')} />
+            <TypeRow title="SPV" desc="Dokumen supervisor — belum tersedia" onClick={() => setDocType('spv')} />
+            <TypeRow title="BM" desc="Dokumen bisnis manager — belum tersedia" onClick={() => setDocType('bm')} />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (docType === 'spv' || docType === 'bm') {
+    const name = docType.toUpperCase();
+    return (
+      <>
+        <div className="mb-3">
+          <button type="button" className="text-button" onClick={() => setDocType(null)}>← Pilih Jenis Dokumen</button>
+        </div>
+        <section className="content-card info-card">
+          <div className="section-heading">
+            <div>
+              <h2>Dokumen {name}</h2>
+              <p>Halaman dokumen {name}.</p>
+            </div>
+          </div>
+          <p className="py-10 text-center text-[13px] text-ink-400">Halaman ini masih kosong — belum ada input untuk {name}.</p>
+        </section>
+      </>
+    );
+  }
+
+  // docType === 'sales' — current editor
   return (
     <>
+      <div className="mb-3 flex items-center gap-3">
+        <button type="button" className="text-button" onClick={() => setDocType(null)}>← Pilih Jenis Dokumen</button>
+        <span className="text-[11px] font-bold uppercase tracking-wide text-ink-400">Dokumen Sales</span>
+      </div>
       <div className="print-header">
         <div className="print-title">
           <h1>PERHITUNGAN INSENTIF</h1>
