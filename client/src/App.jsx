@@ -310,7 +310,7 @@ function App() {
         path="/dashboard"
         element={
           user ? (
-            <Layout title="Dashboard" breadcrumb={['Dashboard']}>
+            <Layout breadcrumb={['Dashboard']}>
               <Dashboard
                 metrics={metrics}
                 documents={documents}

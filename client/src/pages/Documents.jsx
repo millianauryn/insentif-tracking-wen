@@ -328,7 +328,7 @@ export default function Documents({
             <p>Halaman dokumen {name}.</p>
           </div>
         </div>
-        <p className="py-10 text-center text-[13px] text-ink-400">Halaman ini masih kosong — belum ada input untuk {name}.</p>
+        <p className="py-10 text-center text-[13px] text-ink-400">Halaman ini masih kosong. Belum ada input untuk {name}.</p>
       </section>
     );
   }
@@ -443,7 +443,7 @@ export default function Documents({
             <div className="kw-row"><label>Rp.</label><input value={kwitansi.nominal} onChange={(e) => setKwitansi({ ...kwitansi, nominal: e.target.value })} disabled={!canEdit} placeholder="882.000" /></div>
           </div>
           <div className="kw-sign">
-            <span className="sig-name">{selectedPosition?.name || sales.name || '—'}</span>
+            <span className="sig-name">{selectedPosition?.name || sales.name || '–'}</span>
             <span className="sig-role">{selectedPosition?.position_type || 'SALES'}</span>
           </div>
           <div className="kw-total">

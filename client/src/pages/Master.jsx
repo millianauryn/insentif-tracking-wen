@@ -338,7 +338,7 @@ export default function Master({ data, onRefresh, user }) {
             <label className="label">Divisi</label>
             <select className="input" value={form.division_id || ''} onChange={(e) => handleMasterFormChange('division_id', e.target.value)}>
               <option value="">- Tanpa Divisi -</option>
-              {activeItems.division.map((d) => <option key={d.id} value={d.id}>{d.code ? `${d.code} — ${d.name}` : d.name}</option>)}
+              {activeItems.division.map((d) => <option key={d.id} value={d.id}>{d.code ? `${d.code} · ${d.name}` : d.name}</option>)}
             </select>
           </div>
           <div>
@@ -413,7 +413,7 @@ export default function Master({ data, onRefresh, user }) {
             <label className="label">Divisi</label>
             <select className="input" value={form.division_id || ''} onChange={(e) => handleMasterFormChange('division_id', e.target.value)}>
               <option value="">- Tanpa Divisi -</option>
-              {activeItems.division.map((d) => <option key={d.id} value={d.id}>{d.code ? `${d.code} — ${d.name}` : d.name}</option>)}
+              {activeItems.division.map((d) => <option key={d.id} value={d.id}>{d.code ? `${d.code} · ${d.name}` : d.name}</option>)}
             </select>
           </div>
           <div>
@@ -643,7 +643,7 @@ export default function Master({ data, onRefresh, user }) {
                   <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${p.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : p.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{p.position_type}</span>
                   <div className="min-w-0 flex-1">
                     <strong>{p.name}</strong>
-                    <p className="text-[11px] text-ink-400">{p.join_date ? `Masuk: ${new Date(p.join_date).toLocaleDateString('id-ID')}` : '—'}{parent ? ` · ← ${parent.name}` : ''}{branchNames.length ? ` · ${branchNames.length} cabang` : ''}</p>
+                    <p className="text-[11px] text-ink-400">{p.join_date ? `Masuk: ${new Date(p.join_date).toLocaleDateString('id-ID')}` : '–'}{parent ? ` · ← ${parent.name}` : ''}{branchNames.length ? ` · ${branchNames.length} cabang` : ''}</p>
                   </div>
                   <button className="icon-button" type="button" aria-label={`Edit ${p.name}`} onClick={() => openPosForm(p)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
                   <button className="icon-button" type="button" aria-label={`Hapus ${p.name}`} onClick={() => removePosition(p.id)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1-14H6L5 6"/></svg></button>

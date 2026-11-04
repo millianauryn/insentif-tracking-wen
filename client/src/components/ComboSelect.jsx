@@ -45,7 +45,7 @@ export default function ComboSelect({
         autoComplete="off"
       />
       {open && (
-        <span className="absolute left-0 right-0 top-full mt-1 z-20 block rounded-xl border border-slate-200 bg-white shadow-lg">
+        <span data-ui className="absolute left-0 right-0 top-full mt-1 z-20 block rounded-xl border border-slate-200 bg-white shadow-lg">
           <span className="block border-b border-slate-100 px-3 py-2">
             <input
               value={query}

@@ -54,17 +54,28 @@ const config = defineConfig({
     },
     semanticTokens: {
       colors: {
-        'bg.default': { value: 'white' },
-        'bg.canvas': { value: '{colors.canvas}' },
-        'bg.sidebar': { value: '{colors.navy.900}' },
-        'fg.default': { value: '#1d1b2d' },
-        'fg.muted': { value: '#888698' },
-        'fg.subtle': { value: '#aaa7b6' },
-        'border.default': { value: '#e9e8f0' },
-        'brand.solid': { value: '{colors.brand.600}' },
-        'brand.subtle': { value: '{colors.brand.50}' },
-        'accent.solid': { value: '{colors.accent.500}' },
-        'accent.subtle': { value: '{colors.accent.50}' },
+        // Nested keys — flat 'fg.subtle' loses to defaultConfig's nested fg.subtle
+        bg: {
+          default: { value: 'white' },
+          canvas: { value: '{colors.canvas}' },
+          sidebar: { value: '{colors.navy.900}' },
+        },
+        fg: {
+          default: { value: '#1d1b2d' },
+          muted: { value: '#63616f' },
+          subtle: { value: '#706e84' },
+        },
+        border: {
+          default: { value: '#e9e8f0' },
+        },
+        brand: {
+          solid: { value: '{colors.brand.600}' },
+          subtle: { value: '{colors.brand.50}' },
+        },
+        accent: {
+          solid: { value: '{colors.accent.500}' },
+          subtle: { value: '{colors.accent.50}' },
+        },
       },
     },
   },

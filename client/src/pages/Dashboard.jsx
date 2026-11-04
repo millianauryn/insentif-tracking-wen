@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Box, Flex, Text, Button } from '@chakra-ui/react';
+import { Link } from 'react-router-dom';
 import Icon from '../components/Icon';
 import { fromApiPeriod, PERIOD_OPTIONS } from '../lib/period';
 import { listHierarchy } from '../api';
-
-function KpiCard({ icon, label, value, helper, tone }) {
-  const icons = { chart: <path d="M4 19V5M4 19h16M8 15l3-4 3 2 5-6"/>, target: <><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></>, trend: <path d="m4 16 5-5 3 3 7-8M15 6h4v4"/>, document: <><path d="M6 3h9l3 3v15H6z"/><path d="M9 11h6M9 15h6"/></> };
-  return <article className="kpi-card"><div className={`kpi-icon ${tone}`}><Icon>{icons[icon]}</Icon></div><div className="kpi-body"><span>{label}</span><strong>{value}</strong><small>{helper}</small></div><span className={`kpi-trend ${tone}`}>●</span></article>;
-}
 
 // Period options come from lib/period (realtime: prev/current/next month)
 
@@ -14,7 +11,7 @@ function TreeNode({ label, role, count, open, onToggle, depth }) {
   const depthClass = depth === 0 ? 'bg-slate-50/70' : depth === 1 ? 'bg-white hover:bg-slate-50' : 'hover:bg-slate-50';
   return (
     <button onClick={onToggle} className={`flex w-full min-w-0 items-center gap-2.5 px-3 py-2.5 text-left ${depthClass}`}>
-      <span className={`text-[11px] font-bold uppercase tracking-wide ${depth === 0 ? 'text-blue-600' : depth === 1 ? 'text-emerald-600' : 'text-ink-500'}`}>{role}</span>
+      <span className="text-[11px] font-bold uppercase tracking-wide text-ink-500">{role}</span>
       <span className="min-w-0 flex-1 truncate text-[13.5px] font-bold text-ink-900">{label}</span>
       <span className="hidden whitespace-nowrap text-[11.5px] text-ink-400 sm:inline">{count} dokumen</span>
       <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-ink-400 ${open ? 'bg-ink-900 text-white' : 'bg-slate-100'}`}>
@@ -84,86 +81,184 @@ export default function Dashboard({ documents, user, period, setPeriod, onNewDoc
   const totalDocs = visibleDocs.length;
   const draftCount = visibleDocs.filter((d) => d.status === 'Draft').length;
   const finalCount = visibleDocs.filter((d) => d.status === 'Final').length;
+  const totalSales = bmReports.length + bmReports.reduce((sum, spv) => sum + getReports(spv.id).length, 0);
+
+  const kpis = [
+    { label: 'Total Dokumen', value: totalDocs, caption: 'Dokumen tersimpan' },
+    { label: 'Draft', value: draftCount, caption: 'Belum dikirim' },
+    { label: 'Final', value: finalCount, caption: 'Sudah disetujui' },
+    { label: 'Total Sales', value: totalSales, caption: 'Sales aktif' },
+  ];
+
+  const recentDocs = [...visibleDocs].sort((a, b) => b.id - a.id).slice(0, 5);
 
   return (
     <>
-      <header className="dashboard-header">
-        <div>
-          <p className="eyebrow">OVERVIEW / INSENTIF SALES</p>
-          <h1>Selamat datang, {user.username}</h1>
-          <p className="subtitle">Pantau performa penjualan dan dokumen insentif dalam satu tampilan.</p>
-        </div>
-        <div className="topbar-actions">
-          <label className="period-control">Periode<select value={period} onChange={(event) => setPeriod(event.target.value)}>{PERIOD_OPTIONS.map((option) => <option key={option}>{option}</option>)}</select></label>
-        </div>
-      </header>
-      <div className="dashboard-toolbar">
-        <div><h2>Ringkasan Performa</h2><p>Data pencapaian periode {period}</p></div>
-        <button className="button primary" onClick={onNewDoc} disabled={user.role === 'observer'}><Icon size={17}><path d="M12 5v14M5 12h14"/></Icon>Tambah Dokumen</button>
-      </div>
-      <section className="kpi-grid">
-        <KpiCard icon="chart" label="Total Dokumen" value={totalDocs.toString().padStart(2, '0')} helper="Dokumen tersimpan" tone="blue" />
-        <KpiCard icon="target" label="Draft" value={draftCount} helper="Belum dikirim" tone="purple" />
-        <KpiCard icon="trend" label="Final" value={finalCount} helper="Sudah disetujui" tone="green" />
-        <KpiCard icon="document" label="Total Sales" value={(bmReports.length + bmReports.reduce((sum, spv) => sum + getReports(spv.id).length, 0)).toString().padStart(2, '0')} helper="Sales aktif" tone="orange" />
-      </section>
+      {/* Title row: noun + grey line, the one primary action right */}
+      <Flex direction={{ base: 'column', lg: 'row' }} justify="space-between" align={{ lg: 'flex-end' }} gap={3}>
+        <Box minW={0}>
+          <Text as="h1" fontSize="24px" fontWeight="700" letterSpacing="-0.02em" color="fg.default" lineHeight="1.2">
+            Dashboard
+          </Text>
+          <Text mt={1.5} fontSize="15px" color="fg.muted">
+            Pantau performa penjualan dan dokumen insentif periode {period}.
+          </Text>
+        </Box>
+        <button
+          className="button primary"
+          onClick={onNewDoc}
+          disabled={user.role === 'observer'}
+          style={{ flexShrink: 0 }}
+        >
+          <Icon size={17}><path d="M12 5v14M5 12h14"/></Icon>Tambah Dokumen
+        </button>
+      </Flex>
 
-      {/* Hierarchy tree: BM → SPV → Sales */}
-      <section className="content-card info-card">
-        <div className="section-heading">
-          <div className="section-icon orange"><Icon><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h4"/></Icon></div>
-          <div><h2>Struktur Organisasi</h2><p>BM → SPV → Sales</p></div>
-        </div>
-        <div className="space-y-1">
-          {rootUser ? (
-            // Hierarchy mode: BM → SPV → Sales from chain + subordinates
-            <div>
-              <TreeNode label={rootUser.username} role="BM" count={visibleDocs.filter((d) => d.owner_id === rootUser.id).length} open={open[`bm:${rootUser.id}`]} onToggle={() => toggle(`bm:${rootUser.id}`)} depth={0} />
-              {open[`bm:${rootUser.id}`] && (
-                <div className="px-3 py-1 space-y-1">
-                  {visibleDocs.filter((d) => d.owner_id === rootUser.id).map((doc) => <DocRow key={doc.id} doc={doc} onClick={() => onLoadDoc?.(doc)} />)}
-                  {bmReports.map((spv) => (
-                    <div key={spv.id}>
-                      <TreeNode label={spv.username} role="SPV" count={visibleDocs.filter((d) => d.owner_id === spv.id).length} open={open[`spv:${spv.id}`]} onToggle={() => toggle(`spv:${spv.id}`)} depth={1} />
-                      {open[`spv:${spv.id}`] && (
-                        <div className="px-6 py-1 space-y-1">
-                          {visibleDocs.filter((d) => d.owner_id === spv.id).map((doc) => <DocRow key={doc.id} doc={doc} onClick={() => onLoadDoc?.(doc)} />)}
-                          {getReports(spv.id).map((sales) => (
-                            <div key={sales.id}>
-                              <TreeNode label={sales.username} role="Sales" count={visibleDocs.filter((d) => d.owner_id === sales.id).length} open={open[`sales:${sales.id}`]} onToggle={() => toggle(`sales:${sales.id}`)} depth={2} />
-                              {open[`sales:${sales.id}`] && (
-                                <div className="px-9 py-1 space-y-1">
-                                  {visibleDocs.filter((d) => d.owner_id === sales.id).map((doc) => <DocRow key={doc.id} doc={doc} onClick={() => onLoadDoc?.(doc)} />)}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+      {/* Scope row: the period control */}
+      <label className="period-control" style={{ marginTop: 20 }}>
+        Periode<select value={period} onChange={(event) => setPeriod(event.target.value)}>{PERIOD_OPTIONS.map((option) => <option key={option}>{option}</option>)}</select>
+      </label>
+
+      <Flex direction={{ base: 'column', lg: 'row' }} gap={6} alignItems="flex-start" mt={6}>
+        <Box flex="1" minW={0}>
+          {/* KPI strip: one container split by 1px dividers */}
+          <Box
+            display="grid"
+            gridTemplateColumns={{ base: '1fr 1fr', md: 'repeat(4, 1fr)' }}
+            gap="1px"
+            bg="border.default"
+            borderWidth={1}
+            borderColor="border.default"
+            rounded="lg"
+            overflow="hidden"
+            mb={4}
+          >
+            {kpis.map((kpi) => (
+              <Box key={kpi.label} bg="white" px={5} py={4}>
+                <Text fontSize="14px" color="fg.muted">{kpi.label}</Text>
+                <Text mt={1} fontSize="24px" fontWeight="500" lineHeight="1.2" fontVariantNumeric="tabular-nums" color="fg.default">
+                  {kpi.value}
+                </Text>
+                <Text mt={1} fontSize="13px" color="fg.subtle">{kpi.caption}</Text>
+              </Box>
+            ))}
+          </Box>
+
+          {/* Hierarchy tree: BM → SPV → Sales */}
+          <section className="content-card info-card">
+            <div className="section-heading">
+              <div><h2>Struktur Organisasi</h2><p>BM → SPV → Sales</p></div>
             </div>
-          ) : (
-            // Fallback: no hierarchy set up yet, show by salesman
-            Object.entries(bySalesman).map(([salesman, docs]) => {
-              const smOpen = open[`bm:${salesman}`];
-              return (
-                <div key={salesman}>
-                  <TreeNode label={salesman} role="BM" count={docs.length} open={smOpen} onToggle={() => toggle(`bm:${salesman}`)} depth={0} />
-                  {smOpen && (
+            <div className="space-y-1">
+              {rootUser ? (
+                // Hierarchy mode: BM → SPV → Sales from chain + subordinates
+                <div>
+                  <TreeNode label={rootUser.username} role="BM" count={visibleDocs.filter((d) => d.owner_id === rootUser.id).length} open={open[`bm:${rootUser.id}`]} onToggle={() => toggle(`bm:${rootUser.id}`)} depth={0} />
+                  {open[`bm:${rootUser.id}`] && (
                     <div className="px-3 py-1 space-y-1">
-                      {docs.map((doc) => <DocRow key={doc.id} doc={doc} onClick={() => onLoadDoc?.(doc)} />)}
+                      {visibleDocs.filter((d) => d.owner_id === rootUser.id).map((doc) => <DocRow key={doc.id} doc={doc} onClick={() => onLoadDoc?.(doc)} />)}
+                      {bmReports.map((spv) => (
+                        <div key={spv.id}>
+                          <TreeNode label={spv.username} role="SPV" count={visibleDocs.filter((d) => d.owner_id === spv.id).length} open={open[`spv:${spv.id}`]} onToggle={() => toggle(`spv:${spv.id}`)} depth={1} />
+                          {open[`spv:${spv.id}`] && (
+                            <div className="px-6 py-1 space-y-1">
+                              {visibleDocs.filter((d) => d.owner_id === spv.id).map((doc) => <DocRow key={doc.id} doc={doc} onClick={() => onLoadDoc?.(doc)} />)}
+                              {getReports(spv.id).map((sales) => (
+                                <div key={sales.id}>
+                                  <TreeNode label={sales.username} role="Sales" count={visibleDocs.filter((d) => d.owner_id === sales.id).length} open={open[`sales:${sales.id}`]} onToggle={() => toggle(`sales:${sales.id}`)} depth={2} />
+                                  {open[`sales:${sales.id}`] && (
+                                    <div className="px-9 py-1 space-y-1">
+                                      {visibleDocs.filter((d) => d.owner_id === sales.id).map((doc) => <DocRow key={doc.id} doc={doc} onClick={() => onLoadDoc?.(doc)} />)}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
-              );
-            })
+              ) : (
+                // Fallback: no hierarchy set up yet, show by salesman
+                Object.entries(bySalesman).map(([salesman, docs]) => {
+                  const smOpen = open[`bm:${salesman}`];
+                  return (
+                    <div key={salesman}>
+                      <TreeNode label={salesman} role="BM" count={docs.length} open={smOpen} onToggle={() => toggle(`bm:${salesman}`)} depth={0} />
+                      {smOpen && (
+                        <div className="px-3 py-1 space-y-1">
+                          {docs.map((doc) => <DocRow key={doc.id} doc={doc} onClick={() => onLoadDoc?.(doc)} />)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            {totalDocs === 0 && <p className="subtitle text-center py-8">Belum ada dokumen. Klik "Tambah Dokumen" untuk mulai.</p>}
+          </section>
+        </Box>
+
+        {/* Rail: recent documents on a 45px pitch, closed by an outlined View all */}
+        <Box w={{ base: '100%', lg: '384px' }} flexShrink={0}>
+          <Text as="h2" fontSize="16px" fontWeight="700" color="fg.default" mb={4}>
+            Dokumen terbaru
+          </Text>
+          {recentDocs.length === 0 && (
+            <Text fontSize="13px" color="fg.subtle" py={3}>Belum ada dokumen.</Text>
           )}
-        </div>
-        {totalDocs === 0 && <p className="subtitle text-center py-8">Belum ada dokumen. Klik "Tambah Dokumen" untuk mulai.</p>}
-      </section>
+          {recentDocs.map((doc) => (
+            <Box
+              key={doc.id}
+              as="button"
+              type="button"
+              onClick={() => onLoadDoc?.(doc)}
+              w="100%"
+              h="45px"
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              gap={2}
+              px={1}
+              borderBottomWidth={1}
+              borderBottomColor="border.default"
+              bg="transparent"
+              textAlign="left"
+              _hover={{ bg: 'white' }}
+            >
+              <Box minW={0}>
+                <Text truncate fontSize="13px" fontWeight="600" color="fg.default">{doc.salesman || 'Tanpa nama'}</Text>
+                <Text truncate fontSize="11px" color="fg.subtle">{fromApiPeriod(doc.period)} · {doc.product || '–'}</Text>
+              </Box>
+              <Text
+                shrink={0}
+                fontSize="11.5px"
+                fontWeight="600"
+                color={doc.status === 'Final' ? 'brand.700' : 'fg.subtle'}
+              >
+                {doc.status}
+              </Text>
+            </Box>
+          ))}
+          {recentDocs.length > 0 && (
+            <Button
+              as={Link}
+              to="/documents/sales"
+              variant="outline"
+              size="sm"
+              w="100%"
+              h="30px"
+              mt={3}
+              fontSize="12px"
+              fontWeight="600"
+            >
+              Lihat semua
+            </Button>
+          )}
+        </Box>
+      </Flex>
     </>
   );
 }

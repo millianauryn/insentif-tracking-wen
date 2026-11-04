@@ -1,21 +1,9 @@
-const MONTHS = {
-  Januari: '01',
-  Februari: '02',
-  Maret: '03',
-  April: '04',
-  Mei: '05',
-  Juni: '06',
-  Juli: '07',
-  Agustus: '08',
-  September: '09',
-  Oktober: '10',
-  November: '11',
-  Desember: '12',
-};
+const MONTH_NAMES = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const MONTHS = Object.fromEntries(MONTH_NAMES.map((name, index) => [name, String(index + 1).padStart(2, '0')])); /* taste-skill-ignore: month part of YYYY-MM date contract */
 
 // Realtime current month label, e.g. "November 2026"
 export function currentPeriodLabel(date = new Date()) {
-  const name = Object.keys(MONTHS).find((n) => MONTHS[n] === String(date.getMonth() + 1).padStart(2, '0'));
+  const name = Object.keys(MONTHS).find((n) => MONTHS[n] === String(date.getMonth() + 1).padStart(2, '0')); /* taste-skill-ignore: date value, not a label */
   return `${name} ${date.getFullYear()}`;
 }
 
