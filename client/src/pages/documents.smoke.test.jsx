@@ -51,15 +51,19 @@ describe('Documents render smoke', () => {
   it('Layout + sidebar render without crashing (user logged in)', async () => {
     const { MemoryRouter } = await import('react-router-dom');
     const { AuthProvider } = await import('../context/AuthContext');
+    const { ChakraProvider } = await import('@chakra-ui/react');
+    const { system } = await import('../theme');
     const Layout = (await import('../components/Layout')).default;
     const html = renderToString(
-      <MemoryRouter initialEntries={['/documents/sales']}>
-        <AuthProvider>
-          <Layout title="Dokumen Insentif" breadcrumb={['Dokumen', 'SALES']}>
-            <div>child</div>
-          </Layout>
-        </AuthProvider>
-      </MemoryRouter>
+      <ChakraProvider value={system}>
+        <MemoryRouter initialEntries={['/documents/sales']}>
+          <AuthProvider>
+            <Layout title="Dokumen Insentif" breadcrumb={['Dokumen', 'SALES']}>
+              <div>child</div>
+            </Layout>
+          </AuthProvider>
+        </MemoryRouter>
+      </ChakraProvider>
     );
     expect(html).toContain('Dokumen');
     expect(html).toContain('Sales');
