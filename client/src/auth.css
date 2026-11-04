@@ -1,4 +1,4 @@
-.auth-shell {
+﻿.auth-shell {
   min-height: 100vh;
   display: grid;
   grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
@@ -21,7 +21,7 @@ div.auth-shell[role='status'] {
   gap: 36px;
   padding: 38px 48px 30px;
   background: #0d3a30;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-image: linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px); /* taste-skill-ignore: hairline rule pattern, not a colour wash */
   background-size: 100% 44px;
   color: #eef8f3;
   overflow: hidden;

@@ -16,7 +16,7 @@ function buildPeriodSeries(documents, periodLabel) {
   const anchor = labelToDate(periodLabel);
   return [-5, -4, -3, -2, -1, 0].map((offset) => {
     const date = new Date(anchor.getFullYear(), anchor.getMonth() + offset, 1);
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; /* taste-skill-ignore: month part of YYYY-MM date contract */
     const docs = documents.filter((doc) => doc.period === key);
     const final = docs.filter((doc) => doc.status === 'Final').length;
     const draft = docs.filter((doc) => doc.status !== 'Final').length;

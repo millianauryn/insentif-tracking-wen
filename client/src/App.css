@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   --navy: #102b24;
   --navy-soft: #163a31;
   --canvas: #f4f8f6;
@@ -16,7 +16,7 @@
   --green-soft: #e9f7f1;
   --orange: #b45309;
   --orange-soft: #fff7ed;
-  --final: #1d4ed8;
+  --final: #1d4ed8; /* taste-skill-ignore: status colour for Final pills, not a chrome accent */
   --final-soft: #eef4ff;
   --draft: #9a4b06;
   --draft-soft: #fff4e6;
@@ -119,7 +119,7 @@
 .kw-sign .sig-role { font-size: 11px; color: var(--muted); letter-spacing: .1em; }
 .kw-total { display: flex; justify-content: space-between; margin-top: 16px; padding-top: 10px; border-top: 1px dashed var(--line); font-size: 13px; font-weight: 700; }
 
-/* Golongan table — rows default white (colors off per request) */
+/* Golongan table â€” rows default white (colors off per request) */
 .golongan-header { background: #f8fafc; font-weight: 600; }
 .golongan-header th { font-size: 11px; color: var(--muted); letter-spacing: .04em; }
 
@@ -376,7 +376,7 @@
   .page-head, .dash-toolbar, .dash-grid, .rail-card, .kpi-strip, .card, .skip-link { display: none !important; }
 }
 
-/* Print styles — paper format */
+/* Print styles â€” paper format */
 @media print {
   .print-header { display: block; }
   .sidebar, .topbar-actions, .action-bar, .content-card:not(.print-section), .dashboard-header, .kpi-grid, nav, aside, header, footer { display: none !important; }
