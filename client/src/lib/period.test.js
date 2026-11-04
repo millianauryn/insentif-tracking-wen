@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toApiPeriod, fromApiPeriod, PERIOD_OPTIONS, monthsOfYear } from './period'
+import { toApiPeriod, fromApiPeriod, PERIOD_OPTIONS, monthNames } from './period'
 
 describe('period helpers', () => {
   it('converts Indonesian month labels to YYYY-MM', () => {
@@ -28,13 +28,10 @@ describe('period helpers', () => {
     expect(fromApiPeriod('bogus')).toBe('bogus')
   })
 
-  it('monthsOfYear returns 12 labels that round-trip', () => {
-    const months = monthsOfYear(2026)
-    expect(months).toHaveLength(12)
-    expect(months[0]).toBe('Januari 2026')
-    expect(months[11]).toBe('Desember 2026')
-    for (const m of months) {
-      expect(fromApiPeriod(toApiPeriod(m))).toBe(m)
-    }
+  it('monthNames returns 12 bare month labels', () => {
+    const names = monthNames()
+    expect(names).toHaveLength(12)
+    expect(names[0]).toBe('Januari')
+    expect(names[11]).toBe('Desember')
   })
 })

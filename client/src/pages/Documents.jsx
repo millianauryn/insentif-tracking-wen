@@ -8,7 +8,7 @@ import PickerChips from '../components/PickerChips';
 import ComboSelect from '../components/ComboSelect';
 import { listPositions, listMasterData } from '../api';
 import { computeTotalFor, computeGrandTotal, principalValueFor } from '../lib/golongan';
-import { monthsOfYear } from '../lib/period';
+import { monthNames } from '../lib/period';
 
 const JENIS_OPTIONS = [
   { value: 'brand', label: 'Brand' },
@@ -289,6 +289,12 @@ export default function Documents({
     if ((type === 'brand' || type === 'principal') && isAutoLabel) updateGolonganRow(row.id, 'label', '');
   };
 
+  // Picking a month keeps the typed year (or the current year) — year stays manual
+  const pickMonth = (monthName) => {
+    const year = /(\d{4})$/.exec(period || '')?.[1] || String(new Date().getFullYear());
+    setPeriod(`${monthName} ${year}`);
+  };
+
   // SPV / BM pages are placeholders for now (switch via sidebar tree)
   if (docType === 'spv' || docType === 'bm') {
     const name = docType.toUpperCase();
@@ -353,9 +359,9 @@ export default function Documents({
             Bulan
             <ComboSelect
               value={period}
-              onChange={setPeriod}
-              options={monthsOfYear().map((m) => ({ value: m }))}
-              placeholder="Pilih atau ketik bulan..."
+              onChange={pickMonth}
+              options={monthNames().map((m) => ({ value: m }))}
+              placeholder="Pilih bulan, ketik tahunnya..."
               disabled={!canEdit}
               emptyHint="Tidak ada bulan cocok."
             />

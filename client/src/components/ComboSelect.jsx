@@ -14,7 +14,13 @@ export default function ComboSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
 
-  const filtered = options.filter((o) => o.value.toLowerCase().includes(query.trim().toLowerCase()));
+  // Also match on the query without a trailing year, so "Februari 2027" still shows "Februari"
+  const q = query.trim().toLowerCase();
+  const qBase = q.replace(/\s+\d{4}$/, '');
+  const filtered = options.filter((o) => {
+    const v = o.value.toLowerCase();
+    return v.includes(q) || (qBase !== q && v.includes(qBase));
+  });
 
   const pick = (v) => {
     onChange(v);
