@@ -1,4 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
 import {
   createDivision, updateDivision, deleteDivision,
   createPrincipal, updatePrincipal, deletePrincipal,
@@ -475,7 +478,7 @@ export default function Master({ data, onRefresh, user }) {
           <p className="master-name">{item.name}</p>
           {subtitle && <p className="master-sub">{subtitle}</p>}
         </div>
-        <span className={`status-pill ${isActive ? 'success' : 'muted'}`}>{statusText}</span>
+        <Badge className={`status-pill ${isActive ? 'success' : 'muted'}`}>{statusText}</Badge>
         <div className="master-actions">
           <button className="icon-action" onClick={() => openEditForm(item, tab)} aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`}>
             <Icon size={15}><path d="M12 20h9M19.5 14.5L16 11l7-7M21 3a2 2 0 0 1 2 2v9M5 15l4 4 9-9"/></Icon>
@@ -523,7 +526,7 @@ export default function Master({ data, onRefresh, user }) {
             )}
           </div>
 
-          <button className="button primary" type="submit" disabled={masterBusy}>{masterBusy ? 'Menyimpan...' : editingUser ? 'Simpan Perubahan' : 'Tambah Akun'}</button>
+          <Button className="button primary" type="submit" disabled={masterBusy}>{masterBusy ? 'Menyimpan...' : editingUser ? 'Simpan Perubahan' : 'Tambah Akun'}</Button>
           {editingUser && <button className="text-button" type="button" onClick={cancelEdit}>Batal</button>}
         </form>
       </section>
@@ -561,9 +564,9 @@ export default function Master({ data, onRefresh, user }) {
             <p>Kelola jabatan BM, SPV, dan SALES dengan hierarki dan cabang.</p>
           </div>
           {!posForm && (
-            <button className="button primary" onClick={() => openPosForm()}>
+            <Button className="button primary" onClick={() => openPosForm()}>
               <Icon size={15}><path d="M12 5v14M5 12h14"/></Icon> Tambah Jabatan
-            </button>
+            </Button>
           )}
         </div>
 
@@ -611,8 +614,8 @@ export default function Master({ data, onRefresh, user }) {
             <div>
               <label className="text-[13px] font-semibold">Kriteria Dokumen *</label>
               <div className="flex gap-1.5 mt-1 mb-2">
-                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, criteria_ids: criteria.map((c) => c.id) })}>Semua</button>
-                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, criteria_ids: [] })}>Kosongkan</button>
+                <Button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, criteria_ids: criteria.map((c) => c.id) })}>Semua</Button>
+                <Button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, criteria_ids: [] })}>Kosongkan</Button>
               </div>
               <div className="max-h-[200px] overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-2">
                 {criteria.map((c) => {
@@ -628,8 +631,8 @@ export default function Master({ data, onRefresh, user }) {
             </div>
             {posError && <p className="form-error" role="alert">{posError}</p>}
             <div className="flex justify-end gap-2">
-              <button type="button" className="button" onClick={closePosForm}>Batal</button>
-              <button type="submit" className="button primary" disabled={posBusy}>{posBusy ? 'Menyimpan...' : 'Simpan'}</button>
+              <Button type="button" className="button" onClick={closePosForm}>Batal</Button>
+              <Button type="submit" className="button primary" disabled={posBusy}>{posBusy ? 'Menyimpan...' : 'Simpan'}</Button>
             </div>
           </form>
         )}
@@ -691,28 +694,32 @@ export default function Master({ data, onRefresh, user }) {
         </div>
 
         {isMasterTab && (
-          <div className="master-tabs" aria-label="Sub-tab data master">
-            {masterTabs.map((t) => (
-              <button key={t.key} className={tab === t.key ? 'active' : ''} onClick={() => { setTab(t.key); closeMasterForm(); }}>{t.icon} {t.label}</button>
-            ))}
-          </div>
+          <Tabs value={tab} onValueChange={(v) => { setTab(v); closeMasterForm(); }}>
+            <TabsList className="master-tabs" aria-label="Sub-tab data master">
+              {masterTabs.map((t) => (
+                <TabsTrigger key={t.key} value={t.key} className={tab === t.key ? 'active' : ''}>{t.icon} {t.label}</TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         )}
 
         {!isMasterTab && (
-          <div className="master-tabs" aria-label="Sub-tab data master">
-            {masterTabs.map((t) => (
-              <button key={t.key} className={tab === t.key ? 'active' : ''} onClick={() => { setTab(t.key); closeMasterForm(); }}>{t.icon} {t.label}</button>
-            ))}
-          </div>
+          <Tabs value={tab} onValueChange={(v) => { setTab(v); closeMasterForm(); }}>
+            <TabsList className="master-tabs" aria-label="Sub-tab data master">
+              {masterTabs.map((t) => (
+                <TabsTrigger key={t.key} value={t.key} className={tab === t.key ? 'active' : ''}>{t.icon} {t.label}</TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         )}
 
         {tab === 'users' ? renderUserSection() : tab === 'positions' ? renderPositionsSection() : tab === 'criteria' ? renderCriteriaSection() : (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <input type="text" className="input flex-1 min-w-[200px]" placeholder="Cari nama, kode, alamat…" value={masterSearch} onChange={(e) => { setMasterSearch(e.target.value); setMasterPage(1); }} />
-              <button className="button primary whitespace-nowrap" onClick={() => openCreateForm(tab)}>
+              <Button className="button primary whitespace-nowrap" onClick={() => openCreateForm(tab)}>
                 <Icon size={15}><path d="M12 5v14M5 12h14"/></Icon> {config.createLabel}
-              </button>
+              </Button>
             </div>
 
             <ul className="master-table">
@@ -737,8 +744,8 @@ export default function Master({ data, onRefresh, user }) {
                   <option value={25}>25 per halaman</option>
                   <option value={50}>50 per halaman</option>
                 </select>
-                <button className="button" disabled={masterPage <= 1} onClick={() => setMasterPage((p) => Math.max(1, p - 1))}>Sebelumnya</button>
-                <button className="button" disabled={masterPage >= totalPages} onClick={() => setMasterPage((p) => Math.min(totalPages, p + 1))}>Selanjutnya</button>
+                <Button className="button" disabled={masterPage <= 1} onClick={() => setMasterPage((p) => Math.max(1, p - 1))}>Sebelumnya</Button>
+                <Button className="button" disabled={masterPage >= totalPages} onClick={() => setMasterPage((p) => Math.min(totalPages, p + 1))}>Selanjutnya</Button>
               </div>
             </div>
 
@@ -753,8 +760,8 @@ export default function Master({ data, onRefresh, user }) {
                     {config.fields(masterForm)}
                     {userError && <p className="form-error" role="alert">{userError}</p>}
                     <div className="flex justify-end gap-2 pt-2">
-                      <button type="button" className="button" onClick={closeMasterForm}>Batal</button>
-                      <button type="submit" className="button primary" disabled={masterBusy}>{masterBusy ? 'Menyimpan...' : 'Simpan'}</button>
+                      <Button type="button" className="button" onClick={closeMasterForm}>Batal</Button>
+                      <Button type="submit" className="button primary" disabled={masterBusy}>{masterBusy ? 'Menyimpan...' : 'Simpan'}</Button>
                     </div>
                   </form>
                 </div>

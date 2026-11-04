@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Database, FileText, GitBranch, Printer } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import { useAuth } from '../context/AuthContext';
 import { errMsg } from '../lib/api';
 
@@ -58,7 +60,6 @@ export default function Login() {
         </div>
 
         <div className="auth-brand-body">
-          <p className="auth-eyebrow">Ruang kerja insentif</p>
           <h2>Rekap insentif yang rapi, dari draft sampai final.</h2>
           <p className="auth-lead">
             Catat target, capaian, dan insentif per wilayah, sales, dan periode — lalu cetak
@@ -92,7 +93,7 @@ export default function Login() {
 
           <label htmlFor="username">
             Username
-            <input
+            <Input
               id="username"
               value={username}
               onChange={(event) => setUsername(event.target.value)}
@@ -106,7 +107,7 @@ export default function Login() {
           <label htmlFor="password">
             Password
             <div className="password-wrapper">
-              <input
+              <Input
                 ref={passwordRef}
                 id="password"
                 type={showPassword ? 'text' : 'password'}
@@ -116,8 +117,10 @@ export default function Login() {
                 minLength="6"
                 required
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 className="password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
                 aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
@@ -127,23 +130,23 @@ export default function Login() {
                 ) : (
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 )}
-              </button>
+              </Button>
             </div>
           </label>
 
           {error && <p className="form-error" role="alert">{error}</p>}
 
-          <button className="button primary" type="submit" disabled={submitting || !username.trim() || password.length < 6}>
+          <Button className="button primary" type="submit" disabled={submitting || !username.trim() || password.length < 6}>
             {submitting ? 'Memeriksa...' : 'Masuk'}
-          </button>
+          </Button>
 
           {import.meta.env.DEV && (
             <div className="dev-login">
               <p className="subtitle">Masuk cepat (pengembangan)</p>
               {['super', 'officer', 'direksi'].map((name) => (
-                <button key={name} type="button" className="button" onClick={() => handleDevLogin(name)}>
+                <Button key={name} type="button" className="button" onClick={() => handleDevLogin(name)}>
                   Masuk sebagai {name}
-                </button>
+                </Button>
               ))}
             </div>
           )}

@@ -10,7 +10,7 @@ div.auth-shell[role='status'] {
   place-items: center;
   padding: 24px;
   font-size: 14px;
-  color: var(--muted);
+  color: var(--grey);
 }
 
 .auth-brand {
@@ -55,24 +55,13 @@ div.auth-shell[role='status'] {
 
 .auth-brand-name small {
   margin-top: 2px;
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: #9cc6b7;
 }
 
 .auth-brand-body {
   max-width: 500px;
-}
-
-.auth-eyebrow {
-  margin: 0 0 12px;
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: #93c4b3;
 }
 
 .auth-brand-body h2 {
@@ -154,7 +143,7 @@ div.auth-shell[role='status'] {
   border: 1px solid var(--line);
   border-radius: 14px;
   background: #fff;
-  box-shadow: 0 1px 2px rgba(16, 32, 26, 0.04), 0 18px 40px -34px rgba(16, 32, 26, 0.35);
+  
 }
 
 .auth-card-head h1 {
@@ -169,7 +158,7 @@ div.auth-shell[role='status'] {
   margin: 6px 0 0;
   font-size: 13px;
   line-height: 1.5;
-  color: var(--muted);
+  color: var(--grey);
 }
 
 .auth-card label {
@@ -197,7 +186,7 @@ div.auth-shell[role='status'] {
 .auth-card input:focus {
   outline: none;
   border-color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(15, 107, 88, 0.12);
+  outline: 2px solid rgba(15, 107, 88, 0.25); outline-offset: 1px;
 }
 
 .auth-card .button {

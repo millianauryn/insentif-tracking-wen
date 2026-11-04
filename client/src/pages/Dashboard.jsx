@@ -1,4 +1,7 @@
 import { Link } from 'react-router-dom';
+import { Button, buttonVariants } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { cn } from 'cn';
 import Icon from '../components/Icon';
 import { fromApiPeriod } from '../lib/period';
 
@@ -89,10 +92,10 @@ export default function Dashboard({ documents = [], user, period, onNewDoc, onLo
           <p>Ringkasan dokumen dan status insentif tim.</p>
         </div>
         <div className="page-head-actions">
-          <Link className="button secondary" to="/documents/sales">Lihat semua dokumen</Link>
-          <button className="button primary" onClick={onNewDoc} disabled={user?.role === 'observer'}>
+          <Link className={cn(buttonVariants({ variant: 'outline' }), 'h-9 px-4')} to="/documents/sales">Lihat semua dokumen</Link>
+          <Button onClick={onNewDoc} disabled={user?.role === 'observer'} className="h-9 px-4">
             <Icon size={16}><path d="M12 5v14M5 12h14" /></Icon>Tambah Dokumen
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -122,7 +125,7 @@ export default function Dashboard({ documents = [], user, period, onNewDoc, onLo
               </div>
               <div className="status-flex">
                 <div className="donut-wrap">
-                  <svg viewBox="0 0 128 128" width="112" height="112" role="img" aria-label={`${totalDocs} dokumen: ${finalCount} final dan ${draftCount} draft`}>
+                  <svg viewBox="0 0 128 128" width="150" height="150" role="img" aria-label={`${totalDocs} dokumen: ${finalCount} final dan ${draftCount} draft`}>
                     <circle cx="64" cy="64" r={donutRadius} fill="none" stroke="#edf2ef" strokeWidth="13" />
                     {finalCount > 0 && (
                       <circle
@@ -253,14 +256,11 @@ export default function Dashboard({ documents = [], user, period, onNewDoc, onLo
                     className="recent-row"
                     onClick={() => onLoadDoc?.(doc)}
                   >
-                    <span className="recent-icon" aria-hidden="true">
-                      <Icon size={15}><path d="M4 5h16v14H4z" /><path d="M8 10h8M8 14h5" /></Icon>
-                    </span>
                     <span className="recent-main">
                       <span className="recent-name">{doc.salesman || 'Tanpa nama'}</span>
                       <span className="recent-meta">{fromApiPeriod(doc.period)} · {doc.product || '–'}</span>
                     </span>
-                    <span className={`status-pill ${doc.status === 'Final' ? 'final' : 'draft'}`}>{doc.status}</span>
+                    <Badge className={doc.status === 'Final' ? 'bg-[var(--final-soft)] text-[var(--final)] hover:bg-[var(--final-soft)]' : 'bg-[var(--draft-soft)] text-[var(--draft)] hover:bg-[var(--draft-soft)]'}>{doc.status}</Badge>
                   </button>
                 ))}
               </div>
@@ -268,7 +268,7 @@ export default function Dashboard({ documents = [], user, period, onNewDoc, onLo
               <EmptyState title="Belum ada dokumen" copy="Dokumen terbaru akan muncul di sini." />
             )}
             {recentDocs.length > 0 && (
-              <Link className="button secondary rail-all" to="/documents/sales">Lihat semua</Link>
+              <Link className={cn(buttonVariants({ variant: 'outline' }), 'h-8 w-full')} to="/documents/sales">Lihat semua</Link>
             )}
           </div>
         </aside>

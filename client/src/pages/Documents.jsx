@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Button } from '../components/ui/button';
 import { canFinalizeDocument } from '../access';
 import { fromApiPeriod } from '../lib/period';
 import { useToast } from '../components/Toast';
@@ -137,9 +138,9 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, canEdit
       </table>
       {canEdit && (
         <div className="flex justify-end mt-3">
-          <button className="button secondary text-[12px] py-1.5 px-3" onClick={() => onAdd('brand')}>
+          <Button className="button secondary text-[12px] py-1.5 px-3" onClick={() => onAdd('brand')}>
             <Icon size={14}><path d="M12 5v14M5 12h14"/></Icon> Tambah Baris
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -350,16 +351,16 @@ export default function Documents({
           </div>
         </div>
         <div className="page-head-actions">
-          <button className="button secondary" type="button" onClick={handlePrint}>
+          <Button className="button secondary" type="button" onClick={handlePrint}>
             <Icon size={15}><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5h20v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></Icon>
             Cetak
-          </button>
-          <button className="button primary" type="button" onClick={save} disabled={!canEdit}>
+          </Button>
+          <Button className="button primary" type="button" onClick={save} disabled={!canEdit}>
             <Icon size={16}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></Icon>
             {documentId ? 'Simpan Perubahan' : 'Simpan Draft'}
-          </button>
+          </Button>
           {canFinalize && (
-            <button className="button secondary" type="button" onClick={onSubmit} disabled={!documentId}>Finalisasi</button>
+            <Button className="button secondary" type="button" onClick={onSubmit} disabled={!documentId}>Finalisasi</Button>
           )}
         </div>
       </div>
@@ -367,7 +368,7 @@ export default function Documents({
       <div className="print-header">
         <div className="print-title">
           <h1>PERHITUNGAN INSENTIF</h1>
-          <button className="button primary" onClick={handlePrint}>Cetak</button>
+          <Button className="button primary" onClick={handlePrint}>Cetak</Button>
         </div>
       </div>
 
@@ -488,8 +489,8 @@ export default function Documents({
             <p>Buka dokumen lama untuk dilanjutkan.</p>
           </div>
           <div className="flex gap-2">
-            <button className="button secondary" type="button" onClick={refreshList} disabled={refreshing}>{refreshing ? 'Memuat...' : 'Muat Ulang'}</button>
-            <button className="button primary" type="button" onClick={onCancel}>Dokumen Baru</button>
+            <Button className="button secondary" type="button" onClick={refreshList} disabled={refreshing}>{refreshing ? 'Memuat...' : 'Muat Ulang'}</Button>
+            <Button className="button primary" type="button" onClick={onCancel}>Dokumen Baru</Button>
           </div>
         </div>
         {documents.length ? (
@@ -514,12 +515,12 @@ export default function Documents({
       <footer className="action-bar">
         <div className="autosave"><span className="save-dot" />{saved ? 'Draft tersimpan' : 'Draft belum disimpan'}</div>
         <div className="actions">
-          <button className="button secondary" onClick={onCancel}>Batal</button>
-          <button className="button primary" onClick={save} disabled={!canEdit}>
+          <Button className="button secondary" onClick={onCancel}>Batal</Button>
+          <Button className="button primary" onClick={save} disabled={!canEdit}>
             <Icon size={17}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></Icon>
             {documentId ? 'Simpan Perubahan' : 'Simpan Draft'}
-          </button>
-          {canFinalize && <button className="button secondary" onClick={onSubmit} disabled={!documentId}>Finalisasi</button>}
+          </Button>
+          {canFinalize && <Button className="button secondary" onClick={onSubmit} disabled={!documentId}>Finalisasi</Button>}
         </div>
       </footer>
     </>

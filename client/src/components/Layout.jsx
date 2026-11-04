@@ -73,12 +73,12 @@ function SideNav({ onNavigate }) {
         </div>
         <div className="leading-tight">
           <p className="text-[13.5px] font-extrabold tracking-[-0.015em] text-ink-900">Insetive Tracking</p>
-          <p className="mt-[2px] text-[10px] font-semibold uppercase tracking-[0.07em] text-ink-400">Insentif Sales</p>
+          <p className="mt-[2px] text-[11px] font-semibold text-ink-400">Insentif Sales</p>
         </div>
       </div>
 
       <nav className="mt-7 flex flex-col gap-1">
-        <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-ink-400">Menu utama</p>
+        <p className="px-3 pb-2 text-[11px] font-bold text-ink-400">Menu utama</p>
         {NAV.filter((item) => !item.roles || item.roles.includes(user?.role)).map((item) => {
           const Icon = item.icon;
           const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
@@ -183,10 +183,7 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-[rgba(17,24,39,0.4)]" aria-label="Tutup menu" onClick={() => setOpen(false)} />
-          <aside
-            className="absolute inset-y-0 left-0 flex flex-col px-3 py-4 shadow-[0_12px_40px_-12px_rgba(16,24,40,.25)]"
-            style={{ width: 'min(86vw,300px)', backgroundColor: GROUND }}
-          >
+          <aside data-ui className="absolute inset-y-0 left-0 flex flex-col px-3 py-4 shadow-[0_12px_40px_-12px_rgba(16,24,40,.25)]" style={{ width: 'min(86vw,300px)', backgroundColor: GROUND }}>
             <Button
               aria-label="Tutup"
               className="absolute right-3 top-3 text-ink-500 hover:bg-white/80"

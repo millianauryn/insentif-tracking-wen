@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
@@ -7,7 +7,7 @@
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --color-canvas: #f4f8f6;
-  --color-ink-400: #6c7a73;
+  --color-ink-400: #64726b;
   --color-ink-500: #5b6b64;
   --color-ink-600: #46544e;
   --color-ink-700: #33403a;
