@@ -199,6 +199,8 @@ export default function Documents({
   const [refreshing, setRefreshing] = useState(false);
   const [positions, setPositions] = useState([]);
   const [masterData, setMasterData] = useState(EMPTY_MASTER);
+  const [salesOpen, setSalesOpen] = useState(false);
+  const [salesQuery, setSalesQuery] = useState('');
   const canEdit = ['superadmin', 'officer'].includes(user.role) && documentStatus === 'Draft';
   const canFinalize = canFinalizeDocument(user, documentStatus);
 
@@ -303,12 +305,42 @@ export default function Documents({
           <span className={`draft-badge ${documentStatus === 'Final' ? 'final-badge' : ''}`}>{documentStatus}</span>
         </div>
         <div className="form-grid">
-          <label>
+          <label className="block">
             Salesman
-            <input list="salesman-list" value={sales.name} onChange={(e) => updateSales('name', e.target.value)} disabled={!canEdit} placeholder={isSuper && !sales.region ? 'Pilih wilayah dulu' : 'Pilih nama sales'} autoComplete="off" />
-            <datalist id="salesman-list">
-              {salesList.map((p) => <option key={p.id} value={p.name} />)}
-            </datalist>
+            <span className="relative block">
+              <input
+                value={sales.name}
+                onChange={(e) => { setSalesQuery(e.target.value); updateSales('name', e.target.value); setSalesOpen(true); }}
+                onFocus={() => { setSalesOpen(true); setSalesQuery(''); }}
+                onBlur={() => setSalesOpen(false)}
+                onKeyDown={(e) => { if (e.key === 'Escape') setSalesOpen(false); }}
+                disabled={!canEdit}
+                placeholder={isSuper && !sales.region ? 'Pilih wilayah dulu' : 'Cari nama sales...'}
+                autoComplete="off"
+              />
+              {salesOpen && (
+                <span className="absolute left-0 right-0 top-full mt-1 z-20 block max-h-[240px] overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+                  {salesList
+                    .filter((p) => p.name.toLowerCase().includes(salesQuery.toLowerCase()))
+                    .map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onMouseDown={(e) => { e.preventDefault(); updateSales('name', p.name); setSalesOpen(false); }}
+                        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-[13px] hover:bg-slate-50"
+                      >
+                        <span className="font-medium text-ink-900">{p.name}</span>
+                        <span className="text-[11px] text-ink-400">{p.position_type}</span>
+                      </button>
+                    ))}
+                  {!salesList.filter((p) => p.name.toLowerCase().includes(salesQuery.toLowerCase())).length && (
+                    <span className="block px-3 py-3 text-[12px] text-ink-400">
+                      {salesList.length ? 'Tidak ada sales cocok.' : isSuper && !sales.region ? 'Pilih wilayah dulu.' : 'Belum ada sales di cabang Anda.'}
+                    </span>
+                  )}
+                </span>
+              )}
+            </span>
           </label>
           <label>
             Wilayah (Kota)
