@@ -14,6 +14,7 @@ export default function PickerChips({
   searchPlaceholder = 'Cari...',
   variant = 'inline',
   canEdit = true,
+  showClear = true,
 }) {
   const [open, setOpen] = useState(variant === 'inline');
   const [q, setQ] = useState('');
@@ -54,9 +55,11 @@ export default function PickerChips({
         <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={toggleAll} disabled={!canEdit}>
           {allSelected ? 'Lepas Semua' : 'Semua'}
         </button>
-        <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => onChange([])} disabled={!canEdit}>
-          Kosongkan
-        </button>
+        {showClear && (
+          <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => onChange([])} disabled={!canEdit}>
+            Kosongkan
+          </button>
+        )}
         {variant === 'dropdown' && (
           <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setOpen((o) => !o)}>
             {open ? 'Tutup' : 'Pilih ▾'}

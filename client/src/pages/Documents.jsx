@@ -324,17 +324,6 @@ export default function Documents({
         </div>
         <div className="form-grid">
           <label className="block">
-            Salesman
-            <ComboSelect
-              value={sales.name}
-              onChange={(v) => updateSales('name', v)}
-              options={salesList.map((p) => ({ value: p.name, hint: p.position_type }))}
-              placeholder={isSuper && !sales.region ? 'Pilih wilayah dulu' : 'Pilih atau ketik nama sales...'}
-              disabled={!canEdit}
-              emptyHint={salesList.length ? 'Tidak ada sales cocok.' : isSuper && !sales.region ? 'Pilih wilayah dulu.' : 'Belum ada sales di cabang Anda.'}
-            />
-          </label>
-          <label className="block">
             Wilayah (Kota)
             {isSuper ? (
               <ComboSelect
@@ -348,6 +337,17 @@ export default function Documents({
             ) : (
               <input value={wilayah} readOnly disabled />
             )}
+          </label>
+          <label className="block">
+            Salesman
+            <ComboSelect
+              value={sales.name}
+              onChange={(v) => updateSales('name', v)}
+              options={salesList.map((p) => ({ value: p.name, hint: p.position_type }))}
+              placeholder={isSuper && !sales.region ? 'Pilih wilayah dulu' : 'Pilih atau ketik nama sales...'}
+              disabled={!canEdit}
+              emptyHint={salesList.length ? 'Tidak ada sales cocok.' : isSuper && !sales.region ? 'Pilih wilayah dulu.' : 'Belum ada sales di cabang Anda.'}
+            />
           </label>
           <label className="block">
             Bulan
@@ -364,8 +364,9 @@ export default function Documents({
             <PickerChips
               label="Produk"
               hint="(nama principal)"
-              variant="dropdown"
+              variant="inline"
               searchPlaceholder="Cari produk..."
+              showClear={false}
               items={masterData.principals
                 .filter((pr) => pr.is_active !== 0 && pr.active !== 0)
                 .map((pr) => ({ id: pr.name, name: pr.name }))}
