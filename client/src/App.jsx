@@ -42,6 +42,7 @@ function App() {
   const [adminData, setAdminData] = useState({ users: [], criteria: [], masterData: { divisions: [], principals: [], brands: [], regions: [], branches: [] } });
   const [period, setPeriod] = useState(currentPeriodLabel());
   const [saved, setSaved] = useState(false);
+  const [insentifTotal, setInsentifTotal] = useState(null); // null = auto-sum of kriteria incentives
   const [kwitansi, setKwitansi] = useState({
     penerima: 'PT. BINTANG SINAR JAYA',
     jumlahUang: '',
@@ -150,6 +151,7 @@ function App() {
         product: sales.product || '',
         period: toApiPeriod(period),
         wilayah: sales.region || null,
+        insentif_total: insentifTotal,
         golongan_rows: buildGolonganRows(),
         criteria_rows: buildCriteriaRows(),
         kwitansi,
@@ -172,6 +174,7 @@ function App() {
         product: sales.product || '',
         period: toApiPeriod(period),
         wilayah: sales.region || null,
+        insentif_total: insentifTotal,
         golongan_rows: buildGolonganRows(),
         criteria_rows: buildCriteriaRows(),
         kwitansi,
@@ -236,6 +239,7 @@ function App() {
       );
       setSales({ ...INITIAL_SALES, name: full.salesman || '', product: full.product || '', region: full.wilayah || '' });
       setPeriod(fromApiPeriod(full.period));
+      setInsentifTotal(full.insentif_total ?? null);
       setKwitansi({
         penerima: full.kwitansi?.penerima || 'PT. BINTANG SINAR JAYA',
         jumlahUang: full.kwitansi?.jumlahUang || '',
@@ -256,6 +260,7 @@ function App() {
     setCriteriaRows(criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', incentive_amount: '' })));
     setSales(INITIAL_SALES);
     setPeriod(currentPeriodLabel());
+    setInsentifTotal(null);
     setKwitansi({ penerima: 'PT. BINTANG SINAR JAYA', jumlahUang: '', keterangan: '', terbilang: '', nominal: '' });
     setSaved(false);
   };
@@ -287,6 +292,8 @@ function App() {
         setPeriod={setPeriod}
         kwitansi={kwitansi}
         setKwitansi={setKwitansi}
+        insentifTotal={insentifTotal}
+        setInsentifTotal={setInsentifTotal}
         documentStatus={documentStatus}
         saved={saved}
       />

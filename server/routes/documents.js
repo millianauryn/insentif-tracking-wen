@@ -29,9 +29,9 @@ function createDocumentsRouter(db, options = {}) {
     const create = db.transaction(() => {
       const ownerId = req.user.id;
       const result = db.prepare(`
-        INSERT INTO incentive_documents (owner_id, format_id, division_id, salesman, product, period, status, wilayah, kwitansi)
-        VALUES (?, ?, ?, ?, ?, ?, 'Draft', ?, ?)
-      `).run(ownerId, input.format_id, input.division_id || null, input.salesman || null, input.product || null, input.period, input.wilayah || null, encodeKwitansi(input.kwitansi));
+        INSERT INTO incentive_documents (owner_id, format_id, division_id, salesman, product, period, status, wilayah, insentif_total, kwitansi)
+        VALUES (?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?)
+      `).run(ownerId, input.format_id, input.division_id || null, input.salesman || null, input.product || null, input.period, input.wilayah || null, encodeNumber(input.insentif_total), encodeKwitansi(input.kwitansi));
       const documentId = result.lastInsertRowid;
       const criteria = db.prepare(`
         SELECT id, label, target_unit, formula, sort_order
@@ -117,6 +117,10 @@ function updateDocument(db, document, input) {
       values.push(input[field]);
     }
   }
+  if (input.insentif_total !== undefined) {
+    fields.push('insentif_total = ?');
+    values.push(encodeNumber(input.insentif_total));
+  }
   if (input.kwitansi !== undefined) {
     fields.push('kwitansi = ?');
     values.push(encodeKwitansi(input.kwitansi));
@@ -181,6 +185,13 @@ function upsertCriteriaRows(db, documentId, rows) {
 
 function isValidPeriod(value) {
   return typeof value === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+}
+
+// Insentif total stored as REAL; null/invalid → NULL (null = use auto-sum on the client)
+function encodeNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 // Kwitansi stored as JSON TEXT; only the five receipt fields are kept

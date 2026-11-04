@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS incentive_documents (
     period TEXT,
     status TEXT NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft', 'Final')),
     wilayah TEXT,
+    insentif_total REAL,
     kwitansi TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))

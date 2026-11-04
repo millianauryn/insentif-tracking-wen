@@ -122,6 +122,24 @@ describe('Documents API', () => {
     expect(get2.body.document.kwitansi.penerima).toBe('PT. BINTANG SINAR JAYA');
   });
 
+  it('persists manual insentif_total override and resets to null', async () => {
+    const res = await officer.post('/api/documents').send({
+      format_id: 1,
+      period: '2026-09',
+      golongan_rows: [],
+      insentif_total: 862000,
+    }).expect(201);
+    const id = res.body.document.id;
+
+    const get1 = await officer.get(`/api/documents/${id}`).expect(200);
+    expect(get1.body.document.insentif_total).toBe(862000);
+
+    // null → back to auto (client falls back to summing the criteria rows)
+    await officer.patch(`/api/documents/${id}`).send({ insentif_total: null }).expect(200);
+    const get2 = await officer.get(`/api/documents/${id}`).expect(200);
+    expect(get2.body.document.insentif_total).toBeNull();
+  });
+
   it('updates criteria_rows values on patch', async () => {
     const created = await officer.post('/api/documents').send({
       format_id: 1,

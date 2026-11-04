@@ -68,6 +68,9 @@ function migrateDatabase(db) {
   if (!docCols.includes('wilayah')) {
     db.exec('ALTER TABLE incentive_documents ADD COLUMN wilayah TEXT');
   }
+  if (!docCols.includes('insentif_total')) {
+    db.exec('ALTER TABLE incentive_documents ADD COLUMN insentif_total REAL');
+  }
 
   // Migrate branches: city (kota) for wilayah derivation
   const branchCols = db.prepare('PRAGMA table_info(branches)').all().map((c) => c.name);

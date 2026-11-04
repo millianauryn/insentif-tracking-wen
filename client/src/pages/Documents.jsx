@@ -164,7 +164,11 @@ function KriteriaRow({ row, onUpdate, canEdit }) {
   );
 }
 
-function KriteriaTable({ rows, onUpdate, canEdit }) {
+function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalChange }) {
+  // Total = auto-sum of the incentive column, overridable by typing (empty = back to auto)
+  const autoSum = rows.reduce((s, r) => s + (Number(r.incentive_amount) || 0), 0);
+  const totalValue = totalOverride ?? autoSum;
+
   return (
     <div className="table-wrap">
       <table>
@@ -182,6 +186,23 @@ function KriteriaTable({ rows, onUpdate, canEdit }) {
           {rows.map((row) => (
             <KriteriaRow key={row.criteria_id} row={row} onUpdate={onUpdate} canEdit={canEdit} />
           ))}
+          <tr className="font-semibold bg-slate-50">
+            <td>TOTAL INSENTIVE</td>
+            <td />
+            <td />
+            <td />
+            <td />
+            <td>
+              <input
+                type="number"
+                min="0"
+                value={totalValue === '' || totalValue === null || Number.isNaN(totalValue) ? '' : totalValue}
+                onChange={(e) => onTotalChange(e.target.value === '' ? null : Number(e.target.value))}
+                disabled={!canEdit}
+                aria-label="Total insentif"
+              />
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -196,6 +217,7 @@ export default function Documents({
   criteriaRows, updateCriteriaRow,
   updateSales, sales, period, setPeriod,
   kwitansi, setKwitansi,
+  insentifTotal, setInsentifTotal,
   documentStatus, saved,
 }) {
   const toast = useToast();
@@ -407,6 +429,8 @@ export default function Documents({
           rows={visibleCriteriaRows}
           onUpdate={updateCriteriaRow}
           canEdit={canEdit}
+          totalOverride={insentifTotal}
+          onTotalChange={setInsentifTotal}
         />
 
         <div className="kwitansi-card">
