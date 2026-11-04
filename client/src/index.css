@@ -2,19 +2,19 @@
 
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --color-canvas: #f2f4f6;
-  --color-ink-400: #706e84;
-  --color-ink-500: #6b7280;
-  --color-ink-600: #4b5563;
-  --color-ink-700: #374151;
-  --color-ink-900: #111827;
-  --color-brand-50: #effcf7;
-  --color-brand-100: #d7f7ea;
-  --color-brand-200: #b0edda;
-  --color-brand-500: #1ea88d;
-  --color-brand-600: #128873;
-  --color-brand-700: #106d5e;
-  --color-brand-800: #10574c;
+  --color-canvas: #f4f8f6;
+  --color-ink-400: #6c7a73;
+  --color-ink-500: #5b6b64;
+  --color-ink-600: #46544e;
+  --color-ink-700: #33403a;
+  --color-ink-900: #16221e;
+  --color-brand-50: #e9f4f0;
+  --color-brand-100: #d8ebe4;
+  --color-brand-200: #b8ddd1;
+  --color-brand-500: #17836c;
+  --color-brand-600: #0f6b58;
+  --color-brand-700: #0c5848;
+  --color-brand-800: #0a493c;
   --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px -12px rgba(16, 24, 40, 0.12);
   --shadow-pop: 0 12px 40px -12px rgba(16, 24, 40, 0.25);
   --animate-fadeUp: fadeUp 0.25s ease-out both;
@@ -34,8 +34,8 @@
 @layer base {
   :root {
     font-family: Inter, sans-serif;
-    color: #1d1b2d;
-    background: #f7f7fb;
+    color: #16221e;
+    background: #f4f8f6;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -46,6 +46,9 @@
   body {
     margin: 0;
     min-width: 320px;
+    font-size: 14px;
+    line-height: 1.5;
+    background: #f4f8f6;
   }
   button,
   input,

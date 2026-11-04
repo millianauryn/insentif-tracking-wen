@@ -321,21 +321,49 @@ export default function Documents({
   if (docType === 'spv' || docType === 'bm') {
     const name = docType.toUpperCase();
     return (
-      <section className="content-card info-card">
-        <div className="section-heading">
-          <div>
-            <h2>Dokumen {name}</h2>
-            <p>Halaman dokumen {name}.</p>
+      <>
+        <div className="page-head doc-page-head">
+          <div className="page-head-copy">
+            <h1>Dokumen {name}</h1>
+            <p>Rekap insentif tingkat {name} belum tersedia pada versi ini.</p>
           </div>
         </div>
-        <p className="py-10 text-center text-[13px] text-ink-400">Halaman ini masih kosong. Belum ada input untuk {name}.</p>
-      </section>
+        <section className="content-card info-card">
+          <div className="empty-state">
+            <strong>Halaman {name} masih kosong</strong>
+            <p>Gunakan halaman Sales untuk mencatat perhitungan insentif. Rekap {name} akan ditambahkan di tahap berikutnya.</p>
+          </div>
+        </section>
+      </>
     );
   }
 
   // docType === 'sales' — current editor
   return (
     <>
+      <div className="page-head doc-page-head">
+        <div className="page-head-copy">
+          <h1>Perhitungan Insentif</h1>
+          <div className="doc-head-meta">
+            <span className={`status-pill ${documentStatus === 'Final' ? 'final' : 'draft'}`}>{documentStatus}</span>
+            <span className="meta-text">{period} · {sales.name || 'Salesman belum dipilih'}</span>
+          </div>
+        </div>
+        <div className="page-head-actions">
+          <button className="button secondary" type="button" onClick={handlePrint}>
+            <Icon size={15}><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5h20v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></Icon>
+            Cetak
+          </button>
+          <button className="button primary" type="button" onClick={save} disabled={!canEdit}>
+            <Icon size={16}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></Icon>
+            {documentId ? 'Simpan Perubahan' : 'Simpan Draft'}
+          </button>
+          {canFinalize && (
+            <button className="button secondary" type="button" onClick={onSubmit} disabled={!documentId}>Finalisasi</button>
+          )}
+        </div>
+      </div>
+
       <div className="print-header">
         <div className="print-title">
           <h1>PERHITUNGAN INSENTIF</h1>
@@ -470,13 +498,16 @@ export default function Documents({
               <div className="admin-row" key={doc.id}>
                 <strong>{doc.salesman || 'Tanpa nama sales'}</strong>
                 <span>{fromApiPeriod(doc.period)}</span>
-                <span className={`result-badge ${doc.status === 'Final' ? 'success' : 'warning'}`}>{doc.status}</span>
+                <span className={`status-pill ${doc.status === 'Final' ? 'final' : 'draft'}`}>{doc.status}</span>
                 <button className="text-button" type="button" onClick={() => onLoad(doc)}>Buka</button>
               </div>
             ))}
           </div>
         ) : (
-          <p className="subtitle">Belum ada dokumen tersimpan.</p>
+          <div className="empty-state">
+            <strong>Belum ada dokumen tersimpan</strong>
+            <p>Simpan draft pertama Anda, lalu buka kembali dari daftar ini.</p>
+          </div>
         )}
       </section>
 

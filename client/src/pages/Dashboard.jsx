@@ -1,264 +1,278 @@
-import { useState, useEffect } from 'react';
-import { Box, Flex, Text, Button } from '@chakra-ui/react';
 import { Link } from 'react-router-dom';
 import Icon from '../components/Icon';
-import { fromApiPeriod, PERIOD_OPTIONS } from '../lib/period';
-import { listHierarchy } from '../api';
+import { fromApiPeriod } from '../lib/period';
 
-// Period options come from lib/period (realtime: prev/current/next month)
+const MONTH_LONG = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
-function TreeNode({ label, role, count, open, onToggle, depth }) {
-  const depthClass = depth === 0 ? 'bg-slate-50/70' : depth === 1 ? 'bg-white hover:bg-slate-50' : 'hover:bg-slate-50';
-  return (
-    <button onClick={onToggle} className={`flex w-full min-w-0 items-center gap-2.5 px-3 py-2.5 text-left ${depthClass}`}>
-      <span className="text-[11px] font-bold uppercase tracking-wide text-ink-500">{role}</span>
-      <span className="min-w-0 flex-1 truncate text-[13.5px] font-bold text-ink-900">{label}</span>
-      <span className="hidden whitespace-nowrap text-[11.5px] text-ink-400 sm:inline">{count} dokumen</span>
-      <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-ink-400 ${open ? 'bg-ink-900 text-white' : 'bg-slate-100'}`}>
-        {open ? <Icon size={12}><path d="M5 12h14"/></Icon> : <Icon size={12}><path d="M12 5v14M5 12h14"/></Icon>}
-      </span>
-    </button>
-  );
+function labelToDate(label) {
+  const match = /^([A-Za-z]+)\s+(\d{4})$/.exec(label || '');
+  const index = match ? MONTH_LONG.indexOf(match[1]) : -1;
+  if (!match || index < 0) return new Date();
+  return new Date(Number(match[2]), index, 1);
 }
 
-function DocRow({ doc, onClick }) {
-  const statusColor = doc.status === 'Final' ? 'text-emerald-700' : 'text-slate-500';
+function buildPeriodSeries(documents, periodLabel) {
+  const anchor = labelToDate(periodLabel);
+  return [-5, -4, -3, -2, -1, 0].map((offset) => {
+    const date = new Date(anchor.getFullYear(), anchor.getMonth() + offset, 1);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const docs = documents.filter((doc) => doc.period === key);
+    const final = docs.filter((doc) => doc.status === 'Final').length;
+    const draft = docs.filter((doc) => doc.status !== 'Final').length;
+    return {
+      key,
+      label: MONTH_SHORT[date.getMonth()],
+      longLabel: MONTH_LONG[date.getMonth()],
+      final,
+      draft,
+      total: final + draft,
+      now: offset === 0,
+    };
+  });
+}
+
+function EmptyState({ title, copy }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 bg-white px-3 py-2 hover:bg-slate-50 cursor-pointer" onClick={onClick}>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[12.5px] font-bold leading-none text-ink-900">{doc.salesman || 'Tanpa nama'}</p>
-        <p className="mt-0.5 truncate text-[10.5px] text-ink-400">{fromApiPeriod(doc.period)} · {doc.product || ''}</p>
-      </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <span className={`whitespace-nowrap text-[11.5px] font-bold ${statusColor}`}>{doc.status}</span>
-        <button className="icon-button" onClick={(e) => { e.stopPropagation(); onClick?.(); }}><Icon size="15"><path d="M4 5h16v14H4z"/><path d="M8 10h8M8 14h5"/></Icon></button>
-      </div>
+    <div className="empty-state">
+      <strong>{title}</strong>
+      <p>{copy}</p>
     </div>
   );
 }
 
-export default function Dashboard({ documents, user, period, setPeriod, onNewDoc, onLoadDoc }) {
-  const [open, setOpen] = useState({});
-  const [hierarchy, setHierarchy] = useState(null);
-
-  useEffect(() => {
-    listHierarchy()
-      .then(setHierarchy)
-      .catch(() => setHierarchy({ chain: [], subordinates: [] }));
-  }, []);
-
-  const toggle = (key) => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
-
-
-  // Build visible user set: current user's chain + their subordinates
-  const visibleUserIds = new Set();
-  const chainUsers = hierarchy?.chain || [];
-  const subordinateUsers = hierarchy?.subordinates || [];
-  chainUsers.forEach((u) => visibleUserIds.add(u.id));
-  subordinateUsers.forEach((u) => visibleUserIds.add(u.id));
-  // If no hierarchy data, show all documents (superadmin default)
-  const showAll = user.role === 'superadmin' || visibleUserIds.size === 0;
-  const visibleDocs = showAll ? documents : documents.filter((d) => visibleUserIds.has(d.owner_id));
-
-  // Build tree: group visible docs by salesman
-  const bySalesman = visibleDocs.reduce((acc, doc) => {
-    const sm = doc.salesman || 'Tanpa Nama';
-    if (!acc[sm]) acc[sm] = [];
-    acc[sm].push(doc);
-    return acc;
-  }, {});
-
-  // For hierarchy display: build from chain + subordinates
-  // chain = [BM, SPV, Sales...] walking up parent_id from current user
-  // subordinates = all users reporting to anyone in chain
-  const allUsers = [...chainUsers, ...subordinateUsers];
-  const rootUser = chainUsers[0] || null; // BM (top of chain)
-  // BM's direct reports = subordinates whose parent_id = BM.id
-  const bmReports = rootUser ? allUsers.filter((u) => u.parent_id === rootUser.id) : [];
-  // For each BM report (SPV), their direct reports = Sales
-  const getReports = (parentId) => allUsers.filter((u) => u.parent_id === parentId);
+export default function Dashboard({ documents = [], user, period, onNewDoc, onLoadDoc }) {
+  const visibleDocs = documents;
 
   const totalDocs = visibleDocs.length;
   const draftCount = visibleDocs.filter((d) => d.status === 'Draft').length;
   const finalCount = visibleDocs.filter((d) => d.status === 'Final').length;
-  const totalSales = bmReports.length + bmReports.reduce((sum, spv) => sum + getReports(spv.id).length, 0);
+  const completion = totalDocs ? Math.round((finalCount / totalDocs) * 100) : 0;
+
+  const salesMap = visibleDocs.reduce((acc, doc) => {
+    const name = (doc.salesman || '').trim() || 'Tanpa nama';
+    if (!acc[name]) acc[name] = { name, total: 0, final: 0, draft: 0 };
+    acc[name].total += 1;
+    if (doc.status === 'Final') acc[name].final += 1;
+    else acc[name].draft += 1;
+    return acc;
+  }, {});
+  const salesRows = Object.values(salesMap).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+  const topSales = salesRows.slice(0, 5);
+  const totalSales = salesRows.filter((row) => row.name !== 'Tanpa nama').length;
 
   const kpis = [
-    { label: 'Total Dokumen', value: totalDocs, caption: 'Dokumen tersimpan' },
-    { label: 'Draft', value: draftCount, caption: 'Belum dikirim' },
-    { label: 'Final', value: finalCount, caption: 'Sudah disetujui' },
-    { label: 'Total Sales', value: totalSales, caption: 'Sales aktif' },
+    { label: 'Total Dokumen', value: totalDocs, caption: 'Dokumen tersimpan', tone: '#9fb0a8' },
+    { label: 'Draft', value: draftCount, caption: 'Belum difinalisasi', tone: '#c07818' },
+    { label: 'Final', value: finalCount, caption: 'Sudah disetujui', tone: '#2f62c4' },
+    { label: 'Total Sales', value: totalSales, caption: 'Sales dengan dokumen', tone: '#0f6b58' },
   ];
 
   const recentDocs = [...visibleDocs].sort((a, b) => b.id - a.id).slice(0, 5);
+  const latestPeriod = visibleDocs.reduce((latest, doc) => (doc.period && doc.period > latest ? doc.period : latest), '');
+  const chartAnchor = latestPeriod ? fromApiPeriod(latestPeriod) : period;
+  const series = buildPeriodSeries(visibleDocs, chartAnchor);
+  const seriesMax = Math.max(1, ...series.map((item) => item.total));
+  const seriesTotal = series.reduce((sum, item) => sum + item.total, 0);
+  const firstPeriod = series[0]?.label || '';
+  const lastPeriod = series[series.length - 1]?.label || '';
+  const donutRadius = 52;
+  const donutCircumference = 2 * Math.PI * donutRadius;
+  const finalShare = totalDocs ? finalCount / totalDocs : 0;
+  const salesMax = Math.max(1, ...topSales.map((row) => row.total));
 
   return (
     <>
-      {/* Title row: noun + grey line, the one primary action right */}
-      <Flex direction={{ base: 'column', lg: 'row' }} justify="space-between" align={{ lg: 'flex-end' }} gap={3}>
-        <Box minW={0}>
-          <Text as="h1" fontSize="24px" fontWeight="700" letterSpacing="-0.02em" color="fg.default" lineHeight="1.2">
-            Dashboard
-          </Text>
-          <Text mt={1.5} fontSize="15px" color="fg.muted">
-            Pantau performa penjualan dan dokumen insentif periode {period}.
-          </Text>
-        </Box>
-        <button
-          className="button primary"
-          onClick={onNewDoc}
-          disabled={user.role === 'observer'}
-          style={{ flexShrink: 0 }}
-        >
-          <Icon size={17}><path d="M12 5v14M5 12h14"/></Icon>Tambah Dokumen
-        </button>
-      </Flex>
+      <div className="page-head">
+        <div className="page-head-copy">
+          <h1>Dashboard</h1>
+          <p>Ringkasan dokumen dan status insentif tim.</p>
+        </div>
+        <div className="page-head-actions">
+          <Link className="button secondary" to="/documents/sales">Lihat semua dokumen</Link>
+          <button className="button primary" onClick={onNewDoc} disabled={user?.role === 'observer'}>
+            <Icon size={16}><path d="M12 5v14M5 12h14" /></Icon>Tambah Dokumen
+          </button>
+        </div>
+      </div>
 
-      {/* Scope row: the period control */}
-      <label className="period-control" style={{ marginTop: 20 }}>
-        Periode<select value={period} onChange={(event) => setPeriod(event.target.value)}>{PERIOD_OPTIONS.map((option) => <option key={option}>{option}</option>)}</select>
-      </label>
-
-      <Flex direction={{ base: 'column', lg: 'row' }} gap={6} alignItems="flex-start" mt={6}>
-        <Box flex="1" minW={0}>
-          {/* KPI strip: one container split by 1px dividers */}
-          <Box
-            display="grid"
-            gridTemplateColumns={{ base: '1fr 1fr', md: 'repeat(4, 1fr)' }}
-            gap="1px"
-            bg="border.default"
-            borderWidth={1}
-            borderColor="border.default"
-            rounded="lg"
-            overflow="hidden"
-            mb={4}
-          >
+      <div className="dash-grid">
+        <div className="dash-main">
+          <div className="kpi-strip">
             {kpis.map((kpi) => (
-              <Box key={kpi.label} bg="white" px={5} py={4}>
-                <Text fontSize="14px" color="fg.muted">{kpi.label}</Text>
-                <Text mt={1} fontSize="24px" fontWeight="500" lineHeight="1.2" fontVariantNumeric="tabular-nums" color="fg.default">
-                  {kpi.value}
-                </Text>
-                <Text mt={1} fontSize="13px" color="fg.subtle">{kpi.caption}</Text>
-              </Box>
-            ))}
-          </Box>
-
-          {/* Hierarchy tree: BM → SPV → Sales */}
-          <section className="content-card info-card">
-            <div className="section-heading">
-              <div><h2>Struktur Organisasi</h2><p>BM → SPV → Sales</p></div>
-            </div>
-            <div className="space-y-1">
-              {rootUser ? (
-                // Hierarchy mode: BM → SPV → Sales from chain + subordinates
-                <div>
-                  <TreeNode label={rootUser.username} role="BM" count={visibleDocs.filter((d) => d.owner_id === rootUser.id).length} open={open[`bm:${rootUser.id}`]} onToggle={() => toggle(`bm:${rootUser.id}`)} depth={0} />
-                  {open[`bm:${rootUser.id}`] && (
-                    <div className="px-3 py-1 space-y-1">
-                      {visibleDocs.filter((d) => d.owner_id === rootUser.id).map((doc) => <DocRow key={doc.id} doc={doc} onClick={() => onLoadDoc?.(doc)} />)}
-                      {bmReports.map((spv) => (
-                        <div key={spv.id}>
-                          <TreeNode label={spv.username} role="SPV" count={visibleDocs.filter((d) => d.owner_id === spv.id).length} open={open[`spv:${spv.id}`]} onToggle={() => toggle(`spv:${spv.id}`)} depth={1} />
-                          {open[`spv:${spv.id}`] && (
-                            <div className="px-6 py-1 space-y-1">
-                              {visibleDocs.filter((d) => d.owner_id === spv.id).map((doc) => <DocRow key={doc.id} doc={doc} onClick={() => onLoadDoc?.(doc)} />)}
-                              {getReports(spv.id).map((sales) => (
-                                <div key={sales.id}>
-                                  <TreeNode label={sales.username} role="Sales" count={visibleDocs.filter((d) => d.owner_id === sales.id).length} open={open[`sales:${sales.id}`]} onToggle={() => toggle(`sales:${sales.id}`)} depth={2} />
-                                  {open[`sales:${sales.id}`] && (
-                                    <div className="px-9 py-1 space-y-1">
-                                      {visibleDocs.filter((d) => d.owner_id === sales.id).map((doc) => <DocRow key={doc.id} doc={doc} onClick={() => onLoadDoc?.(doc)} />)}
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+              <div className="kpi-cell" key={kpi.label}>
+                <div className="kpi-label">
+                  <span className="kpi-dot" style={{ background: kpi.tone }} aria-hidden="true" />
+                  {kpi.label}
                 </div>
-              ) : (
-                // Fallback: no hierarchy set up yet, show by salesman
-                Object.entries(bySalesman).map(([salesman, docs]) => {
-                  const smOpen = open[`bm:${salesman}`];
-                  return (
-                    <div key={salesman}>
-                      <TreeNode label={salesman} role="BM" count={docs.length} open={smOpen} onToggle={() => toggle(`bm:${salesman}`)} depth={0} />
-                      {smOpen && (
-                        <div className="px-3 py-1 space-y-1">
-                          {docs.map((doc) => <DocRow key={doc.id} doc={doc} onClick={() => onLoadDoc?.(doc)} />)}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
-            {totalDocs === 0 && <p className="subtitle text-center py-8">Belum ada dokumen. Klik "Tambah Dokumen" untuk mulai.</p>}
-          </section>
-        </Box>
+                <div className="kpi-value">{kpi.value}</div>
+                <div className="kpi-caption">{kpi.caption}</div>
+              </div>
+            ))}
+          </div>
 
-        {/* Rail: recent documents on a 45px pitch, closed by an outlined View all */}
-        <Box w={{ base: '100%', lg: '384px' }} flexShrink={0}>
-          <Text as="h2" fontSize="16px" fontWeight="700" color="fg.default" mb={4}>
-            Dokumen terbaru
-          </Text>
-          {recentDocs.length === 0 && (
-            <Text fontSize="13px" color="fg.subtle" py={3}>Belum ada dokumen.</Text>
-          )}
-          {recentDocs.map((doc) => (
-            <Box
-              key={doc.id}
-              as="button"
-              type="button"
-              onClick={() => onLoadDoc?.(doc)}
-              w="100%"
-              h="45px"
-              display="flex"
-              alignItems="center"
-              justifyContent="space-between"
-              gap={2}
-              px={1}
-              borderBottomWidth={1}
-              borderBottomColor="border.default"
-              bg="transparent"
-              textAlign="left"
-              _hover={{ bg: 'white' }}
-            >
-              <Box minW={0}>
-                <Text truncate fontSize="13px" fontWeight="600" color="fg.default">{doc.salesman || 'Tanpa nama'}</Text>
-                <Text truncate fontSize="11px" color="fg.subtle">{fromApiPeriod(doc.period)} · {doc.product || '–'}</Text>
-              </Box>
-              <Text
-                shrink={0}
-                fontSize="11.5px"
-                fontWeight="600"
-                color={doc.status === 'Final' ? 'brand.700' : 'fg.subtle'}
-              >
-                {doc.status}
-              </Text>
-            </Box>
-          ))}
-          {recentDocs.length > 0 && (
-            <Button
-              as={Link}
-              to="/documents/sales"
-              variant="outline"
-              size="sm"
-              w="100%"
-              h="30px"
-              mt={3}
-              fontSize="12px"
-              fontWeight="600"
-            >
-              Lihat semua
-            </Button>
-          )}
-        </Box>
-      </Flex>
+          <div className="overview-grid">
+            <article className="card">
+              <div className="card-head">
+                <div>
+                  <h2 className="card-title">Status dokumen</h2>
+                  <p className="card-sub">Komposisi draft dan final</p>
+                </div>
+                <span className="card-note">{totalDocs} total</span>
+              </div>
+              <div className="status-flex">
+                <div className="donut-wrap">
+                  <svg viewBox="0 0 128 128" width="112" height="112" role="img" aria-label={`${totalDocs} dokumen: ${finalCount} final dan ${draftCount} draft`}>
+                    <circle cx="64" cy="64" r={donutRadius} fill="none" stroke="#edf2ef" strokeWidth="13" />
+                    {finalCount > 0 && (
+                      <circle
+                        cx="64"
+                        cy="64"
+                        r={donutRadius}
+                        fill="none"
+                        stroke="var(--blue)"
+                        strokeWidth="13"
+                        strokeDasharray={`${finalShare * donutCircumference} ${donutCircumference}`}
+                        transform="rotate(-90 64 64)"
+                      />
+                    )}
+                  </svg>
+                  <span className="donut-center" aria-hidden="true">
+                    <strong>{totalDocs}</strong>
+                    <span>Dokumen</span>
+                  </span>
+                </div>
+                <div className="status-legend">
+                  <div className="legend-row">
+                    <span className="legend-swatch" style={{ background: 'var(--blue)' }} aria-hidden="true" />
+                    <span>Final</span>
+                    <strong>{finalCount}</strong>
+                  </div>
+                  <div className="legend-row">
+                    <span className="legend-swatch" style={{ background: 'var(--blue-tint)' }} aria-hidden="true" />
+                    <span>Draft</span>
+                    <strong>{draftCount}</strong>
+                  </div>
+                  <div className="completion-row">
+                    <span>Penyelesaian</span>
+                    <strong>{completion}%</strong>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article className="card">
+              <div className="card-head">
+                <div>
+                  <h2 className="card-title">Dokumen per periode</h2>
+                  <p className="card-sub">Enam bulan hingga periode terakhir</p>
+                </div>
+                <span className="card-note">{firstPeriod}–{lastPeriod}</span>
+              </div>
+              {seriesTotal === 0 ? (
+                <EmptyState title="Belum ada dokumen" copy="Dokumen yang tersimpan akan muncul di sini per periode." />
+              ) : (
+                <div className="period-chart">
+                  {series.map((item) => (
+                    <div
+                      className="period-col"
+                      key={item.key}
+                      role="img"
+                      aria-label={`${item.longLabel}: ${item.total} dokumen, ${item.final} final, ${item.draft} draft`}
+                      title={`${item.longLabel}: ${item.total} dokumen`}
+                    >
+                      <span className="period-count" aria-hidden="true">{item.total || ''}</span>
+                      <span className="period-track" aria-hidden="true">
+                        {item.draft > 0 && (
+                          <span className="period-bar draft" style={{ height: `${(item.draft / seriesMax) * 100}%` }} />
+                        )}
+                        {item.final > 0 && (
+                          <span className="period-bar final" style={{ height: `${(item.final / seriesMax) * 100}%` }} />
+                        )}
+                      </span>
+                      <span className={`period-label${item.now ? ' now' : ''}`} aria-hidden="true">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="chart-legend">
+                <span><i style={{ background: 'var(--blue)' }} aria-hidden="true" />Final</span>
+                <span><i style={{ background: 'var(--blue-tint)' }} aria-hidden="true" />Draft</span>
+              </div>
+            </article>
+          </div>
+
+          <article className="card">
+            <div className="card-head">
+              <div>
+                <h2 className="card-title">Dokumen per sales</h2>
+                <p className="card-sub">Berdasarkan salesman pada dokumen</p>
+              </div>
+              <span className="card-note">{totalSales} sales</span>
+            </div>
+
+            {topSales.length ? (
+              <div className="sales-breakdown">
+                {topSales.map((row) => (
+                  <div className="sales-row" key={row.name} title={`${row.final} final, ${row.draft} draft`}>
+                    <span className="sales-name">{row.name}</span>
+                    <span className="sales-bar" aria-hidden="true">
+                      {row.final > 0 && (
+                        <span className="sales-bar-final" style={{ width: `${(row.final / salesMax) * 100}%` }} />
+                      )}
+                      {row.draft > 0 && (
+                        <span className="sales-bar-draft" style={{ width: `${(row.draft / salesMax) * 100}%` }} />
+                      )}
+                    </span>
+                    <span className="sales-count">{row.total}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="Belum ada dokumen" copy='Klik "Tambah Dokumen" untuk mulai mencatat insentif.' />
+            )}
+
+            {salesRows.length > topSales.length && (
+              <Link className="sales-more" to="/documents/sales">Lihat semua sales</Link>
+            )}
+          </article>
+        </div>
+
+        <aside className="dash-rail">
+          <div className="card rail-card">
+            <div className="rail-head">
+              <h2 className="rail-title">Dokumen terbaru</h2>
+              <Link className="rail-link" to="/documents/sales">Lihat semua</Link>
+            </div>
+            {recentDocs.length ? (
+              <div className="recent-list">
+                {recentDocs.map((doc) => (
+                  <button
+                    key={doc.id}
+                    type="button"
+                    className="recent-row"
+                    onClick={() => onLoadDoc?.(doc)}
+                  >
+                    <span className="recent-icon" aria-hidden="true">
+                      <Icon size={15}><path d="M4 5h16v14H4z" /><path d="M8 10h8M8 14h5" /></Icon>
+                    </span>
+                    <span className="recent-main">
+                      <span className="recent-name">{doc.salesman || 'Tanpa nama'}</span>
+                      <span className="recent-meta">{fromApiPeriod(doc.period)} · {doc.product || '–'}</span>
+                    </span>
+                    <span className={`status-pill ${doc.status === 'Final' ? 'final' : 'draft'}`}>{doc.status}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <EmptyState title="Belum ada dokumen" copy="Dokumen terbaru akan muncul di sini." />
+            )}
+            {recentDocs.length > 0 && (
+              <Link className="button secondary rail-all" to="/documents/sales">Lihat semua</Link>
+            )}
+          </div>
+        </aside>
+      </div>
     </>
   );
 }

@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { getDashboardMetrics } from './incentive';
 import { createDocument, updateDocument, finalizeDocument, getDocument, listCriteria, listDocumentFormats, listDocuments, listUsers, listMasterData } from './api';
 import { canManageAdmin } from './access';
 import { useAuth } from './context/AuthContext';
@@ -50,7 +49,6 @@ function App() {
     terbilang: '',
     nominal: '',
   });
-  const metrics = useMemo(() => getDashboardMetrics(golonganRows.filter(r => !r.isGroup)), [golonganRows]);
 
   const reloadAdminData = useCallback(async () => {
     if (!user) return;
@@ -312,7 +310,6 @@ function App() {
           user ? (
             <Layout breadcrumb={['Dashboard']}>
               <Dashboard
-                metrics={metrics}
                 documents={documents}
                 user={user}
                 period={period}

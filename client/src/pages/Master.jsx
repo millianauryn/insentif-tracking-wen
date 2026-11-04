@@ -451,7 +451,6 @@ export default function Master({ data, onRefresh, user }) {
 
   const renderItem = (item) => {
     const isActive = item.is_active !== 0 && item.active !== 0;
-    const statusColor = isActive ? 'text-emerald-700' : 'text-slate-500';
     const statusText = isActive ? 'Aktif' : 'Nonaktif';
 
     let subtitle = '';
@@ -470,22 +469,24 @@ export default function Master({ data, onRefresh, user }) {
     }
 
     return (
-      <li key={item.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50">
-        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[14px] font-bold text-ink-900">{item.name}</p>
-          {subtitle && <p className="truncate text-[13px] text-ink-400">{subtitle}</p>}
+      <li key={item.id} className="master-row-item">
+        <span className={`master-dot ${isActive ? 'on' : ''}`} aria-hidden="true" />
+        <div className="master-main">
+          <p className="master-name">{item.name}</p>
+          {subtitle && <p className="master-sub">{subtitle}</p>}
         </div>
-        <span className={`text-[12px] font-medium ${statusColor}`}>{statusText}</span>
-        <button className="rounded-lg p-2 text-ink-400 hover:bg-slate-100 hover:text-ink-800" onClick={() => openEditForm(item, tab)} aria-label={`Edit ${item.name}`}>
-          <Icon size={15}><path d="M12 20h9M19.5 14.5L16 11l7-7M21 3a2 2 0 0 1 2 2v9M5 15l4 4 9-9"/></Icon>
-        </button>
-        <button className="rounded-lg p-2 text-ink-400 hover:bg-slate-100 hover:text-ink-800" onClick={() => toggleActive(item, tab)} aria-label={`${isActive ? 'Nonaktifkan' : 'Aktifkan'} ${item.name}`}>
-          <Icon size={15}><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m15 9-6 6M9 9l6 6"/></Icon>
-        </button>
-        <button className="rounded-lg p-2 text-ink-400 hover:bg-rose-50 hover:text-rose-600" onClick={() => deleteMasterItem(item.id, tab)} aria-label={`Hapus ${item.name}`}>
-          <Icon size={15}><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></Icon>
-        </button>
+        <span className={`status-pill ${isActive ? 'success' : 'muted'}`}>{statusText}</span>
+        <div className="master-actions">
+          <button className="icon-action" onClick={() => openEditForm(item, tab)} aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`}>
+            <Icon size={15}><path d="M12 20h9M19.5 14.5L16 11l7-7M21 3a2 2 0 0 1 2 2v9M5 15l4 4 9-9"/></Icon>
+          </button>
+          <button className="icon-action" onClick={() => toggleActive(item, tab)} aria-label={`${isActive ? 'Nonaktifkan' : 'Aktifkan'} ${item.name}`} title={`${isActive ? 'Nonaktifkan' : 'Aktifkan'} ${item.name}`}>
+            <Icon size={15}><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m15 9-6 6M9 9l6 6"/></Icon>
+          </button>
+          <button className="icon-action danger" onClick={() => deleteMasterItem(item.id, tab)} aria-label={`Hapus ${item.name}`} title={`Hapus ${item.name}`}>
+            <Icon size={15}><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></Icon>
+          </button>
+        </div>
       </li>
     );
   };
@@ -714,9 +715,15 @@ export default function Master({ data, onRefresh, user }) {
               </button>
             </div>
 
-            <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+            <ul className="master-table">
+              <li className="master-table-head" aria-hidden="true">
+                <span />
+                <span>Nama</span>
+                <span>Status</span>
+                <span>Aksi</span>
+              </li>
               {items.length ? items.map(renderItem) : (
-                <li className="px-4 py-8 text-center text-[13px] text-ink-400">
+                <li className="px-4 py-10 text-center text-[13px] text-ink-400">
                   {masterSearch ? 'Tidak ada data yang cocok dengan pencarian.' : 'Belum ada data.'}
                 </li>
               )}

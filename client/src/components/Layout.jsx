@@ -26,8 +26,8 @@ const DOC_CHILDREN = [
   { to: '/documents/bm', label: 'BM', icon: Crown },
 ];
 
-// Sidebar + top bar share one flat ground (taste sheet: ruled T-frame)
-const GROUND = '#f1f8f6';
+// Sidebar + top bar share the canvas ground so the white panels carry the structure.
+const GROUND = '#f4f8f6';
 
 function LiveClock() {
   const [now, setNow] = useState(() => new Date());
@@ -49,16 +49,16 @@ function LiveClock() {
       gap={1.5}
       whiteSpace="nowrap"
       rounded="full"
-      bg="gray.100"
+      bg="#e8efec"
       px={3}
       py={1}
-      fontSize="13px"
+      fontSize="12.5px"
       fontWeight="semibold"
       fontVariantNumeric="tabular-nums"
       color="fg.muted"
       aria-label={`Waktu sekarang ${tanggal} ${jam}`}
     >
-      <Clock size={14} style={{ flexShrink: 0, color: '#9ca3af' }} />
+      <Clock size={13} style={{ flexShrink: 0, color: '#7e8c85' }} />
       <Span display={{ base: 'none', md: 'inline' }}>{tanggal} · </Span>
       <Span fontWeight="bold" color="fg.default">{jam}</Span>
     </Span>
@@ -79,23 +79,23 @@ function SideNav({ onNavigate }) {
   return (
     <>
       <Flex alignItems="center" gap={2.5} px={2}>
-        <Flex h={10} w={10} alignItems="center" justifyContent="center" rounded="xl" bg="brand.600">
-          <Database size={18} color="#fff" />
+        <Flex h={9} w={9} alignItems="center" justifyContent="center" rounded="10px" bg="brand.600">
+          <Database size={17} color="#fff" />
         </Flex>
         <Box lineHeight="tight">
-          <Text fontSize="13.5px" fontWeight="800" letterSpacing="-0.02em" color="fg.default">Insetive Tracking</Text>
-          <Text fontSize="11px" color="fg.muted">Insentif Sales</Text>
+          <Text fontSize="13.5px" fontWeight="800" letterSpacing="-0.015em" color="fg.default">Insetive Tracking</Text>
+          <Text mt="2px" fontSize="10px" fontWeight="600" letterSpacing="0.07em" textTransform="uppercase" color="fg.subtle">Insentif Sales</Text>
         </Box>
       </Flex>
 
-      <Box as="nav" mt={6} display="flex" flexDirection="column" gap={1.25}>
-        <Text px={3} pb={1} fontSize="13px" fontWeight="700" letterSpacing="0.04em" color="fg.subtle">Menu utama</Text>
+      <Box as="nav" mt={7} display="flex" flexDirection="column" gap={1}>
+        <Text px={3} pb={2} fontSize="10px" fontWeight="700" letterSpacing="0.1em" textTransform="uppercase" color="fg.subtle">Menu utama</Text>
         {NAV.filter((item) => !item.roles || item.roles.includes(user?.role)).map((item) => {
           const Icon = item.icon;
           const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
           return (
             <NavLink key={item.label} to={item.to} className={itemClass(active)} onClick={onNavigate}>
-              <Icon size={17} color="#6b7280" />
+              <Icon size={17} color={active ? '#0c5848' : '#6c7a73'} />
               <Span flex="1">{item.label}</Span>
             </NavLink>
           );
@@ -107,17 +107,18 @@ function SideNav({ onNavigate }) {
             type="button"
             className={`nav-item w-full ${docActive ? 'nav-item-active' : ''}`}
             onClick={() => setDocOpen((o) => !o)}
+            aria-expanded={docExpanded}
           >
-            <FileText size={17} color="#6b7280" />
+            <FileText size={17} color={docExpanded ? '#0c5848' : '#6c7a73'} />
             <span className="flex-1 text-left">Dokumen</span>
             <ChevronDown
               size={15}
-              color="#9ca3af"
+              color="#7e8c85"
               style={{ transform: docExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
             />
           </button>
           {docExpanded && (
-            <Box ml={4} mt={1} display="flex" flexDirection="column" gap={0.5} borderLeftWidth={2} borderLeftColor="gray.200" pl={3}>
+            <Box ml={4} mt={1} display="flex" flexDirection="column" gap={0.5} borderLeftWidth={1} borderLeftColor="#dbe6e1" pl={3}>
               {DOC_CHILDREN.map((child) => {
                 const ChildIcon = child.icon;
                 return (
@@ -126,12 +127,12 @@ function SideNav({ onNavigate }) {
                     to={child.to}
                     onClick={onNavigate}
                     className={({ isActive }) =>
-                      `flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-semibold transition ${
-                        isActive ? 'bg-brand-50 text-brand-800' : 'text-ink-600 hover:bg-slate-50 hover:text-ink-900'
+                      `flex items-center gap-2 rounded-lg px-2.5 py-2 text-[12.5px] font-semibold transition ${
+                        isActive ? 'bg-brand-50 text-brand-800' : 'text-ink-600 hover:bg-white hover:text-ink-900'
                       }`
                     }
                   >
-                    <ChildIcon size={15} style={{ flexShrink: 0, opacity: 0.7 }} />
+                    <ChildIcon size={15} style={{ flexShrink: 0, opacity: 0.72 }} />
                     <span className="flex-1 text-left">{child.label}</span>
                   </NavLink>
                 );
@@ -142,7 +143,7 @@ function SideNav({ onNavigate }) {
 
         {isSuper && (
           <NavLink to="/master" className={itemClass(location.pathname.startsWith('/master'))} onClick={onNavigate}>
-            <Database size={17} color="#6b7280" />
+            <Database size={17} color={location.pathname.startsWith('/master') ? '#0c5848' : '#6c7a73'} />
             <Span flex="1">Data Master</Span>
           </NavLink>
         )}
@@ -168,9 +169,6 @@ function SideNav({ onNavigate }) {
               <LogOut size={16} />
             </IconButton>
           </Flex>
-          <Span mt={2.5} display="inline-block" rounded="md" bg="brand.100" px={2} py={0.5} fontSize="12px" fontWeight="700" letterSpacing="0.03em" color="brand.800">
-            {user?.role}
-          </Span>
         </Box>
       </Box>
     </>
@@ -186,6 +184,7 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
 
   return (
     <Flex minH="100vh" overflowX="hidden">
+      <a className="skip-link" href="#main-content">Lewati ke konten</a>
       <Box
         as="aside"
         position="fixed"
@@ -237,7 +236,7 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
           borderBottomColor="border.default"
           bg={GROUND}
         >
-          <Flex alignItems="center" justifyContent="space-between" gap={3} h="64px" px={{ base: 4, lg: 6 }}>
+          <Flex alignItems="center" justifyContent="space-between" gap={3} h="64px" px={{ base: 4, lg: 8 }}>
             <Flex minW={0} alignItems="center" gap={2}>
               <IconButton
                 aria-label="Buka menu"
@@ -263,15 +262,22 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
                 </Text>
               </Box>
             </Flex>
-            <Flex shrink={0} alignItems="center" gap={2}>
+            <Flex shrink={0} alignItems="center" gap={2.5}>
               <LiveClock />
-              <Span display={{ base: 'none', sm: 'block' }} rounded="full" bg="gray.100" px={3} py={1} fontSize="12px" fontWeight="600" color="fg.muted">{user?.role}</Span>
+              <Box display={{ base: 'none', sm: 'block' }} textAlign="right" lineHeight="1.25">
+                <Text maxW="160px" truncate fontSize="12.5px" fontWeight="700" color="fg.default">
+                  {user?.name || user?.username}
+                </Text>
+                <Text fontSize="10.5px" fontWeight="600" letterSpacing="0.04em" textTransform="uppercase" color="fg.subtle">
+                  {user?.role}
+                </Text>
+              </Box>
               <Avatar name={user?.name || user?.username} color={user?.avatar_color} emoji={user?.avatar_key} size="sm" ring />
             </Flex>
           </Flex>
         </Box>
 
-        <Box as="main" minW={0} w="full" maxW="full" flex="1" overflowX="hidden" px={{ base: 4, lg: 6 }} py={{ base: 4, lg: 6 }} pb={{ base: 24, lg: 6 }}>
+        <Box as="main" id="main-content" minW={0} w="full" maxW="full" flex="1" overflowX="hidden" px={{ base: 4, lg: 8 }} py={{ base: 4, lg: 7 }} pb={{ base: 24, lg: 7 }}>
           <Box mx="auto" w="full" maxW="1440px">
             {/* Title row lives on the canvas (taste sheet), not in the top bar */}
             {(title || actions) && (
@@ -284,7 +290,7 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
                 mt={1}
                 mb={5}
               >
-                <Box as="h1" fontSize={{ base: '18px', lg: '19px' }} fontWeight="800" letterSpacing="-0.02em" color="fg.default">
+                <Box as="h1" fontSize={{ base: '22px', lg: '24px' }} fontWeight="700" letterSpacing="-0.028em" color="fg.default">
                   {title}
                 </Box>
                 <Flex flexWrap="wrap" alignItems="center" gap={2}>{actions}</Flex>
@@ -294,7 +300,7 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
           </Box>
         </Box>
 
-        <Box as="footer" display={{ base: 'none', lg: 'block' }} px={6} pb={5} textAlign="center" fontSize="11.5px" color="fg.subtle">
+        <Box as="footer" display={{ base: 'none', lg: 'block' }} px={8} pb={5} textAlign="center" fontSize="11.5px" color="fg.subtle">
           © 2026 Insetive Tracking · Insentif Sales Management
         </Box>
       </Box>

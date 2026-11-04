@@ -7,14 +7,14 @@ const config = defineConfig({
       colors: {
         // Primary brand (teal, from --brand / brand-*)
         brand: {
-          50: { value: '#effcf7' },
-          100: { value: '#d7f7ea' },
-          200: { value: '#b0edda' },
-          500: { value: '#1ea88d' },
-          600: { value: '#128873' },
-          700: { value: '#106d5e' },
-          800: { value: '#10574c' },
-          900: { value: '#0f4940' },
+          50: { value: '#e9f4f0' },
+          100: { value: '#d8ebe4' },
+          200: { value: '#b8ddd1' },
+          500: { value: '#17836c' },
+          600: { value: '#0f6b58' },
+          700: { value: '#0c5848' },
+          800: { value: '#0a493c' },
+          900: { value: '#083a30' },
         },
         // Accent (purple, from --blue / #7067f0)
         accent: {
@@ -31,7 +31,7 @@ const config = defineConfig({
           700: { value: '#2d2a4c' },
         },
         // Page canvas (from --canvas)
-        canvas: { value: '#f7f7fb' },
+        canvas: { value: '#f4f8f6' },
         // Paper format row colors (golongan table)
         paper: {
           cream: { value: '#fef9e7' },
@@ -61,12 +61,12 @@ const config = defineConfig({
           sidebar: { value: '{colors.navy.900}' },
         },
         fg: {
-          default: { value: '#1d1b2d' },
-          muted: { value: '#63616f' },
-          subtle: { value: '#706e84' },
+          default: { value: '#16221e' },
+          muted: { value: '#58665f' },
+          subtle: { value: '#6c7a73' },
         },
         border: {
-          default: { value: '#e9e8f0' },
+          default: { value: '#e2e9e6' },
         },
         brand: {
           solid: { value: '{colors.brand.600}' },
