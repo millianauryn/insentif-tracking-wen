@@ -4,8 +4,9 @@ import { PERIOD_OPTIONS, fromApiPeriod } from '../lib/period';
 import { useToast } from '../components/Toast';
 import { errMsg } from '../lib/api';
 import Icon from '../components/Icon';
+import PickerChips from '../components/PickerChips';
 import { listPositions, listMasterData } from '../api';
-import { computeTotalFor } from '../lib/golongan';
+import { computeTotalFor, computeGrandTotal, principalValueFor } from '../lib/golongan';
 
 const JENIS_OPTIONS = [
   { value: 'brand', label: 'Brand' },
@@ -60,6 +61,33 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
         <td className="text-center">{deleteBtn}</td>
       </tr>
     );
+  }
+
+  // Principal with brand children: value = sum of those brands (auto, not editable)
+  if (row.type === 'principal') {
+    let hasChildren = false;
+    for (let i = index + 1; i < allRows.length; i++) {
+      const r = allRows[i];
+      if (r.type === 'principal' || r.type === 'total-divisi' || r.type === 'total') break;
+      if (r.type === 'brand') { hasChildren = true; break; }
+    }
+    if (hasChildren) {
+      const v = principalValueFor(allRows, index);
+      const pPct = v.target > 0 ? (v.achievement / v.target) * 100 : 0;
+      const pStatus = v.target > 0 && pPct >= 100 ? 'Tercapai' : 'Gugur';
+      return (
+        <tr className="font-semibold">
+          <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} placeholder="Nama principal" /></td>
+          <td>{jenisSelect}</td>
+          <td className="text-right">{v.target.toLocaleString('id-ID')}</td>
+          <td className="text-right">{v.achievement.toLocaleString('id-ID')}</td>
+          <td className="text-right">{pPct.toFixed(1)}%</td>
+          <td><span className={`result-badge ${pStatus === 'Tercapai' ? 'success' : 'warning'}`}>{v.target > 0 ? pStatus : ''}</span></td>
+          <td className="text-center">{deleteBtn}</td>
+        </tr>
+      );
+    }
+    // no brand children → manual inputs (same as brand row)
   }
 
   return (
@@ -179,14 +207,44 @@ export default function Documents({
     listMasterData().then(setMasterData).catch(() => setMasterData(EMPTY_MASTER));
   }, []);
 
-  // Wilayah derived: salesman position branch → region, fallback officer's branch region
+  // Officer: wilayah auto-fills from own linked cabang (city → region fallback)
+  const isSuper = user.role === 'superadmin';
+  useEffect(() => {
+    if (isSuper || sales.region) return;
+    const own = masterData.branches.filter((b) => (user.branch_ids || []).includes(b.id));
+    if (!own.length) return;
+    const withCity = own.find((b) => b.city);
+    const city = withCity?.city || masterData.regions.find((r) => r.id === own[0].region_id)?.name;
+    if (city) updateSales('region', city);
+  }, [isSuper, user.branch_ids, masterData, sales.region, updateSales]);
+
+  // Sales options: officer → positions at own branches; superadmin → positions at branches in chosen kota
+  const positionsAtBranches = (branchIds) =>
+    positions.filter((p) => p.active && (p.branch_ids || []).some((id) => branchIds.includes(id)));
+  const salesOptions = isSuper
+    ? (sales.region
+        ? positionsAtBranches(masterData.branches.filter((b) => b.city === sales.region).map((b) => b.id))
+        : [])
+    : positionsAtBranches(user.branch_ids || []);
+  const salesList = (() => {
+    const salesOnly = salesOptions.filter((p) => p.position_type === 'SALES');
+    return salesOnly.length ? salesOnly : salesOptions;
+  })();
+
+  // Superadmin wilayah dropdown: distinct kota from active branches
+  const kotaOptions = [...new Set(
+    masterData.branches
+      .filter((b) => (b.is_active !== 0 && b.active !== 0) && b.city)
+      .map((b) => b.city)
+  )].sort();
+
+  // Wilayah shown in doc header (kota)
+  const wilayah = sales.region || '-';
+
+  // Selected salesman's position (kwitansi signature)
   const selectedPosition = positions.find(
     (p) => p.active && p.name.trim().toLowerCase() === (sales.name || '').trim().toLowerCase()
   ) || null;
-  const branchId = selectedPosition?.branch_ids?.[0] ?? user?.branch_ids?.[0];
-  const linkedBranch = masterData.branches.find((b) => b.id === branchId);
-  const linkedRegion = masterData.regions.find((r) => r.id === linkedBranch?.region_id);
-  const wilayah = linkedRegion?.name || '-';
 
   // Produk selection derived from sales.product (source of truth)
   const selectedBrands = parseBrands(sales.product);
@@ -212,10 +270,8 @@ export default function Documents({
 
   const save = () => (documentId ? onUpdate() : onCreate());
 
-  const totals = {
-    target: golonganRows.filter((r) => r.type === 'brand' || r.type === 'principal').reduce((s, r) => s + (Number(r.target) || 0), 0),
-    achievement: golonganRows.filter((r) => r.type === 'brand' || r.type === 'principal').reduce((s, r) => s + (Number(r.achievement) || 0), 0),
-  };
+  const grand = computeGrandTotal(golonganRows);
+  const totals = { target: grand.target, achievement: grand.achievement };
   totals.percentage = totals.target > 0 ? (totals.achievement / totals.target) * 100 : 0;
   totals.status = totals.target > 0 && totals.percentage >= 100 ? 'Tercapai' : 'Gugur';
 
@@ -230,13 +286,6 @@ export default function Documents({
     if ((type === 'brand' || type === 'principal') && isAutoLabel) updateGolonganRow(row.id, 'label', '');
   };
 
-  const toggleBrand = (name) => {
-    const next = selectedBrands.includes(name)
-      ? selectedBrands.filter((b) => b !== name)
-      : [...selectedBrands, name];
-    updateSales('product', joinBrands(next));
-  };
-
   return (
     <>
       <div className="print-header">
@@ -245,6 +294,58 @@ export default function Documents({
           <button className="button primary" onClick={handlePrint}>Cetak</button>
         </div>
       </div>
+
+      {/* Informasi Dokumen — placed at top */}
+      <section className="content-card info-card">
+        <div className="section-heading">
+          <div className="section-icon blue"><Icon><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></Icon></div>
+          <div><h2>Informasi Dokumen</h2><p>Data dasar dokumen insentif sales.</p></div>
+          <span className={`draft-badge ${documentStatus === 'Final' ? 'final-badge' : ''}`}>{documentStatus}</span>
+        </div>
+        <div className="form-grid">
+          <label>
+            Salesman
+            <input list="salesman-list" value={sales.name} onChange={(e) => updateSales('name', e.target.value)} disabled={!canEdit} placeholder={isSuper && !sales.region ? 'Pilih wilayah dulu' : 'Pilih nama sales'} autoComplete="off" />
+            <datalist id="salesman-list">
+              {salesList.map((p) => <option key={p.id} value={p.name} />)}
+            </datalist>
+          </label>
+          <label>
+            Wilayah (Kota)
+            {isSuper ? (
+              <select value={sales.region} onChange={(e) => updateSales('region', e.target.value)} disabled={!canEdit}>
+                <option value="">{kotaOptions.length ? 'Pilih wilayah' : 'Belum ada kota di cabang'}</option>
+                {kotaOptions.map((k) => <option key={k} value={k}>{k}</option>)}
+              </select>
+            ) : (
+              <input value={wilayah} readOnly disabled />
+            )}
+          </label>
+          <label>
+            Bulan
+            <input list="bulan-list" value={period} onChange={(e) => setPeriod(e.target.value)} disabled={!canEdit} placeholder="Contoh: September 2026" />
+            <datalist id="bulan-list">
+              {PERIOD_OPTIONS.map((o) => <option key={o} value={o} />)}
+            </datalist>
+          </label>
+          <div className="col-span-2">
+            <PickerChips
+              label="Produk"
+              hint="(dari nama principal)"
+              variant="dropdown"
+              searchPlaceholder="Cari produk..."
+              items={masterData.principals
+                .filter((pr) => pr.is_active !== 0 && pr.active !== 0)
+                .flatMap((pr) => masterData.brands
+                  .filter((b) => b.principal_id === pr.id && b.is_active !== 0 && b.active !== 0)
+                  .map((b) => ({ id: b.name, name: b.name, subtitle: pr.name })))}
+              selected={selectedBrands}
+              onChange={(names) => updateSales('product', joinBrands(names))}
+              canEdit={canEdit}
+            />
+          </div>
+        </div>
+      </section>
 
       <section className="content-card info-card print-section">
         <div className="doc-header">
@@ -316,66 +417,6 @@ export default function Documents({
         ) : (
           <p className="subtitle">Belum ada dokumen tersimpan.</p>
         )}
-      </section>
-
-      <section className="content-card info-card">
-        <div className="section-heading">
-          <div className="section-icon blue"><Icon><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></Icon></div>
-          <div><h2>Informasi Dokumen</h2><p>Data dasar dokumen insentif sales.</p></div>
-          <span className={`draft-badge ${documentStatus === 'Final' ? 'final-badge' : ''}`}>{documentStatus}</span>
-        </div>
-        <div className="form-grid">
-          <label>
-            Salesman
-            <input list="salesman-list" value={sales.name} onChange={(e) => updateSales('name', e.target.value)} disabled={!canEdit} placeholder="Pilih nama sales" autoComplete="off" />
-            <datalist id="salesman-list">
-              {positions.filter((p) => p.active).map((p) => <option key={p.id} value={p.name} />)}
-            </datalist>
-          </label>
-          <label>Wilayah<input value={wilayah} readOnly disabled /></label>
-          <label>
-            Bulan
-            <input list="bulan-list" value={period} onChange={(e) => setPeriod(e.target.value)} disabled={!canEdit} placeholder="Contoh: September 2026" />
-            <datalist id="bulan-list">
-              {PERIOD_OPTIONS.map((o) => <option key={o} value={o} />)}
-            </datalist>
-          </label>
-
-          {/* Produk: chips grouped by principal */}
-          <div className="col-span-2">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-[13px] font-semibold">Produk <span className="text-ink-400 font-normal">(dari nama principal)</span></label>
-              <div className="flex gap-1.5">
-                <span className="text-[12px] text-ink-500 self-center">{selectedBrands.length} produk dipilih</span>
-                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => { const all = masterData.brands.filter((b) => b.is_active !== 0 && b.active !== 0).map((b) => b.name); updateSales('product', joinBrands(all)); }} disabled={!canEdit}>Semua</button>
-                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => updateSales('product', '')} disabled={!canEdit}>Kosongkan</button>
-              </div>
-            </div>
-            <div className="max-h-[250px] overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-3">
-              {masterData.principals.filter((pr) => pr.is_active !== 0 && pr.active !== 0).map((principal) => {
-                const principalBrands = masterData.brands.filter((b) => b.principal_id === principal.id && b.is_active !== 0 && b.active !== 0);
-                if (!principalBrands.length) return null;
-                return (
-                  <div key={principal.id}>
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-ink-400 mb-1.5">{principal.name}</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {principalBrands.map((brand) => {
-                        const checked = selectedBrands.includes(brand.name);
-                        return (
-                          <label key={brand.id} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[12px] cursor-pointer transition ${checked ? 'bg-brand-50 border-brand-600 text-brand-800 font-semibold' : 'bg-white border-slate-200 text-ink-700 hover:bg-slate-50'}`}>
-                            <input type="checkbox" checked={checked} onChange={() => toggleBrand(brand.name)} disabled={!canEdit} className="sr-only" />
-                            {brand.name}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-              {!masterData.principals.length && <p className="text-[12px] text-ink-400 text-center py-3">Belum ada produk. Tambah principal & brand di Data Master.</p>}
-            </div>
-          </div>
-        </div>
       </section>
 
       <footer className="action-bar">

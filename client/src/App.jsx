@@ -6,7 +6,7 @@ import { canManageAdmin } from './access';
 import { useAuth } from './context/AuthContext';
 import { useToast } from './components/Toast';
 import { errMsg } from './lib/api';
-import { toApiPeriod, fromApiPeriod } from './lib/period';
+import { toApiPeriod, fromApiPeriod, currentPeriodLabel } from './lib/period';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Documents from './pages/Documents';
@@ -21,7 +21,7 @@ const INITIAL_SALES = {
   product: '',
   branch: 'Cabang Jakarta Selatan',
   division: 'General Trade',
-  period: 'Oktober 2026',
+  period: currentPeriodLabel(),
 };
 
 let nextRowId = 1;
@@ -40,7 +40,7 @@ function App() {
   const [documents, setDocuments] = useState([]);
   const [documentStatus, setDocumentStatus] = useState('Draft');
   const [adminData, setAdminData] = useState({ users: [], criteria: [], masterData: { divisions: [], principals: [], brands: [], regions: [], branches: [] } });
-  const [period, setPeriod] = useState('Oktober 2026');
+  const [period, setPeriod] = useState(currentPeriodLabel());
   const [saved, setSaved] = useState(false);
   const [kwitansi, setKwitansi] = useState({
     penerima: 'PT. BINTANG SINAR JAYA',
@@ -149,6 +149,7 @@ function App() {
         salesman: sales.name,
         product: sales.product || '',
         period: toApiPeriod(period),
+        wilayah: sales.region || null,
         golongan_rows: buildGolonganRows(),
         criteria_rows: buildCriteriaRows(),
         kwitansi,
@@ -170,6 +171,7 @@ function App() {
         salesman: sales.name,
         product: sales.product || '',
         period: toApiPeriod(period),
+        wilayah: sales.region || null,
         golongan_rows: buildGolonganRows(),
         criteria_rows: buildCriteriaRows(),
         kwitansi,
@@ -232,7 +234,7 @@ function App() {
             }))
           : criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', incentive_amount: '' }))
       );
-      setSales({ ...INITIAL_SALES, name: full.salesman || '', product: full.product || '' });
+      setSales({ ...INITIAL_SALES, name: full.salesman || '', product: full.product || '', region: full.wilayah || '' });
       setPeriod(fromApiPeriod(full.period));
       setKwitansi({
         penerima: full.kwitansi?.penerima || 'PT. BINTANG SINAR JAYA',
@@ -253,6 +255,7 @@ function App() {
     setGolonganRows([makeRow({ label: '', target: '', achievement: '', type: 'brand', isGroup: false })]);
     setCriteriaRows(criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', incentive_amount: '' })));
     setSales(INITIAL_SALES);
+    setPeriod(currentPeriodLabel());
     setKwitansi({ penerima: 'PT. BINTANG SINAR JAYA', jumlahUang: '', keterangan: '', terbilang: '', nominal: '' });
     setSaved(false);
   };

@@ -60,10 +60,19 @@ function migrateDatabase(db) {
     db.exec('ALTER TABLE users ADD COLUMN parent_id INTEGER REFERENCES users(id) ON DELETE SET NULL');
   }
 
-  // Migrate incentive_documents: kwitansi JSON (per-document receipt fields)
+  // Migrate incentive_documents: kwitansi JSON (per-document receipt fields) + wilayah (kota)
   const docCols = db.prepare('PRAGMA table_info(incentive_documents)').all().map((c) => c.name);
   if (!docCols.includes('kwitansi')) {
     db.exec('ALTER TABLE incentive_documents ADD COLUMN kwitansi TEXT');
+  }
+  if (!docCols.includes('wilayah')) {
+    db.exec('ALTER TABLE incentive_documents ADD COLUMN wilayah TEXT');
+  }
+
+  // Migrate branches: city (kota) for wilayah derivation
+  const branchCols = db.prepare('PRAGMA table_info(branches)').all().map((c) => c.name);
+  if (!branchCols.includes('city')) {
+    db.exec('ALTER TABLE branches ADD COLUMN city TEXT');
   }
 
   // Ensure position_criteria table exists (each position has own kriteria set)

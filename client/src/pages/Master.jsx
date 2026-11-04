@@ -9,6 +9,7 @@ import {
   listPositions, createPosition, updatePosition, deletePosition, listCriteria,
 } from '../api';
 import Icon from '../components/Icon';
+import PickerChips from '../components/PickerChips';
 
 const EMPTY_MASTER = { divisions: [], principals: [], brands: [], regions: [], branches: [] };
 
@@ -74,7 +75,7 @@ export default function Master({ data, onRefresh, user }) {
       principal: { name: '', code: '', address: '', division_id: '' },
       brand: { principal_id: '', name: '' },
       region: { name: '' },
-      branch: { name: '', code: '', address: '', region_id: '', division_id: '' },
+      branch: { name: '', code: '', address: '', city: '', region_id: '', division_id: '' },
     };
     setMasterForm({ ...defaults[key], _tab: key, _isNew: true });
     setMasterPage(1);
@@ -113,8 +114,8 @@ export default function Master({ data, onRefresh, user }) {
         if (_isNew) await createRegion({ name: payload.name.trim() });
         else await updateRegion(id, { name: payload.name.trim(), is_active: payload.is_active ? 1 : 0 });
       } else if (_tab === 'branch') {
-        if (_isNew) await createBranch({ name: payload.name.trim(), code: payload.code?.trim() || null, address: payload.address?.trim() || null, region_id: payload.region_id ? Number(payload.region_id) : null, division_id: payload.division_id ? Number(payload.division_id) : null });
-        else await updateBranch(id, { name: payload.name.trim(), code: payload.code?.trim() || null, address: payload.address?.trim() || null, region_id: payload.region_id ? Number(payload.region_id) : null, division_id: payload.division_id ? Number(payload.division_id) : null, is_active: payload.is_active ? 1 : 0 });
+        if (_isNew) await createBranch({ name: payload.name.trim(), code: payload.code?.trim() || null, address: payload.address?.trim() || null, city: payload.city?.trim() || null, region_id: payload.region_id ? Number(payload.region_id) : null, division_id: payload.division_id ? Number(payload.division_id) : null });
+        else await updateBranch(id, { name: payload.name.trim(), code: payload.code?.trim() || null, address: payload.address?.trim() || null, city: payload.city?.trim() || null, region_id: payload.region_id ? Number(payload.region_id) : null, division_id: payload.division_id ? Number(payload.division_id) : null, is_active: payload.is_active ? 1 : 0 });
       }
       closeMasterForm();
       await onRefresh();
@@ -291,6 +292,10 @@ export default function Master({ data, onRefresh, user }) {
     branch: getActiveItems('branch'),
   };
 
+  const branchItems = masterData.branches
+    .filter((b) => b.is_active !== 0 && b.active !== 0)
+    .map((b) => ({ id: b.id, name: b.name, subtitle: masterData.regions.find((r) => r.id === b.region_id)?.name || '' }));
+
   const tabConfig = {
     division: {
       title: 'Divisi',
@@ -423,6 +428,10 @@ export default function Master({ data, onRefresh, user }) {
             <input className="input" value={form.code || ''} onChange={(e) => handleMasterFormChange('code', e.target.value)} />
           </div>
           <div>
+            <label className="label">Kota / Wilayah</label>
+            <input className="input" value={form.city || ''} onChange={(e) => handleMasterFormChange('city', e.target.value)} placeholder="Contoh: Kotabaru" />
+          </div>
+          <div>
             <label className="label">Alamat</label>
             <input className="input" value={form.address || ''} onChange={(e) => handleMasterFormChange('address', e.target.value)} />
           </div>
@@ -496,46 +505,18 @@ export default function Master({ data, onRefresh, user }) {
           <label>Password<input type="password" minLength={editingUser ? undefined : 6} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder={editingUser ? 'Biarkan kosong jika tidak diubah' : undefined} required={!editingUser} /></label>
           <label>Role *<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}><option value="officer">Officer</option><option value="observer">Observer</option><option value="superadmin">Super Admin</option></select></label>
 
-          {/* Branch multi-select */}
+          {/* Branch multi-select (searchable) */}
           <div className="col-span-2">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-[13px] font-semibold">Cabang yang diurus {form.role === 'officer' ? '*' : ''} <span className="text-ink-400 font-normal">(minimal {form.role === 'officer' ? 1 : 0})</span></label>
-              <div className="flex gap-1.5">
-                <span className="text-[12px] text-ink-500 self-center">{form.branch_ids.length} cabang dipilih</span>
-                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setForm({ ...form, branch_ids: masterData.branches.filter((b) => b.is_active !== 0 && b.active !== 0).map((b) => b.id) })}>Semua</button>
-                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setForm({ ...form, branch_ids: [] })}>Kosongkan</button>
-              </div>
-            </div>
-            <div className="max-h-[300px] overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-3">
-              {masterData.regions.filter((r) => r.is_active !== 0 && r.active !== 0).map((region) => {
-                const regionBranches = masterData.branches.filter((b) => b.region_id === region.id && b.is_active !== 0 && b.active !== 0);
-                if (regionBranches.length === 0) return null;
-                return (
-                  <div key={region.id}>
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-ink-400 mb-1.5">{region.name}</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {regionBranches.map((branch) => {
-                        const checked = form.branch_ids.includes(branch.id);
-                        return (
-                          <label key={branch.id} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[12px] cursor-pointer transition ${checked ? 'bg-brand-50 border-brand-600 text-brand-800 font-semibold' : 'bg-white border-slate-200 text-ink-700 hover:bg-slate-50'}`}>
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={(e) => {
-                                if (e.target.checked) setForm({ ...form, branch_ids: [...form.branch_ids, branch.id] });
-                                else setForm({ ...form, branch_ids: form.branch_ids.filter((id) => id !== branch.id) });
-                              }}
-                              className="sr-only"
-                            />
-                            {branch.name}
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <PickerChips
+              label="Cabang yang diurus"
+              hint={form.role === 'officer' ? '(minimal 1)' : ''}
+              required={form.role === 'officer'}
+              variant="inline"
+              searchPlaceholder="Cari cabang... (mis. Banjarmasin, Kapuas)"
+              items={branchItems}
+              selected={form.branch_ids}
+              onChange={(ids) => setForm({ ...form, branch_ids: ids })}
+            />
             {form.role === 'officer' && form.branch_ids.length === 0 && (
               <p className="text-[12px] text-rose-600 mt-1 font-semibold">Wajib pilih minimal satu cabang untuk Officer.</p>
             )}
@@ -614,35 +595,16 @@ export default function Master({ data, onRefresh, user }) {
                 </select>
               </div>
             )}
-            {/* Branch multi-select for position */}
+            {/* Branch multi-select for position (searchable) */}
             <div>
-              <label className="text-[13px] font-semibold">Cabang / Distributor</label>
-              <div className="flex gap-1.5 mt-1 mb-2">
-                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, branch_ids: masterData.branches.filter((b) => b.is_active !== 0 && b.active !== 0).map((b) => b.id) })}>Semua</button>
-                <button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, branch_ids: [] })}>Kosongkan</button>
-              </div>
-              <div className="max-h-[250px] overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-3">
-                {masterData.regions.filter((r) => r.is_active !== 0 && r.active !== 0).map((region) => {
-                  const regionBranches = masterData.branches.filter((b) => b.region_id === region.id && b.is_active !== 0 && b.active !== 0);
-                  if (regionBranches.length === 0) return null;
-                  return (
-                    <div key={region.id}>
-                      <p className="text-[11px] font-bold uppercase tracking-wide text-ink-400 mb-1.5">{region.name}</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {regionBranches.map((branch) => {
-                          const checked = posForm.branch_ids.includes(branch.id);
-                          return (
-                            <label key={branch.id} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[12px] cursor-pointer transition ${checked ? 'bg-brand-50 border-brand-600 text-brand-800 font-semibold' : 'bg-white border-slate-200 text-ink-700 hover:bg-slate-50'}`}>
-                              <input type="checkbox" checked={checked} onChange={(e) => { if (e.target.checked) setPosForm({ ...posForm, branch_ids: [...posForm.branch_ids, branch.id] }); else setPosForm({ ...posForm, branch_ids: posForm.branch_ids.filter((id) => id !== branch.id) }); }} className="sr-only" />
-                              {branch.name}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <PickerChips
+                label="Cabang / Distributor"
+                variant="inline"
+                searchPlaceholder="Cari cabang... (mis. Banjarmasin, Kapuas)"
+                items={branchItems}
+                selected={posForm.branch_ids}
+                onChange={(ids) => setPosForm({ ...posForm, branch_ids: ids })}
+              />
             </div>
             {/* Kriteria multi-select for position */}
             <div>

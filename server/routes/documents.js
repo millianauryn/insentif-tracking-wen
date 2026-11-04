@@ -29,9 +29,9 @@ function createDocumentsRouter(db, options = {}) {
     const create = db.transaction(() => {
       const ownerId = req.user.id;
       const result = db.prepare(`
-        INSERT INTO incentive_documents (owner_id, format_id, division_id, salesman, product, period, status, kwitansi)
-        VALUES (?, ?, ?, ?, ?, ?, 'Draft', ?)
-      `).run(ownerId, input.format_id, input.division_id || null, input.salesman || null, input.product || null, input.period, encodeKwitansi(input.kwitansi));
+        INSERT INTO incentive_documents (owner_id, format_id, division_id, salesman, product, period, status, wilayah, kwitansi)
+        VALUES (?, ?, ?, ?, ?, ?, 'Draft', ?, ?)
+      `).run(ownerId, input.format_id, input.division_id || null, input.salesman || null, input.product || null, input.period, input.wilayah || null, encodeKwitansi(input.kwitansi));
       const documentId = result.lastInsertRowid;
       const criteria = db.prepare(`
         SELECT id, label, target_unit, formula, sort_order
@@ -110,7 +110,7 @@ function getDocument(db, id) {
 function updateDocument(db, document, input) {
   const fields = [];
   const values = [];
-  for (const field of ['division_id', 'salesman', 'product', 'period', 'format_id']) {
+  for (const field of ['division_id', 'salesman', 'product', 'period', 'format_id', 'wilayah']) {
     if (input[field] !== undefined) {
       if (field === 'period' && !isValidPeriod(input[field])) throw new Error('Invalid period');
       fields.push(`${field} = ?`);

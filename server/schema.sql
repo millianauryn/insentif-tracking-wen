@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS branches (
     name TEXT NOT NULL UNIQUE,
     code TEXT,
     address TEXT,
+    city TEXT,
     region_id INTEGER REFERENCES regions(id) ON DELETE SET NULL,
     division_id INTEGER REFERENCES divisions(id) ON DELETE SET NULL,
     is_active INTEGER NOT NULL DEFAULT 1,
@@ -105,6 +106,7 @@ CREATE TABLE IF NOT EXISTS incentive_documents (
     product TEXT,
     period TEXT,
     status TEXT NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft', 'Final')),
+    wilayah TEXT,
     kwitansi TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))

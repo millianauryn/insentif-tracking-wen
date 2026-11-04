@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Icon from '../components/Icon';
-import { fromApiPeriod } from '../lib/period';
+import { fromApiPeriod, PERIOD_OPTIONS } from '../lib/period';
 import { listHierarchy } from '../api';
 
 function KpiCard({ icon, label, value, helper, tone }) {
@@ -8,7 +8,7 @@ function KpiCard({ icon, label, value, helper, tone }) {
   return <article className="kpi-card"><div className={`kpi-icon ${tone}`}><Icon>{icons[icon]}</Icon></div><div className="kpi-body"><span>{label}</span><strong>{value}</strong><small>{helper}</small></div><span className={`kpi-trend ${tone}`}>●</span></article>;
 }
 
-const PERIOD_OPTIONS = ['Oktober 2026', 'November 2026', 'Desember 2026'];
+// Period options come from lib/period (realtime: prev/current/next month)
 
 function TreeNode({ label, role, count, open, onToggle, depth }) {
   const depthClass = depth === 0 ? 'bg-slate-50/70' : depth === 1 ? 'bg-white hover:bg-slate-50' : 'hover:bg-slate-50';

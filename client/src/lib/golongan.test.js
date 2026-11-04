@@ -1,35 +1,65 @@
 import { describe, expect, it } from 'vitest';
-import { computeTotalFor } from './golongan';
+import { computeTotalFor, computeGrandTotal, principalValueFor } from './golongan';
 
+// P1 has children → its value = children sum (manual 999 ignored)
+// P2 has no children → manual value
+// brand B0 before any principal → standalone (counts in totals directly)
 const rows = [
-  { type: 'principal', label: 'PULAU BARU', target: 100, achievement: 50 },
-  { type: 'brand', label: 'PASEO', target: 200, achievement: 250 },
+  { type: 'brand', label: 'STANDALONE', target: 5, achievement: 5 },
+  { type: 'principal', label: 'P1', target: 999, achievement: 999 },
+  { type: 'brand', label: 'B1', target: 200, achievement: 250 },
+  { type: 'brand', label: 'B2', target: 30, achievement: 10 },
   { type: 'total-divisi', label: 'TOTAL DIVISI', target: '', achievement: '' },
-  { type: 'principal', label: 'GRP 2', target: 30, achievement: 10 },
-  { type: 'brand', label: 'NICE', target: 70, achievement: 90 },
+  { type: 'principal', label: 'P2', target: 999, achievement: 999 },
   { type: 'total', label: 'TOTAL', target: '', achievement: '' },
 ];
 
+describe('principalValueFor', () => {
+  it('sums brand children when present (manual values ignored)', () => {
+    expect(principalValueFor(rows, 1)).toEqual({ target: 230, achievement: 260 });
+  });
+
+  it('uses manual values when the principal has no brand children', () => {
+    expect(principalValueFor(rows, 5)).toEqual({ target: 999, achievement: 999 });
+  });
+});
+
 describe('computeTotalFor', () => {
-  it('total sums every principal + brand row (target & achievement)', () => {
-    expect(computeTotalFor(rows, 5)).toEqual({ target: 400, achievement: 400 });
+  it('total-divisi sums its section: standalone brand + principal effective value (no double-count)', () => {
+    // section = B0 (standalone) + P1 effective value (children counted once via P1)
+    expect(computeTotalFor(rows, 4)).toEqual({ target: 5 + 230, achievement: 5 + 260 });
   });
 
-  it('total-divisi sums only its section (since previous total row)', () => {
-    expect(computeTotalFor(rows, 2)).toEqual({ target: 300, achievement: 300 });
-    // second section starts after first total row
-    const withSecondTotal = [...rows];
-    withSecondTotal.splice(5, 0, { type: 'total-divisi', label: 'TOTAL DIVISI 2' });
-    expect(computeTotalFor(withSecondTotal, 5)).toEqual({ target: 100, achievement: 100 });
+  it('total = standalone brands + all principal effective values', () => {
+    expect(computeTotalFor(rows, 6)).toEqual({ target: 5 + 230 + 999, achievement: 5 + 260 + 999 });
   });
 
-  it('excludes other total rows from sums (no double-count)', () => {
-    const result = computeTotalFor(rows, 5);
-    expect(result.target).toBe(100 + 200 + 30 + 70);
-  });
-
-  it('returns zeros for empty or valueless rows', () => {
-    expect(computeTotalFor([{ type: 'total', label: 'TOTAL' }], 0)).toEqual({ target: 0, achievement: 0 });
+  it('returns zeros for missing rows', () => {
     expect(computeTotalFor([], 0)).toEqual({ target: 0, achievement: 0 });
+  });
+});
+
+describe('computeGrandTotal', () => {
+  it('matches the grand total row math', () => {
+    expect(computeGrandTotal(rows)).toEqual(computeTotalFor(rows, 6));
+  });
+
+  it('resets standalone tracking after a total row', () => {
+    const split = [
+      { type: 'principal', label: 'P1', target: 10, achievement: 10 },
+      { type: 'brand', label: 'B1', target: 20, achievement: 20 },
+      { type: 'total-divisi', label: 'T1' },
+      { type: 'brand', label: 'B_orphan', target: 7, achievement: 7 },
+    ];
+    // P1 covers B1 (20/20); after T1 the orphan brand is standalone again (7/7)
+    expect(computeGrandTotal(split)).toEqual({ target: 27, achievement: 27 });
+  });
+
+  it('does not double-count children under a principal', () => {
+    const simple = [
+      { type: 'principal', label: 'P', target: 1, achievement: 1 },
+      { type: 'brand', label: 'B', target: 100, achievement: 50 },
+    ];
+    expect(computeGrandTotal(simple)).toEqual({ target: 100, achievement: 50 });
   });
 });

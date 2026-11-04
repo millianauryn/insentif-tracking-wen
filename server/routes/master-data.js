@@ -13,7 +13,7 @@ function createMasterDataRouter(db, options = {}) {
       const principals = db.prepare('SELECT id, name, code, address, division_id, is_active FROM principals ORDER BY name').all();
       const brands = db.prepare('SELECT id, principal_id, name, is_active FROM brands ORDER BY name').all();
       const regions = db.prepare('SELECT id, name, is_active FROM regions ORDER BY name').all();
-      const branches = db.prepare('SELECT id, name, code, address, region_id, division_id, is_active FROM branches ORDER BY name').all();
+      const branches = db.prepare('SELECT id, name, code, address, city, region_id, division_id, is_active FROM branches ORDER BY name').all();
 
       res.json({
         divisions,
@@ -313,7 +313,7 @@ router.delete('/regions/:id', auth, role('superadmin'), async (req, res) => {
 // Create branch
 router.post('/branches', auth, role('superadmin'), async (req, res) => {
   try {
-    const { name, code, address, region_id, division_id } = req.body;
+    const { name, code, address, city, region_id, division_id } = req.body;
     if (!name) {
       return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Branch name required' } });
     }
@@ -333,8 +333,8 @@ router.post('/branches', auth, role('superadmin'), async (req, res) => {
         return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Division not found' } });
       }
     }
-    const info = db.prepare('INSERT INTO branches (name, code, address, region_id, division_id) VALUES (?, ?, ?, ?, ?)').run(name, code || null, address || null, region_id || null, division_id || null);
-    res.status(201).json({ message: 'Branch created', branch: { id: info.lastInsertRowid, name, code, address, region_id, division_id } });
+    const info = db.prepare('INSERT INTO branches (name, code, address, city, region_id, division_id) VALUES (?, ?, ?, ?, ?, ?)').run(name, code || null, address || null, city || null, region_id || null, division_id || null);
+    res.status(201).json({ message: 'Branch created', branch: { id: info.lastInsertRowid, name, code, address, city, region_id, division_id } });
   } catch (err) {
     console.error('POST /api/branches error:', err);
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Internal server error' } });
@@ -345,14 +345,15 @@ router.post('/branches', auth, role('superadmin'), async (req, res) => {
 router.patch('/branches/:id', auth, role('superadmin'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, code, address, region_id, division_id, active } = req.body;
-    const branch = db.prepare('SELECT id, name, code, address, region_id, division_id, is_active FROM branches WHERE id = ?').get(id);
+    const { name, code, address, city, region_id, division_id, active } = req.body;
+    const branch = db.prepare('SELECT id, name, code, address, city, region_id, division_id, is_active FROM branches WHERE id = ?').get(id);
     if (!branch) {
       return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Branch not found' } });
     }
     const nextName = name === undefined ? branch.name : name;
     const nextCode = code === undefined ? branch.code : code;
     const nextAddress = address === undefined ? branch.address : address;
+    const nextCity = city === undefined ? branch.city : city;
     const nextRegionId = region_id === undefined ? branch.region_id : region_id;
     const nextDivisionId = division_id === undefined ? branch.division_id : division_id;
     const nextActive = active === undefined ? branch.is_active : (active ? 1 : 0);
@@ -375,8 +376,8 @@ router.patch('/branches/:id', auth, role('superadmin'), async (req, res) => {
     if (duplicate) {
       return res.status(409).json({ error: { code: 'CONFLICT', message: 'Branch name already exists' } });
     }
-    db.prepare('UPDATE branches SET name = ?, code = ?, address = ?, region_id = ?, division_id = ?, is_active = ? WHERE id = ?')
-      .run(nextName.trim(), nextCode || null, nextAddress || null, nextRegionId || null, nextDivisionId || null, nextActive, id);
+    db.prepare('UPDATE branches SET name = ?, code = ?, address = ?, city = ?, region_id = ?, division_id = ?, is_active = ? WHERE id = ?')
+      .run(nextName.trim(), nextCode || null, nextAddress || null, nextCity || null, nextRegionId || null, nextDivisionId || null, nextActive, id);
     res.json({ message: 'Branch updated' });
   } catch (err) {
     console.error('PATCH /api/branches/:id error:', err);
