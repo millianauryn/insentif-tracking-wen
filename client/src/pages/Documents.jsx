@@ -345,14 +345,12 @@ export default function Documents({
           <div className="col-span-2">
             <PickerChips
               label="Produk"
-              hint="(dari nama principal)"
+              hint="(nama principal)"
               variant="dropdown"
               searchPlaceholder="Cari produk..."
               items={masterData.principals
                 .filter((pr) => pr.is_active !== 0 && pr.active !== 0)
-                .flatMap((pr) => masterData.brands
-                  .filter((b) => b.principal_id === pr.id && b.is_active !== 0 && b.active !== 0)
-                  .map((b) => ({ id: b.name, name: b.name, subtitle: pr.name })))}
+                .map((pr) => ({ id: pr.name, name: pr.name }))}
               selected={selectedBrands}
               onChange={(names) => updateSales('product', joinBrands(names))}
               canEdit={canEdit}
