@@ -36,4 +36,9 @@ export default defineConfig({
       '/api': 'http://localhost:3002',
     },
   },
+  preview: {
+    proxy: {
+      '/api': 'http://localhost:3002',
+    },
+  },
 })
