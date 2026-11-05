@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Plus, Minus } from 'lucide-react';
 import { Button, buttonVariants } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { cn } from 'cn';
@@ -16,29 +17,63 @@ function EmptyState({ title, copy }) {
   );
 }
 
-// Lama kerja dari tanggal masuk jabatan: "4 tahun" / "8 bulan" / "–"
+// Lama kerja: "1 tahun 2 bulan 30 hari (20 Mei 2000)"
 function tenureLabel(joinDate) {
   if (!joinDate) return '–';
   const start = new Date(joinDate);
   if (Number.isNaN(start.getTime())) return '–';
-  const months = Math.max(0, (Date.now() - start.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
-  const years = Math.floor(months / 12);
-  if (years >= 1) return `${years} tahun`;
-  return `${Math.max(1, Math.round(months))} bulan`;
+  const now = new Date();
+  let years = now.getFullYear() - start.getFullYear();
+  let months = now.getMonth() - start.getMonth();
+  let days = now.getDate() - start.getDate();
+  if (days < 0) {
+    months -= 1;
+    days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+  years = Math.max(0, years);
+  months = Math.max(0, months);
+  days = Math.max(0, days);
+  const dateStr = start.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  return `${years} tahun ${months} bulan ${days} hari (${dateStr})`;
 }
 
-function OrgNode({ position, childrenOf, depth }) {
+function OrgNode({ position, childrenOf, depth, collapsed, onToggle }) {
+  const kids = childrenOf(position.id);
+  const hasKids = kids.length > 0 && depth < 2;
+  const open = !collapsed.has(position.id);
   return (
     <div className="org-node">
       <div className="org-row">
         <span className="org-role">{position.position_type}</span>
-        <span className="org-name">{position.name}</span>
+        <Link className="org-name" to={`/insetif?name=${encodeURIComponent(position.name)}`}>{position.name}</Link>
         <span className="org-tenure">{tenureLabel(position.join_date)}</span>
+        {hasKids && (
+          <button
+            type="button"
+            className={`org-toggle${open ? ' open' : ''}`}
+            onClick={() => onToggle(position.id)}
+            aria-expanded={open}
+            aria-label={open ? `Tutup ${position.name}` : `Buka ${position.name}`}
+          >
+            {open ? <Minus size={13} /> : <Plus size={13} />}
+          </button>
+        )}
       </div>
-      {depth < 2 && (
+      {hasKids && open && (
         <div className="org-children">
-          {childrenOf(position.id).map((child) => (
-            <OrgNode key={child.id} position={child} childrenOf={childrenOf} depth={depth + 1} />
+          {kids.map((child) => (
+            <OrgNode
+              key={child.id}
+              position={child}
+              childrenOf={childrenOf}
+              depth={depth + 1}
+              collapsed={collapsed}
+              onToggle={onToggle}
+            />
           ))}
         </div>
       )}
@@ -48,6 +83,14 @@ function OrgNode({ position, childrenOf, depth }) {
 
 export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc }) {
   const [positions, setPositions] = useState([]);
+  const [collapsed, setCollapsed] = useState(() => new Set());
+
+  const toggleNode = (id) => setCollapsed((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
 
   useEffect(() => {
     listPositions()
@@ -88,7 +131,14 @@ export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc })
             {roots.length ? (
               <div className="org-tree">
                 {roots.map((bm) => (
-                  <OrgNode key={bm.id} position={bm} childrenOf={childrenOf} depth={0} />
+                  <OrgNode
+                    key={bm.id}
+                    position={bm}
+                    childrenOf={childrenOf}
+                    depth={0}
+                    collapsed={collapsed}
+                    onToggle={toggleNode}
+                  />
                 ))}
               </div>
             ) : (

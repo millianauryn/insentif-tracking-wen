@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { canFinalizeDocument } from '../access';
-import { fromApiPeriod } from '../lib/period';
-import { useToast } from '../components/Toast';
-import { errMsg } from '../lib/api';
 import Icon from '../components/Icon';
 import PickerChips from '../components/PickerChips';
 import ComboSelect from '../components/ComboSelect';
@@ -212,8 +209,8 @@ function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalChange }
 
 export default function Documents({
   docType = 'sales',
-  user, documents, onRefresh, setDocuments,
-  onCreate, onUpdate, onSubmit, onLoad, onCancel,
+  user,
+  onCreate, onUpdate, onSubmit, onCancel,
   documentId, golonganRows, updateGolonganRow, removeGolonganRow, addGolonganRow,
   criteriaRows, updateCriteriaRow,
   updateSales, sales, period, setPeriod,
@@ -221,8 +218,6 @@ export default function Documents({
   insentifTotal, setInsentifTotal,
   documentStatus, saved,
 }) {
-  const toast = useToast();
-  const [refreshing, setRefreshing] = useState(false);
   const [positions, setPositions] = useState([]);
   const [masterData, setMasterData] = useState(EMPTY_MASTER);
   const canEdit = ['superadmin', 'officer'].includes(user.role) && documentStatus === 'Draft';
@@ -281,18 +276,6 @@ export default function Documents({
   const visibleCriteriaRows = showAllCriteria
     ? criteriaRows
     : criteriaRows.filter((r) => myCriteriaIds.includes(r.criteria_id));
-
-  const refreshList = async () => {
-    setRefreshing(true);
-    try {
-      const { documents: next } = await onRefresh();
-      setDocuments(next);
-    } catch (err) {
-      toast('error', errMsg(err));
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
   const save = () => (documentId ? onUpdate() : onCreate());
 
@@ -480,36 +463,6 @@ export default function Documents({
             <strong>Rp {totals.achievement.toLocaleString('id-ID')}</strong>
           </div>
         </div>
-      </section>
-
-      <section className="content-card info-card">
-        <div className="section-heading heading-with-action">
-          <div>
-            <h2>Dokumen Tersimpan</h2>
-            <p>Buka dokumen lama untuk dilanjutkan.</p>
-          </div>
-          <div className="flex gap-2">
-            <Button className="button secondary" type="button" onClick={refreshList} disabled={refreshing}>{refreshing ? 'Memuat...' : 'Muat Ulang'}</Button>
-            <Button className="button primary" type="button" onClick={onCancel}>Dokumen Baru</Button>
-          </div>
-        </div>
-        {documents.length ? (
-          <div className="admin-list">
-            {documents.map((doc) => (
-              <div className="admin-row" key={doc.id}>
-                <strong>{doc.salesman || 'Tanpa nama sales'}</strong>
-                <span>{fromApiPeriod(doc.period)}</span>
-                <span className={`status-pill ${doc.status === 'Final' ? 'final' : 'draft'}`}>{doc.status}</span>
-                <button className="text-button" type="button" onClick={() => onLoad(doc)}>Buka</button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state">
-            <strong>Belum ada dokumen tersimpan</strong>
-            <p>Simpan draft pertama Anda, lalu buka kembali dari daftar ini.</p>
-          </div>
-        )}
       </section>
 
       <footer className="action-bar">

@@ -18,6 +18,7 @@ import Avatar from './Avatar';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
+  { to: '/insetif', label: 'Insetif', icon: FileText, end: true },
 ];
 
 const DOC_CHILDREN = [

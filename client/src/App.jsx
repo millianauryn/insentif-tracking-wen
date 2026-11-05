@@ -8,6 +8,7 @@ import { errMsg } from './lib/api';
 import { toApiPeriod, fromApiPeriod, currentPeriodLabel } from './lib/period';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
+import Insetif from './pages/Insetif';
 import Documents from './pages/Documents';
 import Master from './pages/Master';
 import Login from './pages/Login';
@@ -316,6 +317,24 @@ function App() {
                 setPeriod={setPeriod}
                 onNewDoc={() => { cancelEdit(); navigate('/documents'); }}
                 onLoadDoc={(doc) => { loadDocument(doc); navigate('/documents'); }}
+              />
+            </Layout>
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+      <Route
+        path="/insetif"
+        element={
+          user ? (
+            <Layout title="Insetif" breadcrumb={['Insetif']}>
+              <Insetif
+                documents={documents}
+                setDocuments={setDocuments}
+                onRefresh={listDocuments}
+                onLoad={(doc) => { loadDocument(doc); navigate('/documents'); }}
+                onNewDoc={() => { cancelEdit(); navigate('/documents'); }}
               />
             </Layout>
           ) : (
