@@ -10,6 +10,7 @@ export default function SearchBox({ value, onSearch, placeholder = 'Cari…', cl
         onChange={(e) => onSearch(e.target.value)}
         placeholder={placeholder}
         className="input pl-9 pr-3 py-2 w-full min-w-[180px] sm:min-w-[220px]"
+        style={{ paddingLeft: 36 }}
         autoComplete="off"
       />
     </div>
