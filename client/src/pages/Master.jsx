@@ -318,7 +318,7 @@ const [createUser, setCreateUser] = useState(false);
             <input className="input" value={form.code || ''} onChange={(e) => handleMasterFormChange('code', e.target.value)} placeholder="Contoh: PB" maxLength={10} />
           </div>
           {form._isNew ? null : (
-            <label className="flex items-center gap-2 text-[13px] font-semibold text-ink-700">
+            <label className="akun-toggle flex items-center gap-2 text-[13px] font-semibold text-ink-700">
               <Checkbox checked={!!form.is_active} onCheckedChange={(value) => handleMasterFormChange('is_active', value)} />
               Aktif
             </label>
@@ -352,7 +352,7 @@ const [createUser, setCreateUser] = useState(false);
             <input className="input" value={form.address || ''} onChange={(e) => handleMasterFormChange('address', e.target.value)} />
           </div>
           {form._isNew ? null : (
-            <label className="flex items-center gap-2 text-[13px] font-semibold text-ink-700">
+            <label className="akun-toggle flex items-center gap-2 text-[13px] font-semibold text-ink-700">
               <Checkbox checked={!!form.is_active} onCheckedChange={(value) => handleMasterFormChange('is_active', value)} />
               Aktif (muncul di dropdown)
             </label>
@@ -378,7 +378,7 @@ const [createUser, setCreateUser] = useState(false);
             <input className="input" value={form.name} onChange={(e) => handleMasterFormChange('name', e.target.value)} required />
           </div>
           {form._isNew ? null : (
-            <label className="flex items-center gap-2 text-[13px] font-semibold text-ink-700">
+            <label className="akun-toggle flex items-center gap-2 text-[13px] font-semibold text-ink-700">
               <Checkbox checked={!!form.is_active} onCheckedChange={(value) => handleMasterFormChange('is_active', value)} />
               Aktif
             </label>
@@ -397,7 +397,7 @@ const [createUser, setCreateUser] = useState(false);
             <input className="input" value={form.name} onChange={(e) => handleMasterFormChange('name', e.target.value)} required />
           </div>
           {form._isNew ? null : (
-            <label className="flex items-center gap-2 text-[13px] font-semibold text-ink-700">
+            <label className="akun-toggle flex items-center gap-2 text-[13px] font-semibold text-ink-700">
               <Checkbox checked={!!form.is_active} onCheckedChange={(value) => handleMasterFormChange('is_active', value)} />
               Aktif
             </label>
@@ -442,7 +442,7 @@ const [createUser, setCreateUser] = useState(false);
             <input className="input" value={form.address || ''} onChange={(e) => handleMasterFormChange('address', e.target.value)} />
           </div>
           {form._isNew ? null : (
-            <label className="flex items-center gap-2 text-[13px] font-semibold text-ink-700">
+            <label className="akun-toggle flex items-center gap-2 text-[13px] font-semibold text-ink-700">
               <Checkbox checked={!!form.is_active} onCheckedChange={(value) => handleMasterFormChange('is_active', value)} />
               Aktif
             </label>

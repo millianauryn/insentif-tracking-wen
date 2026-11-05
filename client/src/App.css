@@ -96,6 +96,7 @@
 /* Form grid adjustments */
 .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: start; }
 .form-grid label { display: flex; flex-direction: column; gap: 6px; }
+.form-grid .akun-toggle { flex-direction: row !important; align-items: center; gap: 8px; }
 .form-grid input, .form-grid select { min-height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-size: 12px; }
 .form-grid .button { align-self: start; justify-self: start; min-height: 32px; padding: 0 16px; font-size: 12px; }
 .form-grid .col-span-2, .form-grid .col-span-3 { grid-column: 1 / -1; }
