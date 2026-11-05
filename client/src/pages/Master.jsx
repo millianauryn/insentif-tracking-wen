@@ -2,6 +2,7 @@ import { useRef, useState, useEffect } from 'react';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Checkbox } from '../components/ui/checkbox';
 import {
   createDivision, updateDivision, deleteDivision,
   createPrincipal, updatePrincipal, deletePrincipal,
@@ -27,6 +28,7 @@ export default function Master({ data, onRefresh, user }) {
   // Akun tab state
   const [form, setForm] = useState({ username: '', password: '', role: 'officer', branch_ids: [] });
   const [editingUser, setEditingUser] = useState(null);
+const [createUser, setCreateUser] = useState(false);
   const [userError, setUserError] = useState('');
   const usernameRef = useRef(null);
 
@@ -164,6 +166,7 @@ export default function Master({ data, onRefresh, user }) {
 
   const cancelEdit = () => {
     setEditingUser(null);
+    setCreateUser(false);
     resetUserForm();
     setUserError('');
     usernameRef.current?.blur();
@@ -316,7 +319,7 @@ export default function Master({ data, onRefresh, user }) {
           </div>
           {form._isNew ? null : (
             <label className="flex items-center gap-2 text-[13px] font-semibold text-ink-700">
-              <input type="checkbox" checked={!!form.is_active} onChange={(e) => handleMasterFormChange('is_active', e.target.checked)} />
+              <Checkbox checked={!!form.is_active} onCheckedChange={(value) => handleMasterFormChange('is_active', value)} />
               Aktif
             </label>
           )}
@@ -350,7 +353,7 @@ export default function Master({ data, onRefresh, user }) {
           </div>
           {form._isNew ? null : (
             <label className="flex items-center gap-2 text-[13px] font-semibold text-ink-700">
-              <input type="checkbox" checked={!!form.is_active} onChange={(e) => handleMasterFormChange('is_active', e.target.checked)} />
+              <Checkbox checked={!!form.is_active} onCheckedChange={(value) => handleMasterFormChange('is_active', value)} />
               Aktif (muncul di dropdown)
             </label>
           )}
@@ -376,7 +379,7 @@ export default function Master({ data, onRefresh, user }) {
           </div>
           {form._isNew ? null : (
             <label className="flex items-center gap-2 text-[13px] font-semibold text-ink-700">
-              <input type="checkbox" checked={!!form.is_active} onChange={(e) => handleMasterFormChange('is_active', e.target.checked)} />
+              <Checkbox checked={!!form.is_active} onCheckedChange={(value) => handleMasterFormChange('is_active', value)} />
               Aktif
             </label>
           )}
@@ -395,7 +398,7 @@ export default function Master({ data, onRefresh, user }) {
           </div>
           {form._isNew ? null : (
             <label className="flex items-center gap-2 text-[13px] font-semibold text-ink-700">
-              <input type="checkbox" checked={!!form.is_active} onChange={(e) => handleMasterFormChange('is_active', e.target.checked)} />
+              <Checkbox checked={!!form.is_active} onCheckedChange={(value) => handleMasterFormChange('is_active', value)} />
               Aktif
             </label>
           )}
@@ -440,7 +443,7 @@ export default function Master({ data, onRefresh, user }) {
           </div>
           {form._isNew ? null : (
             <label className="flex items-center gap-2 text-[13px] font-semibold text-ink-700">
-              <input type="checkbox" checked={!!form.is_active} onChange={(e) => handleMasterFormChange('is_active', e.target.checked)} />
+              <Checkbox checked={!!form.is_active} onCheckedChange={(value) => handleMasterFormChange('is_active', value)} />
               Aktif
             </label>
           )}
@@ -498,13 +501,19 @@ export default function Master({ data, onRefresh, user }) {
   const renderUserSection = () => (
     <>
       <section className="content-card info-card">
-        <div className="section-heading">
+        <div className="section-heading heading-with-action">
           <div>
-            <h2>{editingUser ? 'Edit Akun' : 'Tambah Akun'}</h2>
-            <p>{editingUser ? `Mengubah ${editingUser.username}.` : 'Buat akun officer atau observer dengan akses cabang.'}</p>
+            <h2>{editingUser ? 'Edit Akun' : createUser ? 'Tambah Akun' : 'Akun'}</h2>
+            <p>
+              {editingUser ? `Mengubah ${editingUser.username}.` : createUser ? 'Buat akun officer atau observer dengan akses cabang.' : 'Daftar akun aktif dan nonaktif.'}
+            </p>
           </div>
+          {!editingUser && !createUser && (
+            <Button onClick={() => setCreateUser(true)}>Tambah Akun</Button>
+          )}
         </div>
-        <form className="form-grid" onSubmit={submitUser}>
+        {editingUser || createUser ? (
+          <form className="form-grid" onSubmit={submitUser}>
           <label>Username<input ref={usernameRef} value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} pattern="[a-z ]*" title="Username harus huruf kecil" required /></label>
           <label>Password<input type="password" minLength={editingUser ? undefined : 6} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder={editingUser ? 'Biarkan kosong jika tidak diubah' : undefined} required={!editingUser} /></label>
           <label>Role *<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}><option value="officer">Officer</option><option value="observer">Observer</option><option value="superadmin">Super Admin</option></select></label>
@@ -527,8 +536,9 @@ export default function Master({ data, onRefresh, user }) {
           </div>
 
           <Button className="button primary" type="submit" disabled={masterBusy}>{masterBusy ? 'Menyimpan...' : editingUser ? 'Simpan Perubahan' : 'Tambah Akun'}</Button>
-          {editingUser && <button className="text-button" type="button" onClick={cancelEdit}>Batal</button>}
+          <button className="text-button" type="button" onClick={cancelEdit}>Batal</button>
         </form>
+      ) : null}
       </section>
       {userError && <p className="form-error" role="alert">{userError}</p>}
       <section className="content-card info-card">
