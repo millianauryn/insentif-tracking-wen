@@ -411,3 +411,12 @@
   .section-heading { margin-bottom: 10px; }
   .section-icon { display: none; }
 }
+
+/* Org tree (Dashboard): BM > SPV > sales with tenure */
+.org-tree { font-size: 13px; }
+.org-row { position: relative; display: flex; align-items: baseline; gap: 8px; padding: 7px 0; }
+.org-role { min-width: 44px; font-size: 11.5px; font-weight: 700; color: var(--grey); }
+.org-name { font-weight: 700; color: var(--text); }
+.org-tenure { font-size: 12.5px; color: var(--grey); }
+.org-children { margin-left: 12px; padding-left: 16px; border-left: 1px solid var(--rule); }
+.org-children .org-row::before { content: ''; position: absolute; left: -16px; top: 50%; width: 12px; border-top: 1px solid var(--rule); }
