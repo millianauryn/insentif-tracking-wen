@@ -216,8 +216,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
 
           {/* Filters */}
           <div className="p-6 border-b border-[var(--line)]" role="search" aria-label="Filter dokumen">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
-              <div className="md:col-span-2 lg:col-span-1 min-w-0">
+            <div className="flex flex-col gap-3">
+              <div className="min-w-0">
                 <label htmlFor="q" className="sr-only">Cari dokumen</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--ink-3)]" aria-hidden="true" />
@@ -232,47 +232,49 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                   />
                 </div>
               </div>
-              <div>
-                <label htmlFor="filter-spv" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">SPV</label>
-                <Select value={spvId} onValueChange={(v) => { setSpvId(v); setSalesId(''); }}>
-                  <SelectTrigger id="filter-spv" className="h-10 w-full">
-                    <SelectValue placeholder="Semua SPV" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Semua SPV</SelectItem>
-                    {spvOptions.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label htmlFor="filter-sales" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Sales</label>
-                <Select value={salesId} onValueChange={setSalesId}>
-                  <SelectTrigger id="filter-sales" className="h-10 w-full">
-                    <SelectValue placeholder="Semua sales" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Semua sales</SelectItem>
-                    {salesOptions.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label htmlFor="filter-periode" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode</label>
-                <Select value={periode} onValueChange={setPeriode}>
-                  <SelectTrigger id="filter-periode" className="h-10 w-full">
-                    <SelectValue placeholder="Semua periode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Semua periode</SelectItem>
-                    {periodeOptions.map((key) => (
-                      <SelectItem key={key} value={key}>{periodLabel(key)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                <div>
+                  <label htmlFor="filter-spv" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">SPV</label>
+                  <Select value={spvId} onValueChange={(v) => { setSpvId(v); setSalesId(''); }}>
+                    <SelectTrigger id="filter-spv" className="h-10 w-full">
+                      <SelectValue placeholder="Semua SPV" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Semua SPV</SelectItem>
+                      {spvOptions.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label htmlFor="filter-sales" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Sales</label>
+                  <Select value={salesId} onValueChange={setSalesId}>
+                    <SelectTrigger id="filter-sales" className="h-10 w-full">
+                      <SelectValue placeholder="Semua sales" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Semua sales</SelectItem>
+                      {salesOptions.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label htmlFor="filter-periode" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode</label>
+                  <Select value={periode} onValueChange={setPeriode}>
+                    <SelectTrigger id="filter-periode" className="h-10 w-full">
+                      <SelectValue placeholder="Semua periode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Semua periode</SelectItem>
+                      {periodeOptions.map((key) => (
+                        <SelectItem key={key} value={key}>{periodLabel(key)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           </div>
@@ -280,17 +282,17 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
           {/* Document List */}
           <div className="p-0" ref={listRef}>
             {visibleDocs.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 p-3" id="docList" aria-label="Daftar dokumen tersimpan" role="list">
+              <div className="flex flex-col divide-y divide-[var(--line)]" id="docList" aria-label="Daftar dokumen tersimpan" role="list">
                 {visibleDocs.map((doc) => {
                   const isSelected = doc.id === activeDocId;
                   return (
-                    <article
+                    <div
                       key={doc.id}
                       role="listitem"
-                      className={`group relative flex flex-col p-4 bg-white border border-[var(--line)] rounded-[var(--radius)] transition-all duration-200 cursor-pointer ${
+                      className={`group flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${
                         isSelected
-                          ? 'ring-2 ring-[var(--primary)] shadow-[var(--shadow-md)] bg-[var(--primary-soft)]'
-                          : 'hover:ring-[var(--primary)]/50 hover:shadow-[var(--shadow-md)] hover:-translate-y-0.5'
+                          ? 'bg-[var(--primary-soft)] ring-inset ring-2 ring-[var(--primary)]'
+                          : 'hover:bg-[var(--bg)]'
                       }`}
                       onClick={() => setActiveDocId(doc.id)}
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId(doc.id); }}}
@@ -298,24 +300,13 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                       aria-current={isSelected ? 'true' : undefined}
                       aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${periodLabel(doc.period)}, status ${doc.status === 'final' ? 'Final' : 'Draft'}`}
                     >
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-[14px] text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
-                            {doc.salesman || 'Tanpa nama sales'}
-                          </p>
-                          <p className="text-[12px] text-[var(--ink-2)] mt-0.5">{periodLabel(doc.period)}</p>
-                        </div>
-                        <div className="flex-shrink-0">
-                          {makeBadge(doc.status)}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between mt-auto pt-3 border-t border-[var(--line-soft)]">
-                        <span className="text-[12px] font-medium text-[var(--link)] group-hover:underline transition-colors">
-                          Buka detail
-                        </span>
-                        <ChevronRight className="size-4 text-[var(--ink-3)] group-hover:text-[var(--primary)] transition-colors" aria-hidden="true" />
-                      </div>
-                    </article>
+                      <p className="flex-1 min-w-0 font-medium text-[14px] text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
+                        {doc.salesman || 'Tanpa nama sales'}
+                      </p>
+                      <p className="shrink-0 text-[12px] text-[var(--ink-2)] hidden sm:block">{periodLabel(doc.period)}</p>
+                      <div className="shrink-0">{makeBadge(doc.status)}</div>
+                      <ChevronRight className="shrink-0 size-4 text-[var(--ink-3)] group-hover:text-[var(--primary)] transition-colors" aria-hidden="true" />
+                    </div>
                   );
                 })}
               </div>
