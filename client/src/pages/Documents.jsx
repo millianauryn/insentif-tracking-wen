@@ -357,8 +357,8 @@ export default function Documents({
     setPeriod(`${monthName} ${year}`);
   };
 
-  // SPV / BM pages are placeholders for now (switch via sidebar tree)
-  if (docType === 'spv' || docType === 'bm') {
+  // SPV page: rekap format (Excel-table style), read-only. BM stays a placeholder.
+  if (docType === 'bm') {
     const name = docType.toUpperCase();
     return (
       <>
@@ -372,6 +372,26 @@ export default function Documents({
           <div className="empty-state">
             <strong>Halaman {name} masih kosong</strong>
             <p>Gunakan halaman Sales untuk mencatat perhitungan insentif. Rekap {name} akan ditambahkan di tahap berikutnya.</p>
+          </div>
+        </section>
+      </>
+    );
+  }
+
+  if (docType === 'spv') {
+    const name = docType.toUpperCase();
+    return (
+      <>
+        <div className="page-head doc-page-head">
+          <div className="page-head-copy">
+            <h1>Rekap Insentif {name}</h1>
+            <p>Rekapitulasi perhitungan insentif tingkat {name}.</p>
+          </div>
+        </div>
+        <section className="content-card info-card print-section">
+          <div className="empty-state">
+            <strong>Belum ada data rekap {name}</strong>
+            <p>Data rekap insentif tingkat {name} akan ditampilkan dalam tabel berikut setelah tersedia.</p>
           </div>
         </section>
       </>

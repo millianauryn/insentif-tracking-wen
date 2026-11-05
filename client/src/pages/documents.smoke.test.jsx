@@ -43,9 +43,16 @@ describe('Documents render smoke', () => {
     expect(html).toContain('Wilayah (Kota)');
   });
 
-  it('spv and bm placeholder pages render', () => {
-    expect(renderToString(<Documents {...baseProps} docType="spv" />)).toMatch(/Dokumen\s*<!-- -->\s*SPV|Dokumen SPV/);
-    expect(renderToString(<Documents {...baseProps} docType="bm" />)).toMatch(/Dokumen\s*<!-- -->\s*BM|Dokumen BM/);
+  it('spv rekap page renders', () => {
+    const html = renderToString(<Documents {...baseProps} docType="spv" />);
+    expect(html).toContain('Rekap Insentif');
+    expect(html).toContain('SPV');
+    expect(html).toContain('Belum ada data rekap');
+  });
+
+  it('bm placeholder page renders', () => {
+    const html = renderToString(<Documents {...baseProps} docType="bm" />);
+    expect(html).toMatch(/Dokumen\s*<!-- -->\s*BM|Dokumen BM/);
   });
 
   it('Layout + sidebar render without crashing (user logged in)', async () => {
