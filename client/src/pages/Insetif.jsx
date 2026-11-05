@@ -44,6 +44,10 @@ function periodLabel(key) {
   return PERIOD_LABELS[key] || key;
 }
 
+function positionOf(positions, name) {
+  return positions.find((p) => p.name === name);
+}
+
 function makeBadge(status) {
   if (status === 'final') {
     return (
@@ -145,6 +149,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
       rows = rows.filter((d) => names.includes(d.salesman));
     }
     if (periode) rows = rows.filter((d) => d.period === periode);
+    rows = rows.filter((d) => d.status === 'final');
     const q = search.trim().toLowerCase();
     if (q) {
       rows = rows.filter((d) =>
@@ -324,6 +329,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
               <div className="flex flex-col divide-y divide-[var(--line)]" id="docList" aria-label="Daftar dokumen tersimpan" role="list">
                 {paginatedDocs.map((doc) => {
                   const isSelected = doc.id === activeDocId;
+                  const pos = positionOf(positions, doc.salesman);
                   return (
                     <div
                       key={doc.id}
@@ -342,6 +348,9 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                       <p className="flex-1 min-w-0 font-medium text-[14px] text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
                         {doc.salesman || 'Tanpa nama sales'}
                       </p>
+                      {pos && (
+                        <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
+                      )}
                       <p className="shrink-0 text-[12px] text-[var(--ink-2)] hidden sm:block">{periodLabel(doc.period)}</p>
                       <div className="shrink-0">{makeBadge(doc.status)}</div>
                       <ChevronRight className="shrink-0 size-4 text-[var(--ink-3)] group-hover:text-[var(--primary)] transition-colors" aria-hidden="true" />
@@ -602,6 +611,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
               <div className="flex flex-col gap-2 px-3 pb-4" id="docList" aria-label="Daftar dokumen tersimpan" role="list">
                 {paginatedDocs.map((doc) => {
                   const isSelected = doc.id === activeDocId;
+                  const pos = positionOf(positions, doc.salesman);
                   return (
                     <article
                       key={doc.id}
@@ -622,6 +632,9 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                           <p className="font-semibold text-[14px] text-[var(--ink)] truncate hover:text-[var(--primary)] transition-colors">
                             {doc.salesman || 'Tanpa nama sales'}
                           </p>
+                          {pos && (
+                            <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
+                          )}
                           <p className="text-[12px] text-[var(--ink-2)] mt-0.5">{periodLabel(doc.period)}</p>
                         </div>
                         <div className="flex-shrink-0">
