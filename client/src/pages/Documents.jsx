@@ -20,12 +20,26 @@ const EMPTY_MASTER = { principals: [], brands: [], regions: [], branches: [] };
 const parseBrands = (s) => (s ? s.split(',').map((t) => t.replace(/^\s*&\s*/, '').trim()).filter(Boolean) : []);
 const joinBrands = (arr) => (arr.length <= 1 ? (arr[0] || '') : `${arr.slice(0, -1).join(', ')}, & ${arr[arr.length - 1]}`);
 
-function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit }) {
+function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit, dnd }) {
   const target = Number(row.target) || 0;
   const achievement = Number(row.achievement) || 0;
   const pct = target > 0 ? (achievement / target) * 100 : 0;
   const status = target > 0 && pct >= 100 ? 'Tercapai' : 'Gugur';
   const statusLabel = target > 0 ? status : '';
+
+  // Drag-to-reorder (HTML5): row draggable hanya saat mode edit
+  const dragging = !!dnd && dnd.dragIndex === index;
+  const rowStateClass = `${dragging ? ' row-dragging' : ''}${!!dnd && dnd.overIndex === index && !dragging ? ' row-over' : ''}`;
+  const trProps = canEdit && dnd
+    ? {
+        draggable: true,
+        onDragStart: (e) => dnd.start(index, e),
+        onDragEnter: () => dnd.enter(index),
+        onDragOver: (e) => dnd.over(index, e),
+        onDrop: (e) => dnd.drop(index, e),
+        onDragEnd: dnd.end,
+      }
+    : {};
 
   const jenisSelect = (
     <select
@@ -45,20 +59,29 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
     </button>
   ) : null;
 
+  const actionCell = canEdit ? (
+    <span className="cell-actions">
+      <span className="drag-grip" aria-hidden="true">
+        <Icon size={13}><path d="M9 6h.01M9 12h.01M9 18h.01M15 6h.01M15 12h.01M15 18h.01"/></Icon>
+      </span>
+      {deleteBtn}
+    </span>
+  ) : null;
+
   // Total rows: auto-computed from principal + brand rows (not editable)
   if (row.type === 'total-divisi' || row.type === 'total') {
     const total = computeTotalFor(allRows, index);
     const tPct = total.target > 0 ? (total.achievement / total.target) * 100 : 0;
     const tStatus = total.target > 0 && tPct >= 100 ? 'Tercapai' : 'Gugur';
     return (
-      <tr className="font-semibold">
+      <tr {...trProps} className={`font-semibold${rowStateClass}`}>
         <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} /></td>
         <td>{jenisSelect}</td>
         <td className="text-right">{total.target.toLocaleString('id-ID')}</td>
         <td className="text-right">{total.achievement.toLocaleString('id-ID')}</td>
         <td className="text-right">{tPct.toFixed(1)}%</td>
         <td><span className={`result-badge ${tStatus === 'Tercapai' ? 'success' : 'warning'}`}>{total.target > 0 ? tStatus : ''}</span></td>
-        <td className="text-center">{deleteBtn}</td>
+        <td className="text-center">{actionCell}</td>
       </tr>
     );
   }
@@ -76,14 +99,14 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
       const pPct = v.target > 0 ? (v.achievement / v.target) * 100 : 0;
       const pStatus = v.target > 0 && pPct >= 100 ? 'Tercapai' : 'Gugur';
       return (
-        <tr className="font-semibold">
+        <tr {...trProps} className={`font-semibold${rowStateClass}`}>
           <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} placeholder="Nama principal" /></td>
           <td>{jenisSelect}</td>
           <td className="text-right">{v.target.toLocaleString('id-ID')}</td>
           <td className="text-right">{v.achievement.toLocaleString('id-ID')}</td>
           <td className="text-right">{pPct.toFixed(1)}%</td>
           <td><span className={`result-badge ${pStatus === 'Tercapai' ? 'success' : 'warning'}`}>{v.target > 0 ? pStatus : ''}</span></td>
-          <td className="text-center">{deleteBtn}</td>
+          <td className="text-center">{actionCell}</td>
         </tr>
       );
     }
@@ -91,19 +114,51 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
   }
 
   return (
-    <tr>
+    <tr {...trProps} className={rowStateClass}>
       <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} placeholder="Nama golongan" /></td>
       <td>{jenisSelect}</td>
       <td><input type="number" min="0" value={row.target ?? ''} onChange={(e) => onUpdate(row.id, 'target', e.target.value)} disabled={!canEdit} /></td>
       <td><input type="number" min="0" value={row.achievement ?? ''} onChange={(e) => onUpdate(row.id, 'achievement', e.target.value)} disabled={!canEdit} /></td>
       <td className="text-right">{target > 0 ? `${pct.toFixed(1)}%` : '0.0%'}</td>
       <td><span className={`result-badge ${status === 'Tercapai' ? 'success' : 'warning'}`}>{statusLabel}</span></td>
-      <td className="text-center">{deleteBtn}</td>
+      <td className="text-center">{actionCell}</td>
     </tr>
   );
 }
 
-function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, canEdit }) {
+function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit }) {
+  const [dragIndex, setDragIndex] = useState(null);
+  const [overIndex, setOverIndex] = useState(null);
+
+  const dnd = {
+    dragIndex,
+    overIndex,
+    start: (index, e) => {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(index));
+      setDragIndex(index);
+      setOverIndex(null);
+    },
+    enter: (index) => {
+      if (dragIndex !== null && dragIndex !== index) setOverIndex(index);
+    },
+    over: (index, e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    },
+    drop: (index, e) => {
+      e.preventDefault();
+      const from = Number(e.dataTransfer.getData('text/plain'));
+      if (Number.isInteger(from)) onReorder(from, index);
+      setDragIndex(null);
+      setOverIndex(null);
+    },
+    end: () => {
+      setDragIndex(null);
+      setOverIndex(null);
+    },
+  };
+
   return (
     <div className="table-wrap">
       <table>
@@ -129,6 +184,7 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, canEdit
               onRemove={onRemove}
               onJenisChange={onJenisChange}
               canEdit={canEdit}
+              dnd={canEdit ? dnd : null}
             />
           ))}
         </tbody>
@@ -211,7 +267,7 @@ export default function Documents({
   docType = 'sales',
   user,
   onCreate, onUpdate, onSubmit, onCancel,
-  documentId, golonganRows, updateGolonganRow, removeGolonganRow, addGolonganRow,
+  documentId, golonganRows, updateGolonganRow, removeGolonganRow, addGolonganRow, reorderGolonganRow,
   criteriaRows, updateCriteriaRow,
   updateSales, sales, period, setPeriod,
   kwitansi, setKwitansi,
@@ -434,6 +490,7 @@ export default function Documents({
           onRemove={removeGolonganRow}
           onJenisChange={changeJenis}
           onAdd={addGolonganRow}
+          onReorder={reorderGolonganRow}
           canEdit={canEdit}
         />
 

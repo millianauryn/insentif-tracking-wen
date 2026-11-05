@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --navy: #102b24;
   --navy-soft: #163a31;
   --canvas: #f4f8f6;
@@ -405,7 +405,7 @@
   input:disabled { color: #000; }
   .result-badge { display: inline-block; padding: 1px 4px; border: 1px solid #000; font-size: 10px; font-weight: 600; margin-top: 2px; }
   .result-badge.success { color: #16865c; } .result-badge.warning { color: #c36f23; }
-  .delete-button, button { display: none !important; }
+  .delete-button, .drag-grip, button { display: none !important; }
   .save-dot, .autosave { display: none !important; }
   .draft-badge { display: none !important; }
   .section-heading { margin-bottom: 10px; }
@@ -424,3 +424,10 @@
 .org-tenure { font-size: 12.5px; color: var(--grey); }
 .org-children { margin-left: 12px; padding-left: 16px; border-left: 1px solid var(--rule); }
 .org-children .org-row::before { content: ''; position: absolute; left: -16px; top: 50%; width: 12px; border-top: 1px solid var(--rule); }
+
+/* Golongan rows: drag-to-reorder */
+.row-dragging { opacity: 0.4; }
+.row-over td { background: var(--blue-soft); }
+.cell-actions { display: inline-flex; align-items: center; gap: 4px; }
+.drag-grip { display: inline-grid; place-items: center; color: var(--grey); cursor: grab; }
+.drag-grip:active { cursor: grabbing; }

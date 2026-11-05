@@ -5,6 +5,7 @@ import { canManageAdmin } from './access';
 import { useAuth } from './context/AuthContext';
 import { useToast } from './components/Toast';
 import { errMsg } from './lib/api';
+import { reorder } from './lib/reorder';
 import { toApiPeriod, fromApiPeriod, currentPeriodLabel } from './lib/period';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -100,6 +101,13 @@ function App() {
     const label = type === 'total-divisi' ? 'TOTAL DIVISI' : type === 'total' ? 'TOTAL' : '';
     const row = makeRow({ label, isGroup, type, target: '', achievement: '' });
     setGolonganRows((current) => [...current, row]);
+    setSaved(false);
+  };
+
+  // Drag-to-reorder: urutan array = sort_order saat disimpan, parent_index dihitung ulang dari urutan
+  const reorderGolonganRow = (fromIndex, toIndex) => {
+    if (user?.role === 'observer') return;
+    setGolonganRows((current) => reorder(current, fromIndex, toIndex));
     setSaved(false);
   };
 
@@ -282,6 +290,7 @@ function App() {
         updateGolonganRow={updateGolonganRow}
         removeGolonganRow={removeGolonganRow}
         addGolonganRow={addGolonganRow}
+        reorderGolonganRow={reorderGolonganRow}
         criteria={criteria}
         criteriaRows={criteriaRows}
         updateCriteriaRow={updateCriteriaRow}
