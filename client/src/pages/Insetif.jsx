@@ -227,7 +227,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                     placeholder="Cari sales, produk, periode..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="pl-11 pr-3 h-10"
+                    className="pr-3 h-10"
+                      style={{ paddingLeft: 44 }}
                     autoComplete="off"
                   />
                 </div>
@@ -476,7 +477,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                     placeholder="Cari sales, produk, periode..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="pl-11 pr-3 h-10"
+                    className="pr-3 h-10"
+                      style={{ paddingLeft: 44 }}
                     autoComplete="off"
                   />
                 </div>
