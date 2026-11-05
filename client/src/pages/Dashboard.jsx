@@ -125,7 +125,7 @@ export default function Dashboard({ documents = [], user, period, onNewDoc, onLo
               </div>
               <div className="status-flex">
                 <div className="donut-wrap">
-                  <svg viewBox="0 0 128 128" width="150" height="150" role="img" aria-label={`${totalDocs} dokumen: ${finalCount} final dan ${draftCount} draft`}>
+                  <svg viewBox="0 0 128 128" width="100%" height="100%" role="img" aria-label={`${totalDocs} dokumen: ${finalCount} final dan ${draftCount} draft`}>
                     <circle cx="64" cy="64" r={donutRadius} fill="none" stroke="#edf2ef" strokeWidth="13" />
                     {finalCount > 0 && (
                       <circle
@@ -260,7 +260,7 @@ export default function Dashboard({ documents = [], user, period, onNewDoc, onLo
                       <span className="recent-name">{doc.salesman || 'Tanpa nama'}</span>
                       <span className="recent-meta">{fromApiPeriod(doc.period)} · {doc.product || '–'}</span>
                     </span>
-                    <Badge className={doc.status === 'Final' ? 'bg-[var(--final-soft)] text-[var(--final)] hover:bg-[var(--final-soft)]' : 'bg-[var(--draft-soft)] text-[var(--draft)] hover:bg-[var(--draft-soft)]'}>{doc.status}</Badge>
+                    <Badge className={`status-pill ${doc.status === 'Final' ? 'final' : 'draft'}`}>{doc.status}</Badge>
                   </button>
                 ))}
               </div>

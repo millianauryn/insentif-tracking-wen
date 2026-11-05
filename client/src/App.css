@@ -294,7 +294,7 @@
   .completion-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding-top: 11px; border-top: 1px solid var(--rule); font-size: 13px; color: var(--grey); }
   .completion-row strong { color: var(--text); font-size: 12.5px; }
 
-  .period-chart { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; align-items: end; height: 110px; margin-top: 2px; }
+  .period-chart { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; align-items: end; height: 148px; margin-top: 2px; }
   .period-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 7px; height: 100%; min-width: 0; }
   .period-count { display: block; font-size: 13px; font-weight: 600; color: var(--grey); font-variant-numeric: tabular-nums; height: 14px; }
   .period-track { width: 100%; max-width: 32px; height: 104px; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }
