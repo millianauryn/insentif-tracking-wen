@@ -228,12 +228,26 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pr-3 h-10"
-                      style={{ paddingLeft: 44 }}
+                    style={{ paddingLeft: 44 }}
                     autoComplete="off"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                <div>
+                  <label htmlFor="filter-bm" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">BM</label>
+                  <Select value={bmId} onValueChange={(v) => { setBmId(v); setSpvId(''); setSalesId(''); }}>
+                    <SelectTrigger id="filter-bm" className="h-10 w-full">
+                      <SelectValue placeholder="Semua BM" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Semua BM</SelectItem>
+                      {bms.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div>
                   <label htmlFor="filter-spv" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">SPV</label>
                   <Select value={spvId} onValueChange={(v) => { setSpvId(v); setSalesId(''); }}>
@@ -478,10 +492,24 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="pr-3 h-10"
-                      style={{ paddingLeft: 44 }}
+                    style={{ paddingLeft: 44 }}
                     autoComplete="off"
                   />
                 </div>
+              </div>
+              <div>
+                <label htmlFor="filter-bm-m" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">BM</label>
+                <Select value={bmId} onValueChange={(v) => { setBmId(v); setSpvId(''); setSalesId(''); }}>
+                  <SelectTrigger id="filter-bm-m" className="h-10 w-full">
+                    <SelectValue placeholder="Semua BM" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Semua BM</SelectItem>
+                    {bms.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
