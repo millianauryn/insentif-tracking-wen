@@ -22,6 +22,7 @@ import { useToast } from '../components/Toast';
 import { fromApiPeriod } from '../lib/period';
 import { errMsg } from '../lib/api';
 import { listPositions } from '../api';
+import ListPager from '../components/ListPager';
 import { Search, ChevronLeft, ChevronRight, Plus, Loader2, X, FolderOpen, RotateCcw } from 'lucide-react';
 
 const childrenOf = (positions, id) => positions.filter((p) => p.parent_position_id === id);
@@ -72,6 +73,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
   const [salesId, setSalesId] = useState('');
   const [periode, setPeriode] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const [activeDocId, setActiveDocId] = useState(null);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
@@ -150,6 +153,22 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
     }
     return rows;
   }, [documents, positions, salesId, spvId, bmId, periode, search]);
+
+  // Kembali ke halaman 1 saat pencarian atau filter berubah.
+  useEffect(() => { setPage(1); }, [search, bmId, spvId, salesId, periode]);
+
+  // Jika hasil filter menyusut (mis. dokumen dihapus), turunkan halaman ke posisi valid.
+  useEffect(() => {
+    const tp = Math.ceil(visibleDocs.length / limit) || 1;
+    if (page > tp) setPage(tp);
+  }, [visibleDocs.length, limit, page]);
+
+  const paginatedDocs = useMemo(() => {
+    const start = (page - 1) * limit;
+    return visibleDocs.slice(start, start + limit);
+  }, [visibleDocs, page, limit]);
+
+  const totalPages = Math.ceil(visibleDocs.length / limit) || 1;
 
   const refreshList = async () => {
     setRefreshing(true);
@@ -303,7 +322,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
           <div className="p-0" ref={listRef}>
             {visibleDocs.length > 0 ? (
               <div className="flex flex-col divide-y divide-[var(--line)]" id="docList" aria-label="Daftar dokumen tersimpan" role="list">
-                {visibleDocs.map((doc) => {
+                {paginatedDocs.map((doc) => {
                   const isSelected = doc.id === activeDocId;
                   return (
                     <div
@@ -340,6 +359,18 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                 <Button variant="outline" size="sm" onClick={() => { setSearch(''); setBmId(''); setSpvId(''); setSalesId(''); setPeriode(''); }}>
                   Hapus semua filter
                 </Button>
+              </div>
+            )}
+            {visibleDocs.length > 0 && (
+              <div className="p-4 border-t border-[var(--line)]">
+                <ListPager
+                  page={page}
+                  pages={totalPages}
+                  total={visibleDocs.length}
+                  limit={limit}
+                  onPage={setPage}
+                  onLimit={setLimit}
+                />
               </div>
             )}
           </div>
@@ -569,7 +600,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
           <div className="p-0">
             {visibleDocs.length > 0 ? (
               <div className="flex flex-col gap-2 px-3 pb-4" id="docList" aria-label="Daftar dokumen tersimpan" role="list">
-                {visibleDocs.map((doc) => {
+                {paginatedDocs.map((doc) => {
                   const isSelected = doc.id === activeDocId;
                   return (
                     <article
@@ -617,6 +648,18 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                 <Button variant="outline" size="sm" onClick={() => { setSearch(''); setBmId(''); setSpvId(''); setSalesId(''); setPeriode(''); }}>
                   Hapus semua filter
                 </Button>
+              </div>
+            )}
+            {visibleDocs.length > 0 && (
+              <div className="p-4 border-t border-[var(--line)]">
+                <ListPager
+                  page={page}
+                  pages={totalPages}
+                  total={visibleDocs.length}
+                  limit={limit}
+                  onPage={setPage}
+                  onLimit={setLimit}
+                />
               </div>
             )}
           </div>

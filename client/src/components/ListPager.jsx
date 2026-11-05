@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function ListPager({ page, pages, total, limit, onPage, onLimit }) {
-  if (pages <= 1 && total <= limit) return null;
+  if (total <= 0) return null;
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 mt-3 text-[13px] text-ink-600">
       <p>
