@@ -515,7 +515,7 @@ const [createUser, setCreateUser] = useState(false);
         </div>
         {(createUser || editingUser) && (
           <div className="modal-overlay" onClick={cancelEdit}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content modal-wide" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h3>{editingUser ? 'Edit Akun' : 'Tambah Akun'}</h3>
                 <button className="icon-button" onClick={cancelEdit} aria-label="Tutup"><Icon size={18}><path d="M18 6L6 18M6 6l12 12"/></Icon></button>
@@ -613,7 +613,7 @@ const [createUser, setCreateUser] = useState(false);
         )}
         {posForm && (
           <div className="modal-overlay" onClick={closePosForm}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-content modal-wide" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <h3>{posForm._isNew ? 'Tambah Jabatan' : 'Edit Jabatan'}</h3>
                 <button className="icon-button" onClick={closePosForm} aria-label="Tutup"><Icon size={18}><path d="M18 6L6 18M6 6l12 12"/></Icon></button>
