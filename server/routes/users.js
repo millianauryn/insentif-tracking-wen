@@ -11,7 +11,7 @@ function createUsersRouter(db, options = {}) {
 
   router.get('/', auth, role('superadmin'), (req, res) => {
     try {
-      const users = db.prepare('SELECT id, username, role, parent_id, active FROM users').all();
+      const users = db.prepare('SELECT id, username, role, parent_id, active, sales_code, position_id FROM users').all();
       // Attach branch_ids for each user
       const branchStmt = db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?');
       const result = users.map((u) => ({
@@ -53,7 +53,7 @@ function createUsersRouter(db, options = {}) {
 
   router.post('/', auth, role('superadmin'), async (req, res) => {
     try {
-      const { username, password, role: userRole, branch_ids } = req.body;
+      const { username, password, role: userRole, branch_ids, sales_code, position_id } = req.body;
       if (!validateUsername(username) || !validatePassword(password) || !userRole || !VALID_ROLES.includes(userRole)) {
         return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Username must be lowercase and password must contain at least 6 characters' } });
       }
@@ -64,13 +64,28 @@ function createUsersRouter(db, options = {}) {
       if (userRole === 'officer' && (!Array.isArray(branch_ids) || branch_ids.length === 0)) {
         return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Officer must have at least one branch' } });
       }
+      // Position must be active SALES type and share at least one selected branch
+      if (position_id !== undefined && position_id !== null) {
+        const pos = db.prepare('SELECT id, position_type FROM positions WHERE id = ? AND active = 1').get(position_id);
+        if (!pos) {
+          return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Position not found or inactive' } });
+        }
+        if (pos.position_type !== 'SALES') {
+          return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Position must be SALES type' } });
+        }
+        const posBranches = db.prepare('SELECT branch_id FROM position_branches WHERE position_id = ?').all(position_id).map((r) => r.branch_id);
+        const hasCommonBranch = Array.isArray(branch_ids) && branch_ids.some((bid) => posBranches.includes(bid));
+        if (!hasCommonBranch) {
+          return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Position must belong to at least one selected branch' } });
+        }
+      }
 
       const passwordHash = await hashPassword(password);
       const create = db.transaction(() => {
         const info = db.prepare(`
-          INSERT INTO users (username, password_hash, role, created_by, active)
-          VALUES (?, ?, ?, ?, 1)
-        `).run(username, passwordHash, userRole, req.user.id);
+          INSERT INTO users (username, password_hash, role, created_by, sales_code, position_id, active)
+          VALUES (?, ?, ?, ?, ?, ?, 1)
+        `).run(username, passwordHash, userRole, req.user.id, sales_code || null, position_id || null);
         const userId = info.lastInsertRowid;
         if (Array.isArray(branch_ids) && branch_ids.length > 0) {
           const insBranch = db.prepare('INSERT OR IGNORE INTO user_branches (user_id, branch_id) VALUES (?, ?)');
@@ -80,7 +95,7 @@ function createUsersRouter(db, options = {}) {
       });
 
       const userId = create();
-      res.status(201).json({ message: 'User created', user: { id: userId, username, role: userRole, branch_ids: branch_ids || [] } });
+      res.status(201).json({ message: 'User created', user: { id: userId, username, role: userRole, branch_ids: branch_ids || [], sales_code, position_id } });
     } catch (err) {
       console.error('POST /api/users error:', err);
       res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Internal server error' } });
@@ -90,7 +105,7 @@ function createUsersRouter(db, options = {}) {
   router.patch('/:id', auth, role('superadmin'), async (req, res) => {
     try {
       const { id } = req.params;
-      const { username, password, role: userRole, active, parent_id, branch_ids } = req.body;
+      const { username, password, role: userRole, active, parent_id, branch_ids, sales_code, position_id } = req.body;
       const user = db.prepare('SELECT id, role FROM users WHERE id = ?').get(id);
       if (!user) {
         return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
@@ -129,6 +144,32 @@ function createUsersRouter(db, options = {}) {
       if (parent_id !== undefined) {
         updates.push('parent_id = ?');
         values.push(parent_id || null);
+      }
+      if (sales_code !== undefined) {
+        updates.push('sales_code = ?');
+        values.push(sales_code || null);
+      }
+      if (position_id !== undefined) {
+        if (position_id === null) {
+          updates.push('position_id = ?');
+          values.push(null);
+        } else {
+          const pos = db.prepare('SELECT id, position_type FROM positions WHERE id = ? AND active = 1').get(position_id);
+          if (!pos) {
+            return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Position not found or inactive' } });
+          }
+          if (pos.position_type !== 'SALES') {
+            return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Position must be SALES type' } });
+          }
+          const finalBranchIds = Array.isArray(branch_ids) ? branch_ids : db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?').all(id).map((r) => r.branch_id);
+          const posBranches = db.prepare('SELECT branch_id FROM position_branches WHERE position_id = ?').all(position_id).map((r) => r.branch_id);
+          const hasCommonBranch = finalBranchIds.some((bid) => posBranches.includes(bid));
+          if (!hasCommonBranch) {
+            return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Position must belong to at least one selected branch' } });
+          }
+          updates.push('position_id = ?');
+          values.push(position_id);
+        }
       }
       if (updates.length > 0) {
         values.push(id);
