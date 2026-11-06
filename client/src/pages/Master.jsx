@@ -503,42 +503,54 @@ const [createUser, setCreateUser] = useState(false);
       <section className="content-card info-card">
         <div className="section-heading heading-with-action">
           <div>
-            <h2>{editingUser ? 'Edit Akun' : createUser ? 'Tambah Akun' : 'Akun'}</h2>
-            <p>
-              {editingUser ? `Mengubah ${editingUser.username}.` : createUser ? 'Buat akun officer atau observer dengan akses cabang.' : 'Daftar akun aktif dan nonaktif.'}
-            </p>
+            <h2>Akun</h2>
+            <p>Daftar akun aktif dan nonaktif.</p>
           </div>
           {!editingUser && !createUser && (
-            <Button onClick={() => setCreateUser(true)}>Tambah Akun</Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <input type="text" className="input flex-1 min-w-[200px]" placeholder="Cari username, role…" value={masterSearch} onChange={(e) => { setMasterSearch(e.target.value); setMasterPage(1); }} />
+              <Button onClick={() => setCreateUser(true)}>Tambah Akun</Button>
+            </div>
           )}
         </div>
-        {editingUser || createUser ? (
-          <form className="form-grid" onSubmit={submitUser}>
-          <label>Username<input ref={usernameRef} value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} pattern="[a-z ]*" title="Username harus huruf kecil" required /></label>
-          <label>Password<input type="password" minLength={editingUser ? undefined : 6} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder={editingUser ? 'Biarkan kosong jika tidak diubah' : undefined} required={!editingUser} /></label>
-          <label>Role *<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}><option value="officer">Officer</option><option value="observer">Observer</option><option value="superadmin">Super Admin</option></select></label>
+        {(createUser || editingUser) && (
+          <div className="modal-overlay" onClick={cancelEdit}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>{editingUser ? 'Edit Akun' : 'Tambah Akun'}</h3>
+                <button className="icon-button" onClick={cancelEdit} aria-label="Tutup"><Icon size={18}><path d="M18 6L6 18M6 6l12 12"/></Icon></button>
+              </div>
+              <form className="form-grid" onSubmit={submitUser}>
+                <label>Username<input ref={usernameRef} value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} pattern="[a-z ]*" title="Username harus huruf kecil" required /></label>
+                <label>Password<input type="password" minLength={editingUser ? undefined : 6} value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} placeholder={editingUser ? 'Biarkan kosong jika tidak diubah' : undefined} required={!editingUser} /></label>
+                <label>Role *<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}><option value="officer">Officer</option><option value="observer">Observer</option><option value="superadmin">Super Admin</option></select></label>
 
-          {/* Branch multi-select (searchable) */}
-          <div className="col-span-2">
-            <PickerChips
-              label="Cabang yang diurus"
-              hint={form.role === 'officer' ? '(minimal 1)' : ''}
-              required={form.role === 'officer'}
-              variant="inline"
-              searchPlaceholder="Cari cabang... (mis. Banjarmasin, Kapuas)"
-              items={branchItems}
-              selected={form.branch_ids}
-              onChange={(ids) => setForm({ ...form, branch_ids: ids })}
-            />
-            {form.role === 'officer' && form.branch_ids.length === 0 && (
-              <p className="text-[12px] text-rose-600 mt-1 font-semibold">Wajib pilih minimal satu cabang untuk Officer.</p>
-            )}
+                {/* Branch multi-select (searchable) */}
+                <div className="col-span-2">
+                  <PickerChips
+                    label="Cabang yang diurus"
+                    hint={form.role === 'officer' ? '(minimal 1)' : ''}
+                    required={form.role === 'officer'}
+                    variant="inline"
+                    searchPlaceholder="Cari cabang... (mis. Banjarmasin, Kapuas)"
+                    items={branchItems}
+                    selected={form.branch_ids}
+                    onChange={(ids) => setForm({ ...form, branch_ids: ids })}
+                  />
+                  {form.role === 'officer' && form.branch_ids.length === 0 && (
+                    <p className="text-[12px] text-rose-600 mt-1 font-semibold">Wajib pilih minimal satu cabang untuk Officer.</p>
+                  )}
+                </div>
+
+                {userError && <p className="form-error" role="alert">{userError}</p>}
+                <div className="flex justify-end gap-2 pt-2">
+                  <button className="text-button" type="button" onClick={cancelEdit}>Batal</button>
+                  <Button className="button primary" type="submit" disabled={masterBusy}>{masterBusy ? 'Menyimpan...' : editingUser ? 'Simpan Perubahan' : 'Tambah Akun'}</Button>
+                </div>
+              </form>
+            </div>
           </div>
-
-          <Button className="button primary" type="submit" disabled={masterBusy}>{masterBusy ? 'Menyimpan...' : editingUser ? 'Simpan Perubahan' : 'Tambah Akun'}</Button>
-          <button className="text-button" type="button" onClick={cancelEdit}>Batal</button>
-        </form>
-      ) : null}
+        )}
       </section>
       {userError && <p className="form-error" role="alert">{userError}</p>}
       <section className="content-card info-card">
@@ -570,7 +582,7 @@ const [createUser, setCreateUser] = useState(false);
       <section className="content-card info-card">
         <div className="section-heading heading-with-action">
           <div>
-            <h2>{posForm?._isNew ? 'Tambah Jabatan' : posForm ? 'Edit Jabatan' : 'Jabatan User'}</h2>
+            <h2>Jabatan User</h2>
             <p>Kelola jabatan BM, SPV, dan SALES dengan hierarki dan cabang.</p>
           </div>
           {!posForm && (
@@ -580,71 +592,98 @@ const [createUser, setCreateUser] = useState(false);
           )}
         </div>
 
+        {!posForm && (
+          <div className="admin-list">
+            {positions.length ? positions.map((p) => {
+              const parent = positions.find((x) => x.id === p.parent_position_id);
+              const branchNames = (p.branch_ids || []).map((bid) => masterData.branches.find((b) => b.id === bid)?.name).filter(Boolean);
+              return (
+                <div className="admin-row" key={p.id}>
+                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${p.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : p.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{p.position_type}</span>
+                  <div className="min-w-0 flex-1">
+                    <strong>{p.name}</strong>
+                    <p className="text-[11px] text-ink-400">{p.join_date ? `Masuk: ${new Date(p.join_date).toLocaleDateString('id-ID')}` : '–'}{parent ? ` · ← ${parent.name}` : ''}{branchNames.length ? ` · ${branchNames.length} cabang` : ''}</p>
+                  </div>
+                  <button className="icon-button" type="button" aria-label={`Edit ${p.name}`} onClick={() => openPosForm(p)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button className="icon-button" type="button" aria-label={`Hapus ${p.name}`} onClick={() => removePosition(p.id)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1-14H6L5 6"/></svg></button>
+                </div>
+              );
+            }) : <p className="text-center py-8 text-[13px] text-ink-400">Belum ada jabatan. Klik "Tambah Jabatan" untuk mulai.</p>}
+          </div>
+        )}
         {posForm && (
-          <form onSubmit={savePosForm} className="space-y-3 border border-slate-200 rounded-xl p-4 mb-4">
-            <div>
-              <label className="text-[13px] font-semibold">Jabatan *</label>
-              <select className="input w-full mt-1" value={posForm.position_type} onChange={(e) => setPosForm({ ...posForm, position_type: e.target.value, parent_position_id: '' })} required>
-                <option value="BM">BM (Bisnis Manager)</option>
-                <option value="SPV">SPV (Supervisor)</option>
-                <option value="SALES">SALES</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[13px] font-semibold">Nama *</label>
-              <input className="input w-full mt-1" value={posForm.name} onChange={(e) => setPosForm({ ...posForm, name: e.target.value })} required placeholder="Nama lengkap" />
-            </div>
-            <div>
-              <label className="text-[13px] font-semibold">Tanggal Masuk *</label>
-              <input className="input w-full mt-1" type="date" value={posForm.join_date} onChange={(e) => setPosForm({ ...posForm, join_date: e.target.value })} required />
-            </div>
-            {posForm.position_type !== 'BM' && (
-              <div>
-                <label className="text-[13px] font-semibold">{posForm.position_type === 'SPV' ? 'Atasan BM' : 'Atasan SPV'} *</label>
-                <select className="input w-full mt-1" value={posForm.parent_position_id} onChange={(e) => setPosForm({ ...posForm, parent_position_id: e.target.value })} required>
-                  <option value="">Pilih {posForm.position_type === 'SPV' ? 'BM' : 'SPV'}</option>
-                  {getParentOptions(posForm.position_type).map((p) => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.position_type})</option>
-                  ))}
-                </select>
+          <div className="modal-overlay" onClick={closePosForm}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>{posForm._isNew ? 'Tambah Jabatan' : 'Edit Jabatan'}</h3>
+                <button className="icon-button" onClick={closePosForm} aria-label="Tutup"><Icon size={18}><path d="M18 6L6 18M6 6l12 12"/></Icon></button>
               </div>
-            )}
-            {/* Branch multi-select for position (searchable) */}
-            <div>
-              <PickerChips
-                label="Cabang / Distributor"
-                variant="inline"
-                searchPlaceholder="Cari cabang... (mis. Banjarmasin, Kapuas)"
-                items={branchItems}
-                selected={posForm.branch_ids}
-                onChange={(ids) => setPosForm({ ...posForm, branch_ids: ids })}
-              />
+              <form onSubmit={savePosForm} className="space-y-3 p-4">
+                <div>
+                  <label className="text-[13px] font-semibold">Jabatan *</label>
+                  <select className="input w-full mt-1" value={posForm.position_type} onChange={(e) => setPosForm({ ...posForm, position_type: e.target.value, parent_position_id: '' })} required>
+                    <option value="BM">BM (Bisnis Manager)</option>
+                    <option value="SPV">SPV (Supervisor)</option>
+                    <option value="SALES">SALES</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[13px] font-semibold">Nama *</label>
+                  <input className="input w-full mt-1" value={posForm.name} onChange={(e) => setPosForm({ ...posForm, name: e.target.value })} required placeholder="Nama lengkap" />
+                </div>
+                <div>
+                  <label className="text-[13px] font-semibold">Tanggal Masuk *</label>
+                  <input className="input w-full mt-1" type="date" value={posForm.join_date} onChange={(e) => setPosForm({ ...posForm, join_date: e.target.value })} required />
+                </div>
+                {posForm.position_type !== 'BM' && (
+                  <div>
+                    <label className="text-[13px] font-semibold">{posForm.position_type === 'SPV' ? 'Atasan BM' : 'Atasan SPV'} *</label>
+                    <select className="input w-full mt-1" value={posForm.parent_position_id} onChange={(e) => setPosForm({ ...posForm, parent_position_id: e.target.value })} required>
+                      <option value="">Pilih {posForm.position_type === 'SPV' ? 'BM' : 'SPV'}</option>
+                      {getParentOptions(posForm.position_type).map((p) => (
+                        <option key={p.id} value={p.id}>{p.name} ({p.position_type})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {/* Branch multi-select for position (searchable) */}
+                <div>
+                  <PickerChips
+                    label="Cabang / Distributor"
+                    variant="inline"
+                    searchPlaceholder="Cari cabang... (mis. Banjarmasin, Kapuas)"
+                    items={branchItems}
+                    selected={posForm.branch_ids}
+                    onChange={(ids) => setPosForm({ ...posForm, branch_ids: ids })}
+                  />
+                </div>
+                {/* Kriteria multi-select for position */}
+                <div>
+                  <label className="text-[13px] font-semibold">Kriteria Dokumen *</label>
+                  <div className="flex gap-1.5 mt-1 mb-2">
+                    <Button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, criteria_ids: criteria.map((c) => c.id) })}>Semua</Button>
+                    <Button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, criteria_ids: [] })}>Kosongkan</Button>
+                  </div>
+                  <div className="max-h-[200px] overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-2">
+                    {criteria.map((c) => {
+                      const checked = posForm.criteria_ids.includes(c.id);
+                      return (
+                        <label key={c.id} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[12px] cursor-pointer transition ${checked ? 'bg-brand-50 border-brand-600 text-brand-800 font-semibold' : 'bg-white border-slate-200 text-ink-700 hover:bg-slate-50'}`}>
+                          <input type="checkbox" checked={checked} onChange={(e) => { if (e.target.checked) setPosForm({ ...posForm, criteria_ids: [...posForm.criteria_ids, c.id] }); else setPosForm({ ...posForm, criteria_ids: posForm.criteria_ids.filter((id) => id !== c.id) }); }} className="sr-only" />
+                          {c.label} {c.target_unit ? <span className="text-[11px] text-ink-500">({c.target_unit})</span> : null}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+                {posError && <p className="form-error" role="alert">{posError}</p>}
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button type="button" className="button" onClick={closePosForm}>Batal</Button>
+                  <Button type="submit" className="button primary" disabled={posBusy}>{posBusy ? 'Menyimpan...' : 'Simpan'}</Button>
+                </div>
+              </form>
             </div>
-            {/* Kriteria multi-select for position */}
-            <div>
-              <label className="text-[13px] font-semibold">Kriteria Dokumen *</label>
-              <div className="flex gap-1.5 mt-1 mb-2">
-                <Button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, criteria_ids: criteria.map((c) => c.id) })}>Semua</Button>
-                <Button type="button" className="button secondary text-[11px] px-2 py-1" onClick={() => setPosForm({ ...posForm, criteria_ids: [] })}>Kosongkan</Button>
-              </div>
-              <div className="max-h-[200px] overflow-y-auto border border-slate-200 rounded-xl p-3 space-y-2">
-                {criteria.map((c) => {
-                  const checked = posForm.criteria_ids.includes(c.id);
-                  return (
-                    <label key={c.id} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[12px] cursor-pointer transition ${checked ? 'bg-brand-50 border-brand-600 text-brand-800 font-semibold' : 'bg-white border-slate-200 text-ink-700 hover:bg-slate-50'}`}>
-                      <input type="checkbox" checked={checked} onChange={(e) => { if (e.target.checked) setPosForm({ ...posForm, criteria_ids: [...posForm.criteria_ids, c.id] }); else setPosForm({ ...posForm, criteria_ids: posForm.criteria_ids.filter((id) => id !== c.id) }); }} className="sr-only" />
-                      {c.label} {c.target_unit ? <span className="text-[11px] text-ink-500">({c.target_unit})</span> : null}
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-            {posError && <p className="form-error" role="alert">{posError}</p>}
-            <div className="flex justify-end gap-2">
-              <Button type="button" className="button" onClick={closePosForm}>Batal</Button>
-              <Button type="submit" className="button primary" disabled={posBusy}>{posBusy ? 'Menyimpan...' : 'Simpan'}</Button>
-            </div>
-          </form>
+          </div>
         )}
 
         {!posForm && (
