@@ -25,9 +25,10 @@ export default function Master({ data, onRefresh, user }) {
   const [masterPage, setMasterPage] = useState(1);
   const [masterLimit, setMasterLimit] = useState(10);
   const [expandedDivisions, setExpandedDivisions] = useState(new Set());
+  const [expandedBranches, setExpandedBranches] = useState(new Set());
 
   // Akun tab state
-  const [form, setForm] = useState({ username: '', password: '', role: 'officer', branch_ids: [] });
+  const [form, setForm] = useState({ username: '', password: '', role: 'officer', branch_ids: [], position_id: '', sales_code: '' });
   const [editingUser, setEditingUser] = useState(null);
 const [createUser, setCreateUser] = useState(false);
   const [userError, setUserError] = useState('');
@@ -48,6 +49,9 @@ const [createUser, setCreateUser] = useState(false);
       Promise.all([listPositions(), listCriteria()])
         .then(([r, c]) => { setPositions(r.positions || []); setCriteria(c.criteria || []); })
         .catch(() => { setPositions([]); setCriteria([]); });
+    }
+    if (tab === 'users') {
+      listPositions().then((r) => setPositions(r.positions || [])).catch(() => setPositions([]));
     }
   }, [tab]);
 
@@ -120,8 +124,10 @@ const [createUser, setCreateUser] = useState(false);
         if (_isNew) await createRegion({ name: payload.name.trim() });
         else await updateRegion(id, { name: payload.name.trim(), is_active: payload.is_active ? 1 : 0 });
       } else if (_tab === 'branch') {
-        if (_isNew) await createBranch({ name: payload.name.trim(), code: payload.code?.trim() || null, address: payload.address?.trim() || null, city: payload.city?.trim() || null, region_id: payload.region_id ? Number(payload.region_id) : null, division_id: payload.division_id ? Number(payload.division_id) : null });
-        else await updateBranch(id, { name: payload.name.trim(), code: payload.code?.trim() || null, address: payload.address?.trim() || null, city: payload.city?.trim() || null, region_id: payload.region_id ? Number(payload.region_id) : null, division_id: payload.division_id ? Number(payload.division_id) : null, is_active: payload.is_active ? 1 : 0 });
+        const divisionIds = (payload.division_ids || []).map(Number);
+        const regionIds = (payload.region_ids || []).map(Number);
+        if (_isNew) await createBranch({ name: payload.name.trim(), code: payload.code?.trim() || null, address: payload.address?.trim() || null, city: payload.city?.trim() || null, division_ids: divisionIds, region_ids: regionIds });
+        else await updateBranch(id, { name: payload.name.trim(), code: payload.code?.trim() || null, address: payload.address?.trim() || null, city: payload.city?.trim() || null, division_ids: divisionIds, region_ids: regionIds, is_active: payload.is_active ? 1 : 0 });
       }
       closeMasterForm();
       await onRefresh();
@@ -163,7 +169,7 @@ const [createUser, setCreateUser] = useState(false);
   };
 
   // ---------- Akun tab ----------
-  const resetUserForm = () => setForm({ username: '', password: '', role: 'officer', branch_ids: [] });
+  const resetUserForm = () => setForm({ username: '', password: '', role: 'officer', branch_ids: [], position_id: '', sales_code: '' });
 
   const cancelEdit = () => {
     setEditingUser(null);
@@ -183,7 +189,13 @@ const [createUser, setCreateUser] = useState(false);
     setMasterBusy(true);
     setUserError('');
     try {
-      const payload = { username: form.username.trim(), role: form.role, branch_ids: form.branch_ids.map(Number) };
+      const payload = {
+        username: form.username.trim(),
+        role: form.role,
+        branch_ids: form.branch_ids.map(Number),
+        position_id: form.position_id ? Number(form.position_id) : undefined,
+        sales_code: form.sales_code.trim() || undefined
+      };
       if (editingUser) {
         await updateUser(editingUser.id, { ...payload, password: form.password || undefined });
         setEditingUser(null);
@@ -201,7 +213,14 @@ const [createUser, setCreateUser] = useState(false);
 
   const startEdit = (target) => {
     setEditingUser({ id: target.id, username: target.username, role: target.role });
-    setForm({ username: target.username, password: '', role: target.role, branch_ids: (target.branch_ids || []).map(Number) });
+    setForm({
+      username: target.username,
+      password: '',
+      role: target.role,
+      branch_ids: (target.branch_ids || []).map(Number),
+      position_id: target.position_id || '',
+      sales_code: target.sales_code || ''
+    });
     setUserError('');
     usernameRef.current?.focus();
     usernameRef.current?.scrollIntoView({ block: 'center' });
@@ -302,6 +321,10 @@ const [createUser, setCreateUser] = useState(false);
   const branchItems = masterData.branches
     .filter((b) => b.is_active !== 0 && b.active !== 0)
     .map((b) => ({ id: b.id, name: b.name, subtitle: masterData.regions.find((r) => r.id === b.region_id)?.name || '' }));
+
+  const filteredPositions = positions.filter((p) =>
+    p.active !== 0 && p.position_type === 'SALES' && p.branch_ids.some((bid) => form.branch_ids.includes(bid))
+  );
 
   const tabConfig = {
     division: {
@@ -416,19 +439,27 @@ const [createUser, setCreateUser] = useState(false);
             <label className="label">Nama Cabang *</label>
             <input className="input" value={form.name} onChange={(e) => handleMasterFormChange('name', e.target.value)} required />
           </div>
-          <div>
-            <label className="label">Divisi</label>
-            <select className="input" value={form.division_id || ''} onChange={(e) => handleMasterFormChange('division_id', e.target.value)}>
-              <option value="">- Tanpa Divisi -</option>
-              {activeItems.division.map((d) => <option key={d.id} value={d.id}>{d.code ? `${d.code} · ${d.name}` : d.name}</option>)}
-            </select>
+          <div className="col-span-2">
+            <PickerChips
+              label="Divisi"
+              hint="(opsional)"
+              variant="inline"
+              searchPlaceholder="Cari divisi..."
+              items={activeItems.division.map((d) => ({ id: d.id, name: d.code ? `${d.code} · ${d.name}` : d.name }))}
+              selected={form.division_ids || (form.division_id ? [form.division_id] : [])}
+              onChange={(ids) => handleMasterFormChange('division_ids', ids)}
+            />
           </div>
-          <div>
-            <label className="label">Area / Region</label>
-            <select className="input" value={form.region_id || ''} onChange={(e) => handleMasterFormChange('region_id', e.target.value)}>
-              <option value="">- Tanpa Area -</option>
-              {activeItems.region.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </select>
+          <div className="col-span-2">
+            <PickerChips
+              label="Area / Region"
+              hint="(opsional)"
+              variant="inline"
+              searchPlaceholder="Cari area..."
+              items={activeItems.region.map((r) => ({ id: r.id, name: r.name }))}
+              selected={form.region_ids || (form.region_id ? [form.region_id] : [])}
+              onChange={(ids) => handleMasterFormChange('region_ids', ids)}
+            />
           </div>
           <div>
             <label className="label">Kode</label>
@@ -459,11 +490,16 @@ const [createUser, setCreateUser] = useState(false);
   const renderItem = (item) => {
     const isActive = item.is_active !== 0 && item.active !== 0;
     const statusText = isActive ? 'Aktif' : 'Nonaktif';
-    const isExpanded = expandedDivisions.has(item.id);
+    const isDivisionExpanded = expandedDivisions.has(item.id);
+    const isBranchExpanded = expandedBranches.has(item.id);
 
     let subtitle = '';
+    let divisionPrincipals = [];
+    let branchDivisions = item.divisions || [];
+    let branchRegions = item.regions || [];
+
     if (tab === 'division') {
-      const divisionPrincipals = activeItems.principal.filter((p) => p.division_id === item.id);
+      divisionPrincipals = activeItems.principal.filter((p) => p.division_id === item.id);
       subtitle = `${item.code || ''}${divisionPrincipals.length ? ` · ${divisionPrincipals.length} Principal` : ''}`;
     } else if (tab === 'principal') {
       const division = activeItems.division.find((d) => d.id === item.division_id);
@@ -472,23 +508,34 @@ const [createUser, setCreateUser] = useState(false);
       const principal = activeItems.principal.find((p) => p.id === item.principal_id);
       subtitle = principal?.name || '';
     } else if (tab === 'branch') {
-      const region = activeItems.region.find((r) => r.id === item.region_id);
-      const division = activeItems.division.find((d) => d.id === item.division_id);
-      subtitle = [item.code, item.address, region?.name, division?.name].filter(Boolean).join(' · ');
+      const regionNames = branchRegions.map(r => r.name).join(', ');
+      const divisionNames = branchDivisions.map(d => d.code ? `${d.code} · ${d.name}` : d.name).join(', ');
+      subtitle = [item.code, item.city, item.address, regionNames || '—', divisionNames || '—'].filter(Boolean).join(' · ');
     }
 
-    const divisionPrincipals = tab === 'division' ? activeItems.principal.filter((p) => p.division_id === item.id) : [];
+    const hasDivisionPrincipals = tab === 'division' && divisionPrincipals.length > 0;
+    const hasBranchRelations = tab === 'branch' && (branchDivisions.length > 0 || branchRegions.length > 0);
 
     return (
       <>
         <li
           key={item.id}
-          className={`master-row-item ${tab === 'division' && divisionPrincipals.length > 0 ? 'clickable' : ''}`}
-          onClick={tab === 'division' && divisionPrincipals.length > 0 ? () => setExpandedDivisions((prev) => {
-            const next = new Set(prev);
-            if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
-            return next;
-          }) : undefined}
+          className={`master-row-item ${hasDivisionPrincipals || hasBranchRelations ? 'clickable' : ''}`}
+          onClick={(hasDivisionPrincipals || hasBranchRelations) ? () => {
+            if (tab === 'division') {
+              setExpandedDivisions((prev) => {
+                const next = new Set(prev);
+                if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
+                return next;
+              });
+            } else if (tab === 'branch') {
+              setExpandedBranches((prev) => {
+                const next = new Set(prev);
+                if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
+                return next;
+              });
+            }
+          } : undefined}
         >
           <span className={`master-dot ${isActive ? 'on' : ''}`} aria-hidden="true" />
           <div className="master-main">
@@ -497,9 +544,11 @@ const [createUser, setCreateUser] = useState(false);
           </div>
           <Badge className={`status-pill ${isActive ? 'success' : 'muted'}`}>{statusText}</Badge>
           <div className="master-actions">
-            {tab === 'division' && divisionPrincipals.length > 0 && (
+            {(hasDivisionPrincipals || hasBranchRelations) && (
               <span className="expand-icon" aria-hidden="true">
-                <Icon size={16}><path d={isExpanded ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"}/></Icon>
+                <Icon size={16}>
+                  <path d={ (tab === 'division' ? isDivisionExpanded : isBranchExpanded) ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6" }/>
+                </Icon>
               </span>
             )}
             <button className="icon-action" onClick={(e) => { e.stopPropagation(); openEditForm(item, tab); }} aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`}>
@@ -513,7 +562,7 @@ const [createUser, setCreateUser] = useState(false);
             </button>
           </div>
         </li>
-        {tab === 'division' && isExpanded && divisionPrincipals.length > 0 && (
+        {tab === 'division' && isDivisionExpanded && divisionPrincipals.length > 0 && (
           <li key={`expand-${item.id}`} className="master-expand-row">
             <div className="master-expand-content">
               <div className="principal-mini-list">
@@ -531,6 +580,38 @@ const [createUser, setCreateUser] = useState(false);
                   );
                 })}
               </div>
+            </div>
+          </li>
+        )}
+        {tab === 'branch' && isBranchExpanded && (branchDivisions.length > 0 || branchRegions.length > 0) && (
+          <li key={`expand-${item.id}`} className="master-expand-row">
+            <div className="master-expand-content">
+              {branchDivisions.length > 0 && (
+                <div className="principal-mini-list">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-ink-400 mb-1.5 px-1">Divisi</p>
+                  {branchDivisions.map((d) => (
+                    <div key={d.id} className="principal-mini-item">
+                      <span className="mini-dot on" aria-hidden="true" />
+                      <div className="mini-main">
+                        <span className="mini-name">{d.code ? `${d.code} · ${d.name}` : d.name}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {branchRegions.length > 0 && (
+                <div className="principal-mini-list">
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-ink-400 mb-1.5 px-1">Area / Region</p>
+                  {branchRegions.map((r) => (
+                    <div key={r.id} className="principal-mini-item">
+                      <span className="mini-dot on" aria-hidden="true" />
+                      <div className="mini-main">
+                        <span className="mini-name">{r.name}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </li>
         )}
@@ -576,11 +657,56 @@ const [createUser, setCreateUser] = useState(false);
                     searchPlaceholder="Cari cabang... (mis. Banjarmasin, Kapuas)"
                     items={branchItems}
                     selected={form.branch_ids}
-                    onChange={(ids) => setForm({ ...form, branch_ids: ids })}
+                    onChange={(ids) => {
+                      const next = { ...form, branch_ids: ids };
+                      if (form.position_id) {
+                        const pos = positions.find((p) => p.id === Number(form.position_id));
+                        if (pos && !pos.branch_ids.some((bid) => ids.includes(bid))) {
+                          next.position_id = '';
+                        }
+                      }
+                      setForm(next);
+                    }}
                   />
                   {form.role === 'officer' && form.branch_ids.length === 0 && (
                     <p className="text-[12px] text-rose-600 mt-1 font-semibold">Wajib pilih minimal satu cabang untuk Officer.</p>
                   )}
+                </div>
+
+                {/* Position dropdown, filtered by selected branches */}
+                {form.role === 'officer' && (
+                  <div className="col-span-2">
+                    <label className="text-[13px] font-semibold">Jabatan (Sales)</label>
+                    <select
+                      className="input w-full mt-1"
+                      value={form.position_id || ''}
+                      onChange={(e) => setForm({ ...form, position_id: e.target.value || '' })}
+                    >
+                      <option value="">-- Pilih Jabatan --</option>
+                      {filteredPositions.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                    {form.branch_ids.length === 0 && (
+                      <p className="text-[12px] text-ink-400 mt-1">Pilih cabang dulu untuk melihat jabatan.</p>
+                    )}
+                    {form.branch_ids.length > 0 && filteredPositions.length === 0 && (
+                      <p className="text-[12px] text-amber-600 mt-1">Tidak ada jabatan SALES di cabang terpilih.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Sales code (optional) */}
+                <div className="col-span-2">
+                  <label className="text-[13px] font-semibold">Kode Sales</label>
+                  <input
+                    className="input w-full mt-1"
+                    type="text"
+                    value={form.sales_code || ''}
+                    onChange={(e) => setForm({ ...form, sales_code: e.target.value })}
+                    placeholder="Contoh: 11111"
+                  />
+                  <p className="text-[12px] text-ink-400 mt-1">Opsional. Ditampilkan di dashboard sebagai (kode nama).</p>
                 </div>
 
                 {userError && <p className="form-error" role="alert">{userError}</p>}
