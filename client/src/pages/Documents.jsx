@@ -208,9 +208,12 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReord
         </tbody>
       </table>
       {canEdit && (
-        <div className="flex justify-end mt-3">
+        <div className="flex justify-end mt-3 gap-2">
           <Button className="button secondary text-[12px] py-1.5 px-3" onClick={() => onAdd('brand')}>
             <Icon size={14}><path d="M12 5v14M5 12h14"/></Icon> Tambah Baris
+          </Button>
+          <Button className="button secondary text-[12px] py-1.5 px-3" onClick={() => onAdd('total-divisi')}>
+            <Icon size={14}><path d="M12 5v14M5 12h14"/></Icon> Tambah Divisi
           </Button>
         </div>
       )}
