@@ -256,9 +256,9 @@ const [createUser, setCreateUser] = useState(false);
   const openPosForm = (item = null) => {
     setPosError('');
     if (item) {
-      setPosForm({ _isNew: false, id: item.id, name: item.name, position_type: item.position_type, join_date: item.join_date || '', parent_position_id: item.parent_position_id || '', branch_ids: item.branch_ids || [], criteria_ids: item.criteria_ids || [] });
+      setPosForm({ _isNew: false, id: item.id, name: item.name, sales_code: item.sales_code || '', position_type: item.position_type, join_date: item.join_date || '', parent_position_id: item.parent_position_id || '', branch_ids: item.branch_ids || [], criteria_ids: item.criteria_ids || [] });
     } else {
-      setPosForm({ _isNew: true, name: '', position_type: 'BM', join_date: '', parent_position_id: '', branch_ids: [], criteria_ids: [] });
+      setPosForm({ _isNew: true, name: '', sales_code: '', position_type: 'BM', join_date: '', parent_position_id: '', branch_ids: [], criteria_ids: [] });
     }
   };
 
@@ -272,6 +272,7 @@ const [createUser, setCreateUser] = useState(false);
     try {
       const payload = {
         name: posForm.name.trim(),
+        sales_code: posForm.sales_code.trim() || undefined,
         position_type: posForm.position_type,
         join_date: posForm.join_date || null,
         parent_position_id: posForm.parent_position_id ? Number(posForm.parent_position_id) : null,
@@ -801,6 +802,10 @@ const [createUser, setCreateUser] = useState(false);
                 <div>
                   <label className="text-[13px] font-semibold">Tanggal Masuk *</label>
                   <input className="input w-full mt-1" type="date" value={posForm.join_date} onChange={(e) => setPosForm({ ...posForm, join_date: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="text-[13px] font-semibold">Kode Sales</label>
+                  <input className="input w-full mt-1" value={posForm.sales_code || ''} onChange={(e) => setPosForm({ ...posForm, sales_code: e.target.value })} placeholder="Contoh: 11111" />
                 </div>
                 {posForm.position_type !== 'BM' && (
                   <div>

@@ -171,6 +171,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 CREATE TABLE IF NOT EXISTS positions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
+    sales_code TEXT,
     position_type TEXT NOT NULL CHECK (position_type IN ('BM', 'SPV', 'SALES')),
     join_date TEXT,
     parent_position_id INTEGER REFERENCES positions(id) ON DELETE SET NULL,

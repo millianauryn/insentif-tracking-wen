@@ -30,7 +30,7 @@ function createPositionsRouter(db, options = {}) {
   // Create position
   router.post('/', auth, role('superadmin'), (req, res) => {
     try {
-      const { name, position_type, join_date, parent_position_id, branch_ids, criteria_ids } = req.body;
+      const { name, position_type, join_date, parent_position_id, branch_ids, criteria_ids, sales_code } = req.body;
       if (!name || !position_type || !VALID_TYPES.includes(position_type)) {
         return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Name and valid position_type (BM/SPV/SALES) required' } });
       }
@@ -55,9 +55,9 @@ function createPositionsRouter(db, options = {}) {
 
       const create = db.transaction(() => {
         const info = db.prepare(`
-          INSERT INTO positions (name, position_type, join_date, parent_position_id, branch_id)
-          VALUES (?, ?, ?, ?, ?)
-        `).run(name.trim(), position_type, join_date || null, parent_position_id || null, branch_ids?.[0] || null);
+          INSERT INTO positions (name, sales_code, position_type, join_date, parent_position_id, branch_id)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(name.trim(), sales_code || null, position_type, join_date || null, parent_position_id || null, branch_ids?.[0] || null);
         const positionId = info.lastInsertRowid;
 
         if (Array.isArray(branch_ids) && branch_ids.length > 0) {
@@ -72,7 +72,7 @@ function createPositionsRouter(db, options = {}) {
       });
 
       const positionId = create();
-      res.status(201).json({ message: 'Position created', position: { id: positionId, name, position_type, join_date, parent_position_id, branch_ids: branch_ids || [], criteria_ids: criteria_ids || [] } });
+      res.status(201).json({ message: 'Position created', position: { id: positionId, name, sales_code, position_type, join_date, parent_position_id, branch_ids: branch_ids || [], criteria_ids: criteria_ids || [] } });
     } catch (err) {
       console.error('POST /api/positions error:', err);
       res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Internal server error' } });
@@ -83,7 +83,7 @@ function createPositionsRouter(db, options = {}) {
   router.patch('/:id', auth, role('superadmin'), (req, res) => {
     try {
       const { id } = req.params;
-      const { name, position_type, join_date, parent_position_id, branch_ids, criteria_ids, active } = req.body;
+      const { name, position_type, join_date, parent_position_id, branch_ids, criteria_ids, active, sales_code } = req.body;
       const position = db.prepare('SELECT id, position_type FROM positions WHERE id = ?').get(id);
       if (!position) {
         return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Position not found' } });
@@ -95,6 +95,7 @@ function createPositionsRouter(db, options = {}) {
       const updates = [];
       const values = [];
       if (name !== undefined) { updates.push('name = ?'); values.push(name.trim()); }
+      if (sales_code !== undefined) { updates.push('sales_code = ?'); values.push(sales_code || null); }
       if (position_type !== undefined) { updates.push('position_type = ?'); values.push(position_type); }
       if (join_date !== undefined) { updates.push('join_date = ?'); values.push(join_date || null); }
       if (parent_position_id !== undefined) { updates.push('parent_position_id = ?'); values.push(parent_position_id || null); }

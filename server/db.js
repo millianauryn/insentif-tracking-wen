@@ -59,6 +59,9 @@ function migrateDatabase(db) {
   if (!userCols.includes('parent_id')) {
     db.exec('ALTER TABLE users ADD COLUMN parent_id INTEGER REFERENCES users(id) ON DELETE SET NULL');
   }
+  if (!userCols.includes('sales_code')) {
+    db.exec('ALTER TABLE users ADD COLUMN sales_code TEXT');
+  }
   if (!userCols.includes('position_id')) {
     db.exec('ALTER TABLE users ADD COLUMN position_id INTEGER REFERENCES positions(id) ON DELETE SET NULL');
   }
@@ -80,6 +83,10 @@ function migrateDatabase(db) {
   if (!branchCols.includes('city')) {
     db.exec('ALTER TABLE branches ADD COLUMN city TEXT');
   }
+
+  // Migrate positions: add sales_code column
+  const posCols = db.prepare('PRAGMA table_info(positions)').all().map((c) => c.name);
+  if (!posCols.includes('sales_code')) db.exec('ALTER TABLE positions ADD COLUMN sales_code TEXT');
 
   // Ensure position_criteria table exists (each position has own kriteria set)
   if (!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='position_criteria'").get()) {
