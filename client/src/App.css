@@ -73,7 +73,7 @@
 
 /* Modal styles */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 1000; animation: fadeIn .15s ease; }
-.modal-content { background: #fff; border-radius: 12px; width: 100%; max-width: 480px; max-height: 90vh; overflow: hidden; animation: slideUp .2s ease; }
+.modal-content { background: #fff; border-radius: 12px; width: 100%; max-width: 480px; max-height: 90vh; overflow: hidden; animation: slideUp .2s ease; padding-inline: 1rem; }
 .modal-wide { max-width: 720px; margin: 0 1rem; }
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--line); }
 .modal-header h3 { margin: 0; font-size: 14px; font-weight: 600; color: var(--text); }
