@@ -49,7 +49,7 @@ function OrgNode({ position, childrenOf, depth, collapsed, onToggle, documentsFi
   const linkedUser = position.position_type === 'SALES' ? userByPosition[position.id] : null;
   const displayName = linkedUser
     ? linkedUser.sales_code
-      ? `(${linkedUser.sales_code} ${linkedUser.username})`
+      ? `${linkedUser.sales_code} ${linkedUser.username}`
       : linkedUser.username
     : position.name;
   return (
