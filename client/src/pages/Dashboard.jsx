@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Minus } from 'lucide-react';
 import { Button, buttonVariants } from '../components/ui/button';
@@ -41,10 +41,12 @@ function tenureLabel(joinDate) {
   return `${years} tahun ${months} bulan ${days} hari (${dateStr})`;
 }
 
-function OrgNode({ position, childrenOf, depth, collapsed, onToggle }) {
+function OrgNode({ position, childrenOf, depth, collapsed, onToggle, docCounts, documentsFinal }) {
   const kids = childrenOf(position.id);
   const hasKids = kids.length > 0 && depth < 2;
   const open = !collapsed.has(position.id);
+  const docTotal = docCounts[position.name] || 0;
+  const docFinal = documentsFinal[position.name] || 0;
   return (
     <div className="org-node">
       <div className="org-row">
@@ -63,6 +65,10 @@ function OrgNode({ position, childrenOf, depth, collapsed, onToggle }) {
           </button>
         )}
       </div>
+      <div className="org-summary">
+        <span className="org-summary-item">Dokumen: <span className="org-summary-value">{docTotal}</span></span>
+        <span className="org-summary-item">Insentif: <span className="org-summary-value">{docFinal}</span></span>
+      </div>
       {hasKids && open && (
         <div className="org-children">
           {kids.map((child) => (
@@ -73,6 +79,8 @@ function OrgNode({ position, childrenOf, depth, collapsed, onToggle }) {
               depth={depth + 1}
               collapsed={collapsed}
               onToggle={onToggle}
+              docCounts={docCounts}
+              documentsFinal={documentsFinal}
             />
           ))}
         </div>
@@ -103,6 +111,21 @@ export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc })
   const roots = positions.filter((p) => !p.parent_position_id);
   const totalSales = positions.filter((p) => p.position_type === 'SALES').length;
   const recentDocs = [...documents].sort((a, b) => b.id - a.id).slice(0, 5);
+
+  const documentsFinal = useMemo(() => {
+    const counts = {};
+    documents.forEach((d) => {
+      if (d.status === 'final') counts[d.salesman] = (counts[d.salesman] || 0) + 1;
+    });
+    return counts;
+  }, [documents]);
+  const docCounts = useMemo(() => {
+    const counts = {};
+    documents.forEach((d) => {
+      counts[d.salesman] = (counts[d.salesman] || 0) + 1;
+    });
+    return counts;
+  }, [documents]);
 
   return (
     <>
@@ -139,6 +162,8 @@ export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc })
                     depth={0}
                     collapsed={collapsed}
                     onToggle={toggleNode}
+                    docCounts={docCounts}
+                    documentsFinal={documentsFinal}
                   />
                 ))}
               </div>
