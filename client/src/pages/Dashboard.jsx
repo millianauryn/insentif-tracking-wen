@@ -6,7 +6,7 @@ import { Badge } from '../components/ui/badge';
 import { cn } from 'cn';
 import Icon from '../components/Icon';
 import { fromApiPeriod } from '../lib/period';
-import { listPositions } from '../api';
+import { listPositions, listUsers } from '../api';
 
 function EmptyState({ title, copy }) {
   return (
@@ -41,16 +41,22 @@ function tenureLabel(joinDate) {
   return `${years} tahun ${months} bulan ${days} hari (${dateStr})`;
 }
 
-function OrgNode({ position, childrenOf, depth, collapsed, onToggle, documentsFinal }) {
+function OrgNode({ position, childrenOf, depth, collapsed, onToggle, documentsFinal, userByPosition }) {
   const kids = childrenOf(position.id);
   const hasKids = kids.length > 0 && depth < 2;
   const open = !collapsed.has(position.id);
   const docFinal = documentsFinal[position.name] || 0;
+  const linkedUser = position.position_type === 'SALES' ? userByPosition[position.id] : null;
+  const displayName = linkedUser
+    ? linkedUser.sales_code
+      ? `(${linkedUser.sales_code} ${linkedUser.username})`
+      : linkedUser.username
+    : position.name;
   return (
     <div className="org-node">
       <div className="org-row">
         <span className="org-role">{position.position_type}</span>
-        <Link className="org-name" to={`/insetif?name=${encodeURIComponent(position.name)}`}>{position.name}</Link>
+        <Link className="org-name" to={`/insetif?name=${encodeURIComponent(position.name)}`}>{displayName}</Link>
         <span className="org-tenure">{tenureLabel(position.join_date)}</span>
         {hasKids && (
           <button
@@ -78,6 +84,7 @@ function OrgNode({ position, childrenOf, depth, collapsed, onToggle, documentsFi
               collapsed={collapsed}
               onToggle={onToggle}
               documentsFinal={documentsFinal}
+              userByPosition={userByPosition}
             />
           ))}
         </div>
@@ -88,6 +95,7 @@ function OrgNode({ position, childrenOf, depth, collapsed, onToggle, documentsFi
 
 export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc }) {
   const [positions, setPositions] = useState([]);
+  const [users, setUsers] = useState([]);
   const [collapsed, setCollapsed] = useState(() => new Set());
   const navigate = useNavigate();
 
@@ -102,12 +110,23 @@ export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc })
     listPositions()
       .then((res) => setPositions((res.positions || []).filter((p) => p.active !== 0)))
       .catch(() => setPositions([]));
+    listUsers()
+      .then((res) => setUsers(res.users || []))
+      .catch(() => setUsers([]));
   }, []);
 
   const childrenOf = (id) => positions.filter((p) => p.parent_position_id === id);
   const roots = positions.filter((p) => !p.parent_position_id);
   const totalSales = positions.filter((p) => p.position_type === 'SALES').length;
   const recentDocs = [...documents].sort((a, b) => b.id - a.id).slice(0, 5);
+
+  const userByPosition = useMemo(() => {
+    const map = {};
+    users.forEach((u) => {
+      if (u.position_id) map[u.position_id] = u;
+    });
+    return map;
+  }, [users]);
 
   const documentsFinal = useMemo(() => {
     const counts = {};
@@ -153,6 +172,7 @@ export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc })
                     collapsed={collapsed}
                     onToggle={toggleNode}
                     documentsFinal={documentsFinal}
+                    userByPosition={userByPosition}
                   />
                 ))}
               </div>
