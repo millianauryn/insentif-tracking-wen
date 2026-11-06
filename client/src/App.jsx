@@ -22,12 +22,11 @@ const INITIAL_SALES = {
   product: '',
   branch: 'Cabang Jakarta Selatan',
   division: 'General Trade',
-  divisi: '',
   period: currentPeriodLabel(),
 };
 
 let nextRowId = 1;
-const makeRow = (props = {}) => ({ id: `r${nextRowId++}`, ...props });
+const makeRow = (props = {}) => ({ id: `r${nextRowId++}`, divisi: '', ...props });
 
 function App() {
   const { user, loading: authLoading } = useAuth();
@@ -124,6 +123,7 @@ function App() {
     return filtered.map((row, index) => {
       const result = {
         label: row.label || null,
+        divisi: row.divisi || null,
         is_group: row.isGroup || false,
         target: row.target !== undefined && row.target !== '' ? Number(row.target) : null,
         achievement: row.achievement !== undefined && row.achievement !== '' ? Number(row.achievement) : null,
@@ -236,6 +236,7 @@ function App() {
               }
               return makeRow({
                 label: row.label || '',
+                divisi: row.divisi || '',
                 isGroup: !!row.is_group,
                 type,
                 target: row.target ?? '',
@@ -316,10 +317,7 @@ function App() {
         setInsentifTotal={setInsentifTotal}
         documentStatus={documentStatus}
         saved={saved}
-          divisions={adminData.masterData.divisions}
-          salesDivisi={sales.divisi}
-          setSalesDivisi={(v) => updateSales('divisi', v)}
-        />
+      />
     </Layout>
   );
 
