@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS users (
     role TEXT NOT NULL CHECK (role IN ('superadmin', 'officer', 'observer')),
     parent_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    sales_code TEXT,
+    position_id INTEGER REFERENCES positions(id) ON DELETE SET NULL,
     active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -60,9 +62,17 @@ CREATE TABLE IF NOT EXISTS branches (
     address TEXT,
     city TEXT,
     region_id INTEGER REFERENCES regions(id) ON DELETE SET NULL,
-    division_id INTEGER REFERENCES divisions(id) ON DELETE SET NULL,
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Branch-Divisions junction (many-to-many)
+CREATE TABLE IF NOT EXISTS branch_divisions (
+    branch_id INTEGER NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+    division_id INTEGER NOT NULL REFERENCES divisions(id) ON DELETE CASCADE,
+    is_primary INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (branch_id, division_id)
 );
 
 -- Brands master data
@@ -207,3 +217,14 @@ CREATE INDEX IF NOT EXISTS idx_position_branches_position ON position_branches(p
 CREATE INDEX IF NOT EXISTS idx_position_branches_branch ON position_branches(branch_id);
 CREATE INDEX IF NOT EXISTS idx_position_criteria_position ON position_criteria(position_id);
 CREATE INDEX IF NOT EXISTS idx_position_criteria_criteria ON position_criteria(criteria_id);
+CREATE TABLE IF NOT EXISTS branch_regions (
+    branch_id INTEGER NOT NULL REFERENCES branches(id) ON DELETE CASCADE,
+    region_id INTEGER NOT NULL REFERENCES regions(id) ON DELETE CASCADE,
+    PRIMARY KEY (branch_id, region_id)
+);
+CREATE INDEX IF NOT EXISTS idx_branch_divisions_branch ON branch_divisions(branch_id);
+CREATE INDEX IF NOT EXISTS idx_branch_divisions_division ON branch_divisions(division_id);
+CREATE INDEX IF NOT EXISTS idx_branch_regions_branch ON branch_regions(branch_id);
+CREATE INDEX IF NOT EXISTS idx_branch_regions_region ON branch_regions(region_id);
+CREATE INDEX IF NOT EXISTS idx_branch_regions_branch ON branch_regions(branch_id);
+CREATE INDEX IF NOT EXISTS idx_branch_regions_region ON branch_regions(region_id);
