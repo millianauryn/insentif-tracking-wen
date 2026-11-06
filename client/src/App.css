@@ -422,6 +422,9 @@
 .org-toggle:hover { background: var(--rule); }
 .org-toggle.open { background: var(--text); border-color: var(--text); color: #fff; }
 .org-tenure { font-size: 12.5px; color: var(--grey); }
+.org-summary { margin-top: 3px; display: flex; gap: 10px; font-size: 11.5px; color: var(--ink-2); }
+.org-summary-item { display: flex; align-items: baseline; gap: 3px; }
+.org-summary-value { font-weight: 700; color: var(--ink); }
 .org-children { margin-left: 12px; padding-left: 16px; border-left: 1px solid var(--rule); }
 .org-children .org-row::before { content: ''; position: absolute; left: -16px; top: 50%; width: 12px; border-top: 1px solid var(--rule); }
 
