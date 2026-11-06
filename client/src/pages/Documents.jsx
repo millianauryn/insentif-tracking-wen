@@ -20,7 +20,7 @@ const EMPTY_MASTER = { principals: [], brands: [], regions: [], branches: [] };
 const parseBrands = (s) => (s ? s.split(',').map((t) => t.replace(/^\s*&\s*/, '').trim()).filter(Boolean) : []);
 const joinBrands = (arr) => (arr.length <= 1 ? (arr[0] || '') : `${arr.slice(0, -1).join(', ')}, & ${arr[arr.length - 1]}`);
 
-function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit, dnd, divisions }) {
+function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit, dnd }) {
   const target = Number(row.target) || 0;
   const achievement = Number(row.achievement) || 0;
   const pct = target > 0 ? (achievement / target) * 100 : 0;
@@ -100,22 +100,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
       const pStatus = v.target > 0 && pPct >= 100 ? 'Tercapai' : 'Gugur';
       return (
         <tr {...trProps} className={`font-semibold${rowStateClass}`}>
-          <td>
-            <input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} placeholder="Nama principal" />
-            {canEdit && (
-              <select
-                value={row.divisi || ''}
-                onChange={(e) => onUpdate(row.id, 'divisi', e.target.value)}
-                disabled={!canEdit}
-                className="input text-[11px] mt-1 w-full"
-              >
-                <option value="">-- Divisi --</option>
-                {(divisions || []).filter((d) => d.is_active !== 0 && d.active !== 0).map((d) => (
-                  <option key={d.id} value={d.name}>{d.name}</option>
-                ))}
-              </select>
-            )}
-          </td>
+          <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} placeholder="Nama principal" /></td>
           <td>{jenisSelect}</td>
           <td className="text-right">{v.target.toLocaleString('id-ID')}</td>
           <td className="text-right">{v.achievement.toLocaleString('id-ID')}</td>
@@ -130,22 +115,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
 
   return (
     <tr {...trProps} className={rowStateClass}>
-      <td>
-        <input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} placeholder="Nama golongan" />
-        {canEdit && (
-          <select
-            value={row.divisi || ''}
-            onChange={(e) => onUpdate(row.id, 'divisi', e.target.value)}
-            disabled={!canEdit}
-            className="input text-[11px] mt-1 w-full"
-          >
-            <option value="">-- Divisi --</option>
-            {(divisions || []).filter((d) => d.is_active !== 0 && d.active !== 0).map((d) => (
-              <option key={d.id} value={d.name}>{d.name}</option>
-            ))}
-          </select>
-        )}
-      </td>
+      <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} placeholder="Nama golongan" /></td>
       <td>{jenisSelect}</td>
       <td><input type="number" min="0" value={row.target ?? ''} onChange={(e) => onUpdate(row.id, 'target', e.target.value)} disabled={!canEdit} /></td>
       <td><input type="number" min="0" value={row.achievement ?? ''} onChange={(e) => onUpdate(row.id, 'achievement', e.target.value)} disabled={!canEdit} /></td>
@@ -156,7 +126,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
   );
 }
 
-function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit, divisions }) {
+function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit, salesDivisi, setSalesDivisi }) {
   const [dragIndex, setDragIndex] = useState(null);
   const [overIndex, setOverIndex] = useState(null);
 
@@ -203,6 +173,21 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReord
             <th className="w-[50px]" aria-label="Aksi" />
           </tr>
         </thead>
+        {canEdit && (
+          <tr className="golongan-divisi-row">
+            <td colSpan={6}>
+              <label className="text-[11px] font-semibold text-ink-700 mr-2">Divisi</label>
+              <select
+                value={salesDivisi || ''}
+                onChange={(e) => setSalesDivisi(e.target.value)}
+                className="input text-[11px] w-full"
+              >
+                <option value="">-- Pilih Divisi --</option>
+              </select>
+            </td>
+            <td className="text-center" />
+          </tr>
+        )}
         <tbody>
           {rows.map((row, index) => (
             <GolonganRow
@@ -215,7 +200,6 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReord
               onJenisChange={onJenisChange}
               canEdit={canEdit}
               dnd={canEdit ? dnd : null}
-              divisions={divisions}
             />
           ))}
         </tbody>
@@ -316,6 +300,7 @@ export default function Documents({
   kwitansi, setKwitansi,
   insentifTotal, setInsentifTotal,
   documentStatus, saved,
+  salesDivisi, setSalesDivisi,
 }) {
   const [positions, setPositions] = useState([]);
   const [masterData, setMasterData] = useState(EMPTY_MASTER);
@@ -555,7 +540,8 @@ export default function Documents({
           onAdd={addGolonganRow}
           onReorder={reorderGolonganRow}
           canEdit={canEdit}
-          divisions={masterData.divisions}
+          salesDivisi={salesDivisi}
+          setSalesDivisi={setSalesDivisi}
         />
 
         <KriteriaTable
