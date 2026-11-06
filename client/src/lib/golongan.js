@@ -1,21 +1,14 @@
-// Principal value: if it has brand children (rows until next principal/total), value = sum of
-// those brands (target & achievement); otherwise the principal's own manual inputs.
+// Principal value: takes target & achievement from the row immediately above,
+// not from brand children below.
 export function principalValueFor(rows, pi) {
-  const p = rows[pi];
-  let target = 0;
-  let achievement = 0;
-  let children = 0;
-  for (let i = pi + 1; i < rows.length; i++) {
-    const r = rows[i];
-    if (r.type === 'principal' || r.type === 'total-divisi' || r.type === 'total') break;
-    if (r.type === 'brand') {
-      target += Number(r.target) || 0;
-      achievement += Number(r.achievement) || 0;
-      children++;
-    }
+  if (pi > 0) {
+    const above = rows[pi - 1];
+    return {
+      target: Number(above.target) || 0,
+      achievement: Number(above.achievement) || 0,
+    };
   }
-  if (children > 0) return { target, achievement };
-  return { target: Number(p.target) || 0, achievement: Number(p.achievement) || 0 };
+  return { target: Number(rows[pi]?.target) || 0, achievement: Number(rows[pi]?.achievement) || 0 };
 }
 
 // Sum a scope without double-counting: principals contribute their effective value

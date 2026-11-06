@@ -126,7 +126,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
   );
 }
 
-function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit, canAdd = canEdit }) {
+function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit }) {
   const [dragIndex, setDragIndex] = useState(null);
   const [overIndex, setOverIndex] = useState(null);
 
@@ -189,7 +189,7 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReord
           ))}
         </tbody>
       </table>
-      {canAdd && (
+      {canEdit && (
         <div className="flex justify-end mt-3">
           <Button className="button secondary text-[12px] py-1.5 px-3" onClick={() => onAdd('brand')}>
             <Icon size={14}><path d="M12 5v14M5 12h14"/></Icon> Tambah Baris
@@ -285,6 +285,7 @@ export default function Documents({
   kwitansi, setKwitansi,
   insentifTotal, setInsentifTotal,
   documentStatus, saved,
+  divisions, salesDivisi, setSalesDivisi,
 }) {
   const [positions, setPositions] = useState([]);
   const [masterData, setMasterData] = useState(EMPTY_MASTER);
@@ -469,9 +470,11 @@ export default function Documents({
           <label className="block">
             Divisi
             <ComboSelect
-              value={sales.division}
-              onChange={(v) => updateSales('division', v)}
-              options={(masterData.divisions || []).map((d) => ({ value: d.name }))}
+              value={salesDivisi}
+              onChange={(v) => setSalesDivisi(v)}
+              options={(divisions || [])
+                .filter((d) => d.is_active !== 0 && d.active !== 0)
+                .map((d) => ({ value: d.name, hint: d.code || '' }))}
               placeholder="Pilih divisi..."
               disabled={!canEdit}
               emptyHint="Belum ada divisi."
@@ -508,6 +511,11 @@ export default function Documents({
               showClear={false}
               items={masterData.principals
                 .filter((pr) => pr.is_active !== 0 && pr.active !== 0)
+                .filter((pr) => {
+                  if (!salesDivisi) return true;
+                  const div = divisions.find((d) => d.name === salesDivisi);
+                  return div && pr.division_id === div.id;
+                })
                 .map((pr) => ({ id: pr.name, name: pr.name }))}
               selected={selectedBrands}
               onChange={(names) => updateSales('product', joinBrands(names))}
@@ -521,7 +529,6 @@ export default function Documents({
         <div className="doc-header">
           <div className="doc-meta">
             <div><strong>Wilayah:</strong><span>{wilayah}</span></div>
-            <div><strong>Divisi:</strong><span>{sales.division || '-'}</span></div>
             <div><strong>Salesman:</strong><span>{sales.name || '-'}</span></div>
             <div><strong>Produk:</strong><span>{sales.product || '-'}</span></div>
             <div><strong>Bulan:</strong><span>{period || '-'}</span></div>
@@ -536,7 +543,6 @@ export default function Documents({
           onAdd={addGolonganRow}
           onReorder={reorderGolonganRow}
           canEdit={canEdit}
-          canAdd={canEdit && (user.role !== 'officer' || Boolean(sales.division))}
         />
 
         <KriteriaTable

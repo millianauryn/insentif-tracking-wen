@@ -22,6 +22,7 @@ const INITIAL_SALES = {
   product: '',
   branch: 'Cabang Jakarta Selatan',
   division: 'General Trade',
+  divisi: '',
   period: currentPeriodLabel(),
 };
 
@@ -166,6 +167,7 @@ function App() {
         product: sales.product || '',
         period: toApiPeriod(period),
         wilayah: sales.region || null,
+        divisi: sales.divisi || null,
         insentif_total: insentifTotal,
         golongan_rows: buildGolonganRows(),
         criteria_rows: buildCriteriaRows(),
@@ -189,6 +191,7 @@ function App() {
         product: sales.product || '',
         period: toApiPeriod(period),
         wilayah: sales.region || null,
+        divisi: sales.divisi || null,
         insentif_total: insentifTotal,
         golongan_rows: buildGolonganRows(),
         criteria_rows: buildCriteriaRows(),
@@ -253,7 +256,7 @@ function App() {
             }))
           : criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', percentage_value: '', incentive_amount: '' }))
       );
-      setSales({ ...INITIAL_SALES, name: full.salesman || '', product: full.product || '', region: full.wilayah || '' });
+      setSales({ ...INITIAL_SALES, name: full.salesman || '', product: full.product || '', region: full.wilayah || '', divisi: full.divisi || '' });
       setPeriod(fromApiPeriod(full.period));
       setInsentifTotal(full.insentif_total ?? null);
       setKwitansi({
@@ -313,7 +316,10 @@ function App() {
         setInsentifTotal={setInsentifTotal}
         documentStatus={documentStatus}
         saved={saved}
-      />
+          divisions={adminData.masterData.divisions}
+          salesDivisi={sales.divisi}
+          setSalesDivisi={(v) => updateSales('divisi', v)}
+        />
     </Layout>
   );
 
