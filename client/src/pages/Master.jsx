@@ -762,21 +762,58 @@ const [createUser, setCreateUser] = useState(false);
 
         {!posForm && (
           <div className="admin-list">
-            {positions.length ? positions.map((p) => {
-              const parent = positions.find((x) => x.id === p.parent_position_id);
-              const branchNames = (p.branch_ids || []).map((bid) => masterData.branches.find((b) => b.id === bid)?.name).filter(Boolean);
-              return (
-                <div className="admin-row" key={p.id}>
-                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${p.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : p.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{p.position_type}</span>
-                  <div className="min-w-0 flex-1">
-                    <strong>{p.sales_code ? `${p.sales_code} ${p.name}` : p.name}</strong>
-                    <p className="text-[11px] text-ink-400">{p.join_date ? `Masuk: ${new Date(p.join_date).toLocaleDateString('id-ID')}` : '–'}{parent ? ` · ← ${parent.name}` : ''}{branchNames.length ? ` · ${branchNames.length} cabang` : ''}</p>
-                  </div>
-                  <button className="icon-button" type="button" aria-label={`Edit ${p.name}`} onClick={() => openPosForm(p)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-                  <button className="icon-button" type="button" aria-label={`Hapus ${p.name}`} onClick={() => removePosition(p.id)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1-14H6L5 6"/></svg></button>
-                </div>
-              );
-            }) : <p className="text-center py-8 text-[13px] text-ink-400">Belum ada jabatan. Klik "Tambah Jabatan" untuk mulai.</p>}
+            {positions.length ? (
+              <>
+                {(() => {
+                  const byBranch = {};
+                  positions.forEach((p) => {
+                    const branchIds = p.branch_ids || [];
+                    const key = branchIds.length > 0 ? branchIds[0] : '__no_branch__';
+                    if (!byBranch[key]) byBranch[key] = [];
+                    byBranch[key].push(p);
+                  });
+                  return Object.entries(byBranch).map(([branchKey, branchPositions]) => {
+                    const branch = branchKey === '__no_branch__'
+                      ? { id: '__no_branch__', name: 'Tanpa Cabang' }
+                      : masterData.branches.find((b) => b.id === Number(branchKey)) || { id: branchKey, name: branchKey };
+                    const open = !expandedBranches.has(branch.id);
+                    return (
+                      <div key={branch.id} className="mb-4">
+                        <div className="flex items-center justify-between cursor-pointer group" onClick={() => {
+                          const next = new Set(expandedBranches);
+                          if (next.has(branch.id)) next.delete(branch.id);
+                          else next.add(branch.id);
+                          setExpandedBranches(next);
+                        }}>
+                          <span className={`text-[12px] font-bold text-ink-700 ${open ? 'text-blue-600' : ''}`}>
+                            {open ? '▸' : '▾'} {branch.name}
+                          </span>
+                          <span className="text-[11px] text-ink-400">{branchPositions.length} jabatan</span>
+                        </div>
+                        {!open && (
+                          <div className="ml-4 mt-2 space-y-2">
+                            {branchPositions.map((p) => {
+                              const parent = positions.find((x) => x.id === p.parent_position_id);
+                              return (
+                                <div className="admin-row" key={p.id}>
+                                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${p.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : p.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{p.position_type}</span>
+                                  <div className="min-w-0 flex-1">
+                                    <strong>{p.sales_code ? `${p.sales_code} ${p.name}` : p.name}</strong>
+                                    <p className="text-[11px] text-ink-400">{p.join_date ? `Masuk: ${new Date(p.join_date).toLocaleDateString('id-ID')}` : '–'}{parent ? ` · ← ${parent.name}` : ''}</p>
+                                  </div>
+                                  <button className="icon-button" type="button" aria-label={`Edit ${p.name}`} onClick={() => openPosForm(p)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                                  <button className="icon-button" type="button" aria-label={`Hapus ${p.name}`} onClick={() => removePosition(p.id)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1-14H6L5 6"/></svg></button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+              </>
+            ) : <p className="text-center py-8 text-[13px] text-ink-400">Belum ada jabatan. Klik "Tambah Jabatan" untuk mulai.</p>}
           </div>
         )}
         {posForm && (
@@ -860,21 +897,58 @@ const [createUser, setCreateUser] = useState(false);
 
         {!posForm && (
           <div className="admin-list">
-            {positions.length ? positions.map((p) => {
-              const parent = positions.find((x) => x.id === p.parent_position_id);
-              const branchNames = (p.branch_ids || []).map((bid) => masterData.branches.find((b) => b.id === bid)?.name).filter(Boolean);
-              return (
-                <div className="admin-row" key={p.id}>
-                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${p.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : p.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{p.position_type}</span>
-                  <div className="min-w-0 flex-1">
-                    <strong>{p.sales_code ? `${p.sales_code} ${p.name}` : p.name}</strong>
-                    <p className="text-[11px] text-ink-400">{p.join_date ? `Masuk: ${new Date(p.join_date).toLocaleDateString('id-ID')}` : '–'}{parent ? ` · ← ${parent.name}` : ''}{branchNames.length ? ` · ${branchNames.length} cabang` : ''}</p>
-                  </div>
-                  <button className="icon-button" type="button" aria-label={`Edit ${p.name}`} onClick={() => openPosForm(p)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-                  <button className="icon-button" type="button" aria-label={`Hapus ${p.name}`} onClick={() => removePosition(p.id)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1-14H6L5 6"/></svg></button>
-                </div>
-              );
-            }) : <p className="text-center py-8 text-[13px] text-ink-400">Belum ada jabatan. Klik "Tambah Jabatan" untuk mulai.</p>}
+            {positions.length ? (
+              <>
+                {(() => {
+                  const byBranch = {};
+                  positions.forEach((p) => {
+                    const branchIds = p.branch_ids || [];
+                    const key = branchIds.length > 0 ? branchIds[0] : '__no_branch__';
+                    if (!byBranch[key]) byBranch[key] = [];
+                    byBranch[key].push(p);
+                  });
+                  return Object.entries(byBranch).map(([branchKey, branchPositions]) => {
+                    const branch = branchKey === '__no_branch__'
+                      ? { id: '__no_branch__', name: 'Tanpa Cabang' }
+                      : masterData.branches.find((b) => b.id === Number(branchKey)) || { id: branchKey, name: branchKey };
+                    const open = !expandedBranches.has(branch.id);
+                    return (
+                      <div key={branch.id} className="mb-4">
+                        <div className="flex items-center justify-between cursor-pointer group" onClick={() => {
+                          const next = new Set(expandedBranches);
+                          if (next.has(branch.id)) next.delete(branch.id);
+                          else next.add(branch.id);
+                          setExpandedBranches(next);
+                        }}>
+                          <span className={`text-[12px] font-bold text-ink-700 ${open ? 'text-blue-600' : ''}`}>
+                            {open ? '▸' : '▾'} {branch.name}
+                          </span>
+                          <span className="text-[11px] text-ink-400">{branchPositions.length} jabatan</span>
+                        </div>
+                        {!open && (
+                          <div className="ml-4 mt-2 space-y-2">
+                            {branchPositions.map((p) => {
+                              const parent = positions.find((x) => x.id === p.parent_position_id);
+                              return (
+                                <div className="admin-row" key={p.id}>
+                                  <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${p.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : p.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{p.position_type}</span>
+                                  <div className="min-w-0 flex-1">
+                                    <strong>{p.sales_code ? `${p.sales_code} ${p.name}` : p.name}</strong>
+                                    <p className="text-[11px] text-ink-400">{p.join_date ? `Masuk: ${new Date(p.join_date).toLocaleDateString('id-ID')}` : '–'}{parent ? ` · ← ${parent.name}` : ''}</p>
+                                  </div>
+                                  <button className="icon-button" type="button" aria-label={`Edit ${p.name}`} onClick={() => openPosForm(p)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                                  <button className="icon-button" type="button" aria-label={`Hapus ${p.name}`} onClick={() => removePosition(p.id)}><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1-14H6L5 6"/></svg></button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  });
+                })()}
+              </>
+            ) : <p className="text-center py-8 text-[13px] text-ink-400">Belum ada jabatan. Klik "Tambah Jabatan" untuk mulai.</p>}
           </div>
         )}
       </section>
