@@ -126,7 +126,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
   );
 }
 
-function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit }) {
+function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit, canAdd = canEdit }) {
   const [dragIndex, setDragIndex] = useState(null);
   const [overIndex, setOverIndex] = useState(null);
 
@@ -189,7 +189,7 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReord
           ))}
         </tbody>
       </table>
-      {canEdit && (
+      {canAdd && (
         <div className="flex justify-end mt-3">
           <Button className="button secondary text-[12px] py-1.5 px-3" onClick={() => onAdd('brand')}>
             <Icon size={14}><path d="M12 5v14M5 12h14"/></Icon> Tambah Baris
@@ -467,6 +467,17 @@ export default function Documents({
             )}
           </label>
           <label className="block">
+            Divisi
+            <ComboSelect
+              value={sales.division}
+              onChange={(v) => updateSales('division', v)}
+              options={(masterData.divisions || []).map((d) => ({ value: d.name }))}
+              placeholder="Pilih divisi..."
+              disabled={!canEdit}
+              emptyHint="Belum ada divisi."
+            />
+          </label>
+          <label className="block">
             Salesman
             <ComboSelect
               value={sales.name}
@@ -510,6 +521,7 @@ export default function Documents({
         <div className="doc-header">
           <div className="doc-meta">
             <div><strong>Wilayah:</strong><span>{wilayah}</span></div>
+            <div><strong>Divisi:</strong><span>{sales.division || '-'}</span></div>
             <div><strong>Salesman:</strong><span>{sales.name || '-'}</span></div>
             <div><strong>Produk:</strong><span>{sales.product || '-'}</span></div>
             <div><strong>Bulan:</strong><span>{period || '-'}</span></div>
@@ -524,6 +536,7 @@ export default function Documents({
           onAdd={addGolonganRow}
           onReorder={reorderGolonganRow}
           canEdit={canEdit}
+          canAdd={canEdit && (user.role !== 'officer' || Boolean(sales.division))}
         />
 
         <KriteriaTable
