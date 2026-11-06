@@ -46,11 +46,8 @@ function OrgNode({ position, childrenOf, depth, collapsed, onToggle, documentsFi
   const hasKids = kids.length > 0 && depth < 2;
   const open = !collapsed.has(position.id);
   const docFinal = documentsFinal[position.name] || 0;
-  const linkedUser = position.position_type === 'SALES' ? userByPosition[position.id] : null;
-  const displayName = linkedUser
-    ? linkedUser.sales_code
-      ? `${linkedUser.sales_code} ${linkedUser.username}`
-      : linkedUser.username
+  const displayName = position.position_type === 'SALES' && position.sales_code
+    ? `${position.sales_code} ${position.name}`
     : position.name;
   return (
     <div className="org-node">
