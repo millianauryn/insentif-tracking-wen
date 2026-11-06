@@ -267,7 +267,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                   <label htmlFor="filter-bm" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">BM</label>
                   <Select value={bmId} onValueChange={(v) => { setBmId(v); setSpvId(''); setSalesId(''); }}>
                     <SelectTrigger id="filter-bm" className="h-10 w-full">
-                      <SelectValue placeholder="Semua BM" />
+                      <SelectValue placeholder="Semua BM">{bmId ? bms.find((p) => String(p.id) === bmId)?.name : 'Semua BM'}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Semua BM</SelectItem>
@@ -281,7 +281,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                   <label htmlFor="filter-spv" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">SPV</label>
                   <Select value={spvId} onValueChange={(v) => { setSpvId(v); setSalesId(''); }}>
                     <SelectTrigger id="filter-spv" className="h-10 w-full">
-                      <SelectValue placeholder="Semua SPV" />
+                      <SelectValue placeholder="Semua SPV">{spvId ? spvOptions.find((p) => String(p.id) === spvId)?.name : 'Semua SPV'}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Semua SPV</SelectItem>
@@ -295,7 +295,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                   <label htmlFor="filter-sales" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Sales</label>
                   <Select value={salesId} onValueChange={setSalesId}>
                     <SelectTrigger id="filter-sales" className="h-10 w-full">
-                      <SelectValue placeholder="Semua sales" />
+                      <SelectValue placeholder="Semua sales">{salesId ? salesOptions.find((p) => String(p.id) === salesId)?.name : 'Semua sales'}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Semua sales</SelectItem>
@@ -309,7 +309,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                   <label htmlFor="filter-periode" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode</label>
                   <Select value={periode} onValueChange={setPeriode}>
                     <SelectTrigger id="filter-periode" className="h-10 w-full">
-                      <SelectValue placeholder="Semua periode" />
+                      <SelectValue placeholder="Semua periode">{periode ? periodLabel(periode) : 'Semua periode'}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Semua periode</SelectItem>
@@ -548,7 +548,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                 <label htmlFor="filter-bm-m" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">BM</label>
                 <Select value={bmId} onValueChange={(v) => { setBmId(v); setSpvId(''); setSalesId(''); }}>
                   <SelectTrigger id="filter-bm-m" className="h-10 w-full">
-                    <SelectValue placeholder="Semua BM" />
+                    <SelectValue placeholder="Semua BM">{bmId ? bms.find((p) => String(p.id) === bmId)?.name : 'Semua BM'}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Semua BM</SelectItem>
@@ -563,7 +563,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                   <label htmlFor="filter-spv-m" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">SPV</label>
                   <Select value={spvId} onValueChange={(v) => { setSpvId(v); setSalesId(''); }}>
                     <SelectTrigger id="filter-spv-m" className="h-10 w-full">
-                      <SelectValue placeholder="Semua SPV" />
+                      <SelectValue placeholder="Semua SPV">{spvId ? spvOptions.find((p) => String(p.id) === spvId)?.name : 'Semua SPV'}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Semua SPV</SelectItem>
@@ -577,7 +577,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                   <label htmlFor="filter-sales-m" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Sales</label>
                   <Select value={salesId} onValueChange={setSalesId}>
                     <SelectTrigger id="filter-sales-m" className="h-10 w-full">
-                      <SelectValue placeholder="Semua sales" />
+                      <SelectValue placeholder="Semua sales">{salesId ? salesOptions.find((p) => String(p.id) === salesId)?.name : 'Semua sales'}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Semua sales</SelectItem>
@@ -592,7 +592,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                 <label htmlFor="filter-periode-m" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode</label>
                 <Select value={periode} onValueChange={setPeriode}>
                   <SelectTrigger id="filter-periode-m" className="h-10 w-full">
-                    <SelectValue placeholder="Semua periode" />
+                    <SelectValue placeholder="Semua periode">{periode ? periodLabel(periode) : 'Semua periode'}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Semua periode</SelectItem>
