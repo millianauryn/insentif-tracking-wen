@@ -126,7 +126,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
   );
 }
 
-function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit, salesDivisi, setSalesDivisi }) {
+function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit, salesDivisi, setSalesDivisi, divisions }) {
   const [dragIndex, setDragIndex] = useState(null);
   const [overIndex, setOverIndex] = useState(null);
 
@@ -183,6 +183,9 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReord
                 className="input text-[11px] w-full"
               >
                 <option value="">-- Pilih Divisi --</option>
+                {(divisions || []).filter((d) => d.is_active !== 0 && d.active !== 0).map((d) => (
+                  <option key={d.id} value={d.name}>{d.name}</option>
+                ))}
               </select>
             </td>
             <td className="text-center" />
@@ -542,6 +545,7 @@ export default function Documents({
           canEdit={canEdit}
           salesDivisi={salesDivisi}
           setSalesDivisi={setSalesDivisi}
+          divisions={masterData.divisions}
         />
 
         <KriteriaTable

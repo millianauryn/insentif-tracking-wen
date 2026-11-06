@@ -318,6 +318,7 @@ function App() {
         saved={saved}
         salesDivisi={sales.divisi}
         setSalesDivisi={(v) => updateSales('divisi', v)}
+        divisions={adminData.masterData.divisions}
       />
     </Layout>
   );
