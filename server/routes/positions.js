@@ -12,7 +12,7 @@ function createPositionsRouter(db, options = {}) {
   // Any authed user (officer picks salesman names for document header).
   router.get('/', auth, (req, res) => {
     try {
-      const positions = db.prepare('SELECT id, name, position_type, join_date, parent_position_id, branch_id, active FROM positions ORDER BY position_type, name').all();
+      const positions = db.prepare('SELECT id, name, sales_code, position_type, join_date, parent_position_id, branch_id, active FROM positions ORDER BY position_type, name').all();
       const branchStmt = db.prepare('SELECT branch_id FROM position_branches WHERE position_id = ?');
       const criteriaStmt = db.prepare('SELECT criteria_id FROM position_criteria WHERE position_id = ?');
       const result = positions.map((p) => ({
