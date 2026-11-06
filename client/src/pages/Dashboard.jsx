@@ -41,11 +41,10 @@ function tenureLabel(joinDate) {
   return `${years} tahun ${months} bulan ${days} hari (${dateStr})`;
 }
 
-function OrgNode({ position, childrenOf, depth, collapsed, onToggle, docCounts, documentsFinal }) {
+function OrgNode({ position, childrenOf, depth, collapsed, onToggle, documentsFinal }) {
   const kids = childrenOf(position.id);
   const hasKids = kids.length > 0 && depth < 2;
   const open = !collapsed.has(position.id);
-  const docTotal = docCounts[position.name] || 0;
   const docFinal = documentsFinal[position.name] || 0;
   return (
     <div className="org-node">
@@ -66,8 +65,7 @@ function OrgNode({ position, childrenOf, depth, collapsed, onToggle, docCounts, 
         )}
       </div>
       <div className="org-summary">
-        <span className="org-summary-item">Dokumen: <span className="org-summary-value">{docTotal}</span></span>
-        <span className="org-summary-item">Insentif: <span className="org-summary-value">{docFinal}</span></span>
+        <span className="org-summary-item">Insentif yang diterima: <span className="org-summary-value">{docFinal}</span></span>
       </div>
       {hasKids && open && (
         <div className="org-children">
@@ -79,7 +77,6 @@ function OrgNode({ position, childrenOf, depth, collapsed, onToggle, docCounts, 
               depth={depth + 1}
               collapsed={collapsed}
               onToggle={onToggle}
-              docCounts={docCounts}
               documentsFinal={documentsFinal}
             />
           ))}
@@ -119,13 +116,6 @@ export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc })
     });
     return counts;
   }, [documents]);
-  const docCounts = useMemo(() => {
-    const counts = {};
-    documents.forEach((d) => {
-      counts[d.salesman] = (counts[d.salesman] || 0) + 1;
-    });
-    return counts;
-  }, [documents]);
 
   return (
     <>
@@ -162,7 +152,6 @@ export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc })
                     depth={0}
                     collapsed={collapsed}
                     onToggle={toggleNode}
-                    docCounts={docCounts}
                     documentsFinal={documentsFinal}
                   />
                 ))}
