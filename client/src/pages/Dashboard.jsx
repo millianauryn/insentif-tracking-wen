@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Minus } from 'lucide-react';
 import { Button, buttonVariants } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -84,6 +84,7 @@ function OrgNode({ position, childrenOf, depth, collapsed, onToggle }) {
 export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc }) {
   const [positions, setPositions] = useState([]);
   const [collapsed, setCollapsed] = useState(() => new Set());
+  const navigate = useNavigate();
 
   const toggleNode = (id) => setCollapsed((prev) => {
     const next = new Set(prev);
@@ -111,7 +112,7 @@ export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc })
           <p>Ringkasan dokumen dan struktur tim insentif.</p>
         </div>
         <div className="page-head-actions">
-          <Link className={cn(buttonVariants({ variant: 'outline' }), 'h-9 px-4')} to="/documents/sales">Lihat semua dokumen</Link>
+          <Link className={cn(buttonVariants({ variant: 'outline' }), 'h-9 px-4')} to="/insetif">Lihat semua dokumen</Link>
           <Button onClick={onNewDoc} disabled={user?.role === 'observer'} className="h-9 px-4">
             <Icon size={16}><path d="M12 5v14M5 12h14" /></Icon>Tambah Dokumen
           </Button>
@@ -160,7 +161,10 @@ export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc })
                     key={doc.id}
                     type="button"
                     className="recent-row"
-                    onClick={() => onLoadDoc?.(doc)}
+                    onClick={() => {
+                      onLoadDoc?.(doc);
+                      navigate(`/insetif?openDoc=${doc.id}`);
+                    }}
                   >
                     <span className="recent-main">
                       <span className="recent-name">{doc.salesman || 'Tanpa nama'}</span>
@@ -174,7 +178,7 @@ export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc })
               <EmptyState title="Belum ada dokumen" copy="Dokumen terbaru akan muncul di sini." />
             )}
             {recentDocs.length > 0 && (
-              <Link className={cn(buttonVariants({ variant: 'outline' }), 'h-8 w-full')} to="/documents/sales">Lihat semua</Link>
+              <Link className={cn(buttonVariants({ variant: 'outline' }), 'h-8 w-full')} to="/insetif">Lihat semua</Link>
             )}
           </div>
         </aside>

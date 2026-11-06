@@ -69,6 +69,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
   const toast = useToast();
   const [searchParams] = useSearchParams();
   const nameParam = searchParams.get('name') || '';
+  const openDocParam = searchParams.get('openDoc') || '';
 
   const [search, setSearch] = useState(nameParam);
   const [positions, setPositions] = useState([]);
@@ -119,6 +120,14 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
       }
     }
   }, [nameParam, positions]);
+
+  // Open detail panel for a doc clicked from Dashboard (?openDoc=<id>).
+  useEffect(() => {
+    if (!openDocParam || !documents.length) return;
+    if (documents.some((d) => String(d.id) === openDocParam)) {
+      setActiveDocId(openDocParam);
+    }
+  }, [openDocParam, documents]);
 
   const bms = positions.filter((p) => p.position_type === 'BM');
   const spvOptions = bmId
