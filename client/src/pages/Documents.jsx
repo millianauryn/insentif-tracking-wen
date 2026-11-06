@@ -205,14 +205,26 @@ function KriteriaRow({ row, onUpdate, canEdit }) {
   const achievement = Number(row.achievement_value) || 0;
   const percentage = target > 0 ? (achievement / target) * 100 : 0;
   const status = target > 0 && percentage >= 100 ? 'Tercapai' : 'Gugur';
+  const isGugur50 = row.label === 'GOL YG GUGUR KURANG DARI 50%';
+  const isCallCompliance = row.label === 'CALL COMPLIANCE';
 
   return (
     <tr className="kriteria-row">
       <td>{row.label}</td>
       <td><input type="number" min="0" value={row.target_value ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'target_value', e.target.value)} disabled={!canEdit} /></td>
       <td><input type="number" min="0" value={row.achievement_value ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'achievement_value', e.target.value)} disabled={!canEdit} /></td>
-      <td>{target > 0 ? `${percentage.toFixed(1)}%` : ''}</td>
-      <td><span className={`result-badge ${status === 'Tercapai' ? 'success' : 'warning'}`}>{target > 0 ? status : ''}</span></td>
+      {isGugur50 ? (
+        <td></td>
+      ) : isCallCompliance ? (
+        <td><input type="number" min="0" step="0.01" value={row.percentage_value ?? percentage.toFixed(1)} onChange={(e) => onUpdate(row.criteria_id, 'percentage_value', e.target.value)} disabled={!canEdit} /></td>
+      ) : (
+        <td>{target > 0 ? `${percentage.toFixed(1)}%` : ''}</td>
+      )}
+      {isGugur50 ? (
+        <td></td>
+      ) : (
+        <td><span className={`result-badge ${status === 'Tercapai' ? 'success' : 'warning'}`}>{target > 0 ? status : ''}</span></td>
+      )}
       <td><input type="number" min="0" value={row.incentive_amount ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'incentive_amount', e.target.value)} disabled={!canEdit} /></td>
     </tr>
   );

@@ -69,7 +69,7 @@ function App() {
         setDocumentFormatId(formats[0]?.id ?? null);
         setDocuments(next);
         setCriteria(crit);
-        setCriteriaRows(crit.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', incentive_amount: '' })));
+        setCriteriaRows(crit.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', percentage_value: '', incentive_amount: '' })));
         if (canManageAdmin(user)) return reloadAdminData();
       })
       .catch((err) => toast('error', errMsg(err)));
@@ -137,11 +137,19 @@ function App() {
 
   const buildCriteriaRows = () =>
     criteriaRows
-      .filter((row) => row.target_value != null || row.achievement_value != null || row.incentive_amount != null)
+      .filter(
+        (row) =>
+          row.target_value != null ||
+          row.achievement_value != null ||
+          row.incentive_amount != null ||
+          row.percentage_value != null
+      )
       .map((row) => ({
         criteria_id: row.criteria_id,
         target_value: row.target_value != null && row.target_value !== '' ? Number(row.target_value) : null,
         achievement_value: row.achievement_value != null && row.achievement_value !== '' ? Number(row.achievement_value) : null,
+        percentage_value:
+          row.percentage_value != null && row.percentage_value !== '' ? Number(row.percentage_value) : null,
         incentive_amount: row.incentive_amount != null && row.incentive_amount !== '' ? Number(row.incentive_amount) : null,
       }));
 
@@ -240,9 +248,10 @@ function App() {
               label: row.label,
               target_value: row.target_value ?? '',
               achievement_value: row.achievement_value ?? '',
+              percentage_value: row.percentage_value ?? '',
               incentive_amount: row.incentive_amount ?? '',
             }))
-          : criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', incentive_amount: '' }))
+          : criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', percentage_value: '', incentive_amount: '' }))
       );
       setSales({ ...INITIAL_SALES, name: full.salesman || '', product: full.product || '', region: full.wilayah || '' });
       setPeriod(fromApiPeriod(full.period));
@@ -264,7 +273,7 @@ function App() {
     setDocumentId(null);
     setDocumentStatus('Draft');
     setGolonganRows([makeRow({ label: '', target: '', achievement: '', type: 'brand', isGroup: false })]);
-    setCriteriaRows(criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', incentive_amount: '' })));
+    setCriteriaRows(criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', percentage_value: '', incentive_amount: '' })));
     setSales(INITIAL_SALES);
     setPeriod(currentPeriodLabel());
     setInsentifTotal(null);
