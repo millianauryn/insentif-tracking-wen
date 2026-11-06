@@ -24,6 +24,7 @@ export default function Master({ data, onRefresh, user }) {
   const [masterSearch, setMasterSearch] = useState('');
   const [masterPage, setMasterPage] = useState(1);
   const [masterLimit, setMasterLimit] = useState(10);
+  const [expandedDivisions, setExpandedDivisions] = useState(new Set());
 
   // Akun tab state
   const [form, setForm] = useState({ username: '', password: '', role: 'officer', branch_ids: [] });
@@ -458,10 +459,12 @@ const [createUser, setCreateUser] = useState(false);
   const renderItem = (item) => {
     const isActive = item.is_active !== 0 && item.active !== 0;
     const statusText = isActive ? 'Aktif' : 'Nonaktif';
+    const isExpanded = expandedDivisions.has(item.id);
 
     let subtitle = '';
     if (tab === 'division') {
-      subtitle = item.code || '';
+      const divisionPrincipals = activeItems.principal.filter((p) => p.division_id === item.id);
+      subtitle = `${item.code || ''}${divisionPrincipals.length ? ` · ${divisionPrincipals.length} Principal` : ''}`;
     } else if (tab === 'principal') {
       const division = activeItems.division.find((d) => d.id === item.division_id);
       subtitle = [item.code, item.address, division?.name].filter(Boolean).join(' · ');
@@ -474,26 +477,64 @@ const [createUser, setCreateUser] = useState(false);
       subtitle = [item.code, item.address, region?.name, division?.name].filter(Boolean).join(' · ');
     }
 
+    const divisionPrincipals = tab === 'division' ? activeItems.principal.filter((p) => p.division_id === item.id) : [];
+
     return (
-      <li key={item.id} className="master-row-item">
-        <span className={`master-dot ${isActive ? 'on' : ''}`} aria-hidden="true" />
-        <div className="master-main">
-          <p className="master-name">{item.name}</p>
-          {subtitle && <p className="master-sub">{subtitle}</p>}
-        </div>
-        <Badge className={`status-pill ${isActive ? 'success' : 'muted'}`}>{statusText}</Badge>
-        <div className="master-actions">
-          <button className="icon-action" onClick={() => openEditForm(item, tab)} aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`}>
-            <Icon size={15}><path d="M12 20h9M19.5 14.5L16 11l7-7M21 3a2 2 0 0 1 2 2v9M5 15l4 4 9-9"/></Icon>
-          </button>
-          <button className="icon-action" onClick={() => toggleActive(item, tab)} aria-label={`${isActive ? 'Nonaktifkan' : 'Aktifkan'} ${item.name}`} title={`${isActive ? 'Nonaktifkan' : 'Aktifkan'} ${item.name}`}>
-            <Icon size={15}><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m15 9-6 6M9 9l6 6"/></Icon>
-          </button>
-          <button className="icon-action danger" onClick={() => deleteMasterItem(item.id, tab)} aria-label={`Hapus ${item.name}`} title={`Hapus ${item.name}`}>
-            <Icon size={15}><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></Icon>
-          </button>
-        </div>
-      </li>
+      <>
+        <li
+          key={item.id}
+          className={`master-row-item ${tab === 'division' && divisionPrincipals.length > 0 ? 'clickable' : ''}`}
+          onClick={tab === 'division' && divisionPrincipals.length > 0 ? () => setExpandedDivisions((prev) => {
+            const next = new Set(prev);
+            if (next.has(item.id)) next.delete(item.id); else next.add(item.id);
+            return next;
+          }) : undefined}
+        >
+          <span className={`master-dot ${isActive ? 'on' : ''}`} aria-hidden="true" />
+          <div className="master-main">
+            <p className="master-name">{item.name}</p>
+            {subtitle && <p className="master-sub">{subtitle}</p>}
+          </div>
+          <Badge className={`status-pill ${isActive ? 'success' : 'muted'}`}>{statusText}</Badge>
+          <div className="master-actions">
+            {tab === 'division' && divisionPrincipals.length > 0 && (
+              <span className="expand-icon" aria-hidden="true">
+                <Icon size={16}><path d={isExpanded ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"}/></Icon>
+              </span>
+            )}
+            <button className="icon-action" onClick={(e) => { e.stopPropagation(); openEditForm(item, tab); }} aria-label={`Edit ${item.name}`} title={`Edit ${item.name}`}>
+              <Icon size={15}><path d="M12 20h9M19.5 14.5L16 11l7-7M21 3a2 2 0 0 1 2 2v9M5 15l4 4 9-9"/></Icon>
+            </button>
+            <button className="icon-action" onClick={(e) => { e.stopPropagation(); toggleActive(item, tab); }} aria-label={`${isActive ? 'Nonaktifkan' : 'Aktifkan'} ${item.name}`} title={`${isActive ? 'Nonaktifkan' : 'Aktifkan'} ${item.name}`}>
+              <Icon size={15}><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m15 9-6 6M9 9l6 6"/></Icon>
+            </button>
+            <button className="icon-action danger" onClick={(e) => { e.stopPropagation(); deleteMasterItem(item.id, tab); }} aria-label={`Hapus ${item.name}`} title={`Hapus ${item.name}`}>
+              <Icon size={15}><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></Icon>
+            </button>
+          </div>
+        </li>
+        {tab === 'division' && isExpanded && divisionPrincipals.length > 0 && (
+          <li key={`expand-${item.id}`} className="master-expand-row">
+            <div className="master-expand-content">
+              <div className="principal-mini-list">
+                {divisionPrincipals.map((p) => {
+                  const pActive = p.is_active !== 0 && p.active !== 0;
+                  return (
+                    <div key={p.id} className="principal-mini-item">
+                      <span className={`mini-dot ${pActive ? 'on' : ''}`} aria-hidden="true" />
+                      <div className="mini-main">
+                        <span className="mini-name">{p.name}</span>
+                        <span className="mini-meta">{p.code || ''}{p.address ? ` · ${p.address}` : ''}</span>
+                      </div>
+                      <Badge className={`status-pill ${pActive ? 'success' : 'muted'}`} size="sm">{pActive ? 'Aktif' : 'Nonaktif'}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </li>
+        )}
+      </>
     );
   };
 

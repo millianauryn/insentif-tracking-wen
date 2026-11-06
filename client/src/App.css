@@ -222,7 +222,9 @@
   .master-row-item { border-bottom: 1px solid var(--rule); }
   .master-row-item:last-child { border-bottom: 0; }
   .master-row-item:hover { background: #fbfdfc; }
-  .master-row-item > .status-pill { justify-self: end; }
+  .master-row-item.clickable { cursor: pointer; }
+  .master-row-item.clickable:hover { background: #f0f6f3; }
+  .expand-icon { display: grid; place-items: center; width: 30px; height: 30px; color: var(--subtle); margin-right: 4px; }
   .master-dot { width: 8px; height: 8px; border-radius: 50%; background: #c7d2cc; }
   .master-dot.on { background: #1f9c70; }
   .master-main { min-width: 0; }
@@ -232,6 +234,18 @@
   .icon-action { display: grid; place-items: center; width: 30px; height: 30px; border: 0; background: transparent; border-radius: 6px; color: var(--subtle); cursor: pointer; }
   .icon-action:hover { background: var(--blue-soft); color: var(--blue); }
   .icon-action.danger:hover { background: var(--danger-soft); color: var(--danger); }
+
+  /* Expandable division rows */
+  .master-expand-row { border-bottom: 1px solid var(--rule); background: #fbfdfc; }
+  .master-expand-content { padding: 8px 14px 12px 26px; }
+  .principal-mini-list { display: flex; flex-direction: column; gap: 6px; }
+  .principal-mini-item { display: grid; grid-template-columns: 10px minmax(0, 1fr) 80px; align-items: center; gap: 10px; padding: 6px 8px; background: #fff; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; }
+  .mini-dot { width: 6px; height: 6px; border-radius: 50%; background: #c7d2cc; }
+  .mini-dot.on { background: #1f9c70; }
+  .mini-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .mini-name { font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mini-meta { font-size: 11px; color: var(--grey); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .status-pill.sm { padding: 2px 7px; font-size: 11px; font-weight: 600; }
 
   .status-pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap; line-height: 1.5; }
   .status-pill::before { content: ''; display: block; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
