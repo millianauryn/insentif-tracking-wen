@@ -5,7 +5,7 @@ import Icon from '../components/Icon';
 import PickerChips from '../components/PickerChips';
 import ComboSelect from '../components/ComboSelect';
 import { listPositions, listMasterData } from '../api';
-import { computeTotalFor, computeGrandTotal, principalValueFor } from '../lib/golongan';
+import { computeTotalFor, computeGrandTotal, principalValueFor, principalAutoValue } from '../lib/golongan';
 import { monthNames } from '../lib/period';
 
 const JENIS_OPTIONS = [
@@ -136,31 +136,24 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
     );
   }
 
-  // Principal with brand children: value = sum of those brands (auto, not editable)
+  // Principal: editable manual inputs; placeholders show the auto sum from linked brands above.
+  // No read-only lock — filled manual values override the auto sum.
   if (row.type === 'principal') {
-    let hasChildren = false;
-    for (let i = index + 1; i < allRows.length; i++) {
-      const r = allRows[i];
-      if (r.type === 'principal' || r.type === 'total-divisi' || r.type === 'total' || r.type === 'divisi') break;
-      if (r.type === 'brand') { hasChildren = true; break; }
-    }
-    if (hasChildren) {
-      const v = principalValueFor(allRows, index);
-      const pPct = v.target > 0 ? (v.achievement / v.target) * 100 : 0;
-      const pStatus = v.target > 0 && pPct >= 100 ? 'Tercapai' : 'Gugur';
-      return (
-        <tr {...trProps} className={`font-semibold${rowStateClass}`}>
-          <td>{nameFieldFor('principal')}</td>
-          <td>{jenisSelect}</td>
-          <td className="text-right">{v.target.toLocaleString('id-ID')}</td>
-          <td className="text-right">{v.achievement.toLocaleString('id-ID')}</td>
-          <td className="text-right">{pPct.toFixed(1)}%</td>
-          <td><span className={`result-badge ${pStatus === 'Tercapai' ? 'success' : 'warning'}`}>{v.target > 0 ? pStatus : ''}</span></td>
-          <td className="text-center">{actionCell}</td>
-        </tr>
-      );
-    }
-    // no brand children → manual inputs (same as brand row)
+    const auto = principalAutoValue(allRows, index);
+    const eff = principalValueFor(allRows, index);
+    const pPct = eff.target > 0 ? (eff.achievement / eff.target) * 100 : 0;
+    const pStatus = eff.target > 0 && pPct >= 100 ? 'Tercapai' : 'Gugur';
+    return (
+      <tr {...trProps} className={`font-semibold${rowStateClass}`}>
+        <td>{nameFieldFor('principal')}</td>
+        <td>{jenisSelect}</td>
+        <td><input type="number" min="0" value={row.target ?? ''} onChange={(e) => onUpdate(row.id, 'target', e.target.value)} disabled={!canEdit} placeholder={auto.count > 0 ? String(auto.target) : ''} /></td>
+        <td><input type="number" min="0" value={row.achievement ?? ''} onChange={(e) => onUpdate(row.id, 'achievement', e.target.value)} disabled={!canEdit} placeholder={auto.count > 0 ? String(auto.achievement) : ''} /></td>
+        <td className="text-right">{eff.target > 0 ? `${pPct.toFixed(1)}%` : '0.0%'}</td>
+        <td><span className={`result-badge ${pStatus === 'Tercapai' ? 'success' : 'warning'}`}>{eff.target > 0 ? pStatus : ''}</span></td>
+        <td className="text-center">{actionCell}</td>
+      </tr>
+    );
   }
 
   return (

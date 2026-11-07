@@ -1,46 +1,59 @@
-// Principal value: sum of brand children below (until next separator) — brands linked to this principal.
-// No children -> use own manual inputs.
-export function principalValueFor(rows, pi) {
-  const p = rows[pi];
+// Auto sum for a principal: sum of brand rows above it since last separator (linked brands).
+// Manual override: non-empty row.target / row.achievement replaces the auto sum (per field).
+export function principalAutoValue(rows, pi) {
   let target = 0;
   let achievement = 0;
-  let children = 0;
-  for (let i = pi + 1; i < rows.length; i++) {
+  let count = 0;
+  for (let i = pi - 1; i >= 0; i--) {
     const r = rows[i];
     if (r.type === 'principal' || r.type === 'total-divisi' || r.type === 'total' || r.type === 'divisi') break;
     if (r.type === 'brand') {
       target += Number(r.target) || 0;
       achievement += Number(r.achievement) || 0;
-      children++;
+      count++;
     }
   }
-  if (children > 0) return { target, achievement };
-  return { target: Number(p.target) || 0, achievement: Number(p.achievement) || 0 };
+  return { target, achievement, count };
 }
 
-// Sum a scope without double-counting: principals contribute their effective value
-// (children counted once through the principal), brands count only while outside any
-// principal section (standalone). Total rows reset the standalone flag, never add.
+export function principalValueFor(rows, pi) {
+  const p = rows[pi];
+  const auto = principalAutoValue(rows, pi);
+  const manualTarget = p.target !== '' && p.target !== null && p.target !== undefined;
+  const manualAchievement = p.achievement !== '' && p.achievement !== null && p.achievement !== undefined;
+  return {
+    target: manualTarget ? Number(p.target) || 0 : auto.target,
+    achievement: manualAchievement ? Number(p.achievement) || 0 : auto.achievement,
+  };
+}
+
+// Sum a scope without double-counting: brands linked above a principal are
+// counted once through the principal, standalone brands (no principal below
+// in their segment) count directly. Total/divisi rows reset, never add.
 function sumScope(scope) {
   let target = 0;
   let achievement = 0;
-  let seenPrincipal = false;
+  let pendingTarget = 0;
+  let pendingAchievement = 0;
+  let pending = 0;
+  const flush = () => { target += pendingTarget; achievement += pendingAchievement; pendingTarget = 0; pendingAchievement = 0; pending = 0; };
   for (let i = 0; i < scope.length; i++) {
     const r = scope[i];
-    if (r.type === 'total-divisi' || r.type === 'total' || r.type === 'divisi') {
-      seenPrincipal = false;
-      continue;
-    }
+    if (r.type === 'total-divisi' || r.type === 'total' || r.type === 'divisi') { flush(); continue; }
     if (r.type === 'principal') {
-      seenPrincipal = true;
       const v = principalValueFor(scope, i);
       target += v.target;
       achievement += v.achievement;
-    } else if (r.type === 'brand' && !seenPrincipal) {
-      target += Number(r.target) || 0;
-      achievement += Number(r.achievement) || 0;
+      pendingTarget = 0; pendingAchievement = 0; pending = 0;
+      continue;
+    }
+    if (r.type === 'brand') {
+      pendingTarget += Number(r.target) || 0;
+      pendingAchievement += Number(r.achievement) || 0;
+      pending++;
     }
   }
+  flush();
   return { target, achievement };
 }
 
