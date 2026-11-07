@@ -378,12 +378,12 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      {/* Desktop: dua kolom saat nav ciut, satu kolom (detail di bawah daftar, full-width) saat nav expand */}
-      <div className={`hidden lg:grid lg:gap-6 lg:px-6 lg:py-6 ${activeDoc && collapsed ? 'lg:grid-cols-[360px_minmax(0,1fr)]' : 'lg:grid-cols-[minmax(0,1fr)]'}`}>
+      {/* Desktop: selalu dua kolom berdampingan (detail satu layar), daftar menyempit saat nav expand */}
+      <div className={`hidden lg:grid lg:gap-5 lg:px-6 lg:py-6 ${activeDoc ? (collapsed ? 'lg:grid-cols-[360px_minmax(0,1fr)]' : 'lg:grid-cols-[300px_minmax(0,1fr)]') : 'lg:grid-cols-[minmax(0,1fr)]'}`}>
         {/* Left: Document List */}
         <section
           className={`card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden ${
-            !activeDoc || !collapsed ? 'lg:col-span-2' : ''
+            !activeDoc ? 'lg:col-span-2' : ''
           }`}
           aria-label="Daftar dokumen"
         >
@@ -537,7 +537,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
 
         {/* Right: Detail Panel (muncul setelah dokumen dibuka) */}
         {activeDoc && (
-          <aside className="card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden flex flex-col" aria-label="Halaman detail dokumen" ref={detailRef}>
+          <aside className="card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden flex flex-col lg:sticky lg:top-24 lg:max-h-[calc(100vh-120px)]" aria-label="Halaman detail dokumen" ref={detailRef}>
           {activeDoc ? (
             <>
               <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-[var(--line)] bg-[var(--bg)]">
