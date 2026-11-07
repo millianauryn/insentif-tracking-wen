@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+¿import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -49,7 +49,7 @@ function positionOf(positions, name) {
 }
 
 function makeBadge(status) {
-  if (status === 'final') {
+  if (String(status).toLowerCase() === 'final') {
     return (
       <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1.5 px-2 py-0.5">
         <span className="w-1.5 h-1.5 rounded-full bg-blue-700" aria-hidden="true" />
@@ -158,7 +158,6 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
       rows = rows.filter((d) => names.includes(d.salesman));
     }
     if (periode) rows = rows.filter((d) => d.period === periode);
-    rows = rows.filter((d) => d.status === 'final');
     const q = search.trim().toLowerCase();
     if (q) {
       rows = rows.filter((d) =>
@@ -352,7 +351,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId(doc.id); }}}
                       tabIndex={0}
                       aria-current={isSelected ? 'true' : undefined}
-                      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${periodLabel(doc.period)}, status ${doc.status === 'final' ? 'Final' : 'Draft'}`}
+                      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${periodLabel(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
                     >
                       <p className="flex-1 min-w-0 font-medium text-[14px] text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
                         {doc.salesman || 'Tanpa nama sales'}
@@ -634,7 +633,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId(doc.id); }}}
                       tabIndex={0}
                       aria-current={isSelected ? 'true' : undefined}
-                      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${periodLabel(doc.period)}, status ${doc.status === 'final' ? 'Final' : 'Draft'}`}
+                      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${periodLabel(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
                     >
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">

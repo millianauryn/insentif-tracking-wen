@@ -128,7 +128,7 @@ export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc })
   const documentsFinal = useMemo(() => {
     const counts = {};
     documents.forEach((d) => {
-      if (d.status === 'final') counts[d.salesman] = (counts[d.salesman] || 0) + 1;
+      if (String(d.status).toLowerCase() === 'final') counts[d.salesman] = (counts[d.salesman] || 0) + 1;
     });
     return counts;
   }, [documents]);
