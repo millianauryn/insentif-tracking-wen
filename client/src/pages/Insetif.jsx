@@ -238,19 +238,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
           className={`card bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden ${
             !activeDoc ? 'lg:col-span-2' : ''
           }`}
-          aria-labelledby="page-title"
+          aria-label="Daftar dokumen"
         >
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 p-6 border-b border-[var(--line)]">
-            <div className="min-w-0">
-              <h1 id="page-title" className="text-[clamp(19px,2.2vw,22px)] font-bold tracking-[-0.015em] leading-[1.3]">
-                Dokumen Tersimpan
-              </h1>
-              <p className="mt-1 text-[13px] text-[var(--ink-2)] leading-[1.5]">
-                Cari, filter, dan buka dokumen lama untuk dilanjutkan.
-              </p>
-            </div>
-          </div>
-
           {/* Filters */}
           <div className="p-6 border-b border-[var(--line)]" role="search" aria-label="Filter dokumen">
             <div className="flex flex-col gap-3">

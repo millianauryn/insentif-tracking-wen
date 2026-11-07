@@ -367,7 +367,7 @@ function App() {
         path="/insetif"
         element={
           user ? (
-            <Layout title="Insetif" breadcrumb={['Insetif']}>
+            <Layout title="Dokumen Tersimpan" breadcrumb={['Dokumen Tersimpan']}>
               <Insetif
                 documents={documents}
                 setDocuments={setDocuments}
