@@ -47,12 +47,14 @@ describe('Documents API', () => {
     expect(db.prepare('SELECT label FROM golongan_rows WHERE is_group = 1').get().label).toBe('GROUP PASEO');
   });
 
-  it('allows owner to edit Draft, blocks owner after Final, and allows Super Admin correction', async () => {
+  it('allows owner to edit Draft, blocks officer finalize, lets observer approve, and allows Super Admin correction', async () => {
     const created = await officer.post('/api/documents').send({ format_id: 1, period: '2026-10', golongan_rows: [] }).expect(201);
     const id = created.body.document.id;
+    const observer = appFor(db, { id: 3, username: 'observer', role: 'observer' });
 
     await officer.patch(`/api/documents/${id}`).send({ period: '2026-11', golongan_rows: [] }).expect(200);
-    await officer.post(`/api/documents/${id}/finalize`).expect(200);
+    await officer.post(`/api/documents/${id}/finalize`).expect(403);
+    await observer.post(`/api/documents/${id}/finalize`).expect(200);
     await officer.patch(`/api/documents/${id}`).send({ period: '2026-12' }).expect(409);
     await admin.patch(`/api/documents/${id}`).send({ period: '2027-01' }).expect(200);
     expect(db.prepare('SELECT COUNT(*) AS count FROM audit_logs WHERE entity_type = \'incentive_document\'').get().count).toBe(1);

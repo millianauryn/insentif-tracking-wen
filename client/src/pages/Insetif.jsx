@@ -19,9 +19,10 @@ import {
 } from '../components/ui/dialog';
 import { Badge } from '../components/ui/badge';
 import { useToast } from '../components/Toast';
+import { useAuth } from '../context/AuthContext';
 import { fromApiPeriod } from '../lib/period';
 import { errMsg } from '../lib/api';
-import { listPositions } from '../api';
+import { listPositions, finalizeDocument } from '../api';
 import ListPager from '../components/ListPager';
 import { Search, ChevronLeft, ChevronRight, Plus, Loader2, X, FolderOpen, RotateCcw } from 'lucide-react';
 
@@ -67,6 +68,8 @@ function makeBadge(status) {
 
 export default function Insetif({ documents, setDocuments, onRefresh, onLoad, onNewDoc }) {
   const toast = useToast();
+  const { user } = useAuth();
+  const canFinalize = ['observer', 'superadmin'].includes(user?.role);
   const [searchParams] = useSearchParams();
   const nameParam = searchParams.get('name') || '';
   const openDocParam = searchParams.get('openDoc') || '';
@@ -440,18 +443,18 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                 </section>
 
                 <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-[var(--line)]">
-                  {activeDoc.status !== 'final' && (
+                  {canFinalize && String(activeDoc.status).toLowerCase() !== 'final' && (
                     <Button
                       variant="default"
                       size="sm"
                       type="button"
-                      onClick={() => {
-                        const idx = documents.findIndex((d) => d.id === activeDocId);
-                        if (idx !== -1) {
-                          const next = [...documents];
-                          next[idx] = { ...next[idx], status: 'final' };
-                          setDocuments(next);
+                      onClick={async () => {
+                        try {
+                          const result = await finalizeDocument(activeDocId);
+                          setDocuments((prev) => prev.map((d) => d.id === result.document.id ? { ...d, status: result.document.status } : d));
                           toast('success', 'Dokumen ditandai sebagai final.');
+                        } catch (err) {
+                          toast('error', errMsg(err));
                         }
                       }}
                     >
@@ -739,19 +742,19 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                 </section>
 
                 <div className="flex flex-col gap-2 mt-8 pt-4 border-t border-[var(--line)]">
-                  {activeDoc.status !== 'final' && (
+                  {canFinalize && String(activeDoc.status).toLowerCase() !== 'final' && (
                     <Button
                       variant="default"
                       size="sm"
                       type="button"
-                      onClick={() => {
-                        const idx = documents.findIndex((d) => d.id === activeDocId);
-                        if (idx !== -1) {
-                          const next = [...documents];
-                          next[idx] = { ...next[idx], status: 'final' };
-                          setDocuments(next);
+                      onClick={async () => {
+                        try {
+                          const result = await finalizeDocument(activeDocId);
+                          setDocuments((prev) => prev.map((d) => d.id === result.document.id ? { ...d, status: result.document.status } : d));
                           toast('success', 'Dokumen ditandai sebagai final.');
                           setActiveDocId(null);
+                        } catch (err) {
+                          toast('error', errMsg(err));
                         }
                       }}
                       className="min-h-[44px]"

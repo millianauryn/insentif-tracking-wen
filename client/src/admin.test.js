@@ -8,10 +8,10 @@ describe('admin UI access policy', () => {
     expect(canManageAdmin({ role: 'observer' })).toBe(false)
   })
 
-  it('allows Officer and Super Admin to finalize Draft documents', () => {
+  it('allows Observer and Super Admin to finalize Draft documents', () => {
     expect(canFinalizeDocument({ role: 'superadmin' }, 'Draft')).toBe(true)
-    expect(canFinalizeDocument({ role: 'officer' }, 'Draft')).toBe(true)
-    expect(canFinalizeDocument({ role: 'observer' }, 'Draft')).toBe(false)
-    expect(canFinalizeDocument({ role: 'officer' }, 'Final')).toBe(false)
+    expect(canFinalizeDocument({ role: 'observer' }, 'Draft')).toBe(true)
+    expect(canFinalizeDocument({ role: 'officer' }, 'Draft')).toBe(false)
+    expect(canFinalizeDocument({ role: 'observer' }, 'Final')).toBe(false)
   })
 })

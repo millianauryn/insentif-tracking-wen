@@ -3,5 +3,5 @@ export function canManageAdmin(user) {
 }
 
 export function canFinalizeDocument(user, status) {
-  return status === 'Draft' && ['superadmin', 'officer'].includes(user?.role)
+  return status === 'Draft' && ['superadmin', 'observer'].includes(user?.role)
 }

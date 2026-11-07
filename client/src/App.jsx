@@ -211,7 +211,7 @@ function App() {
   };
 
   const submitForApproval = async () => {
-    if (user?.role === 'observer') return;
+    if (!['observer', 'superadmin'].includes(user?.role)) return;
     if (!documentId) return;
     try {
       const result = await finalizeDocument(documentId);

@@ -79,7 +79,7 @@ function createDocumentsRouter(db, options = {}) {
   router.post('/:id/finalize', auth, (req, res) => {
     const document = getReadableDocument(db, req.user, req.params.id);
     if (!document) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
-    if (!['officer', 'superadmin'].includes(req.user.role) || (req.user.role === 'officer' && document.owner_id !== req.user.id)) {
+    if (!['observer', 'superadmin'].includes(req.user.role)) {
       return res.status(403).json({ error: { code: 'AUTH_FORBIDDEN', message: 'Cannot finalize this document' } });
     }
     if (document.status !== 'Draft') return res.status(409).json({ error: { code: 'DOCUMENT_LOCKED', message: 'Document is already Final' } });
