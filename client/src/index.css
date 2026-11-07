@@ -6,14 +6,14 @@
 
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --color-canvas: #E0E8F0;
+  --color-canvas: #F5F6F3;
   --color-ink-400: #8A9BA8;
   --color-ink-500: #6B7B8A;
   --color-ink-600: #4A5A68;
   --color-ink-700: #2E3B47;
   --color-ink-900: #1A2530;
   --color-brand-50: #F4F4F4;
-  --color-brand-100: #E0E8F0;
+  --color-brand-100: #F5F6F3;
   --color-brand-200: #D3D9DF;
   --color-brand-500: #9DBBAE;
   --color-brand-600: #9DBBAE;
@@ -39,7 +39,7 @@
   :root {
     font-family: Inter, sans-serif;
     color: #1A2530;
-    background: #E0E8F0;
+    background: #F5F6F3;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -53,7 +53,7 @@
     min-width: 320px;
     font-size: 14px;
     line-height: 1.5;
-    background: #E0E8F0;
+    background: #F5F6F3;
     @apply bg-background text-foreground;
   }
   button,
@@ -226,7 +226,7 @@
 }
 
 :root {
-  --background: #E0E8F0;
+  --background: #F5F6F3;
   --foreground: #1A2530;
   --card: #ffffff;
   --card-foreground: #1A2530;
@@ -238,7 +238,7 @@
   --secondary-foreground: #1A2530;
   --muted: #F4F4F4;
   --muted-foreground: #6B7B8A;
-  --accent: #E0E8F0;
+  --accent: #F5F6F3;
   --accent-foreground: #5F8A78;
   --destructive: oklch(0.577 0.245 27.325);
   --border: #D3D9DF;
@@ -246,11 +246,11 @@
   --ring: #9DBBAE;
   --chart-1: #9DBBAE;
   --chart-2: #7EA796;
-  --chart-3: #E0E8F0;
+  --chart-3: #F5F6F3;
   --chart-4: #D3D9DF;
   --chart-5: #5F8A78;
   --radius: 9px;
-  --sidebar: #E0E8F0;
+  --sidebar: #F5F6F3;
   --sidebar-foreground: #1A2530;
   --sidebar-primary: #9DBBAE;
   --sidebar-primary-foreground: #ffffff;
