@@ -195,8 +195,13 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
 
   useEffect(() => {
     const collapse = () => setCollapsed(true);
+    const expand = () => setCollapsed(false);
     window.addEventListener('insetif-narrow', collapse);
-    return () => window.removeEventListener('insetif-narrow', collapse);
+    window.addEventListener('insetif-expand', expand);
+    return () => {
+      window.removeEventListener('insetif-narrow', collapse);
+      window.removeEventListener('insetif-expand', expand);
+    };
   }, []);
 
   return (

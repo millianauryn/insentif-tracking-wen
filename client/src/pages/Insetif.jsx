@@ -262,6 +262,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
   // Klik nama sales → tabel muncul + navbar ciut otomatis.
   useEffect(() => {
     if (activeDocId) window.dispatchEvent(new Event('insetif-narrow'));
+    else window.dispatchEvent(new Event('insetif-expand'));
   }, [activeDocId]);
 
   // Ambil baris golongan/kriteria/kwitansi agar panel detail menampilkan input officer.
