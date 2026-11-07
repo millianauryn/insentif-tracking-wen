@@ -98,9 +98,9 @@ function App() {
 
   const addGolonganRow = (type = 'brand') => {
     if (user?.role === 'observer') return;
-    const isGroup = type === 'principal' || type === 'total-divisi' || type === 'total';
+    const isGroup = type === 'principal' || type === 'total-divisi' || type === 'total' || type === 'divisi';
     const label = type === 'total-divisi' ? 'TOTAL DIVISI' : type === 'total' ? 'TOTAL' : '';
-    const row = makeRow({ label, isGroup, type, target: '', achievement: '' });
+    const row = makeRow({ label, isGroup, type, divisi: '', target: '', achievement: '' });
     setGolonganRows((current) => [...current, row]);
     setSaved(false);
   };
@@ -119,17 +119,22 @@ function App() {
   };
 
   const buildGolonganRows = () => {
-    const filtered = golonganRows.filter((row) => row.label || row.target || row.achievement);
+    // shortcut: Divisi stored as label prefix "DIVISI:<nama>" — edit DB directly to change format
+    const filtered = golonganRows.filter((row) => row.label || row.target || row.achievement || row.divisi);
     let lastPrincipalIndex;
     return filtered.map((row, index) => {
       const result = {
-        label: row.label || null,
+        label: row.type === 'divisi' ? `DIVISI:${row.divisi || ''}` : row.label || null,
         is_group: row.isGroup || false,
         target: row.target !== undefined && row.target !== '' ? Number(row.target) : null,
         achievement: row.achievement !== undefined && row.achievement !== '' ? Number(row.achievement) : null,
         sort_order: index,
       };
-      // Only principal rows act as parents (divisi type removed)
+      // Divisi/total rows start a new section and never take a parent
+      if (row.type === 'divisi' || row.type === 'total-divisi' || row.type === 'total') {
+        lastPrincipalIndex = undefined;
+        return result;
+      }
       if (row.type === 'principal') lastPrincipalIndex = index;
       else if (lastPrincipalIndex !== undefined) result.parent_index = lastPrincipalIndex;
       return result;
@@ -228,14 +233,20 @@ function App() {
         full.golongan_rows?.length
           ? full.golongan_rows.map((row) => {
               let type = 'brand';
+              let divisi = '';
               if (row.is_group) {
                 const label = (row.label || '').toUpperCase();
-                if (label.includes('TOTAL DIVISI')) type = 'total-divisi';
+                if (label.startsWith('DIVISI:')) {
+                  type = 'divisi';
+                  divisi = (row.label || '').slice(7);
+                }
+                else if (label.includes('TOTAL DIVISI')) type = 'total-divisi';
                 else if (label === 'TOTAL') type = 'total';
                 else type = 'principal';
               }
               return makeRow({
                 label: row.label || '',
+                divisi,
                 isGroup: !!row.is_group,
                 type,
                 target: row.target ?? '',

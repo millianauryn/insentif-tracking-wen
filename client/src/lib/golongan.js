@@ -20,7 +20,7 @@ function sumScope(scope) {
   let seenPrincipal = false;
   for (let i = 0; i < scope.length; i++) {
     const r = scope[i];
-    if (r.type === 'total-divisi' || r.type === 'total') {
+    if (r.type === 'total-divisi' || r.type === 'total' || r.type === 'divisi') {
       seenPrincipal = false;
       continue;
     }
@@ -45,7 +45,7 @@ export function computeTotalFor(rows, rowIndex) {
   let start = 0;
   if (row.type !== 'total') {
     for (let i = rowIndex - 1; i >= 0; i--) {
-      if (rows[i].type === 'total-divisi' || rows[i].type === 'total') { start = i + 1; break; }
+      if (rows[i].type === 'total-divisi' || rows[i].type === 'total' || rows[i].type === 'divisi') { start = i + 1; break; }
     }
   }
   const scope = rows.slice(start, row.type === 'total' ? rows.length : rowIndex);

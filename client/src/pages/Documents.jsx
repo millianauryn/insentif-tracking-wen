@@ -13,6 +13,7 @@ const JENIS_OPTIONS = [
   { value: 'principal', label: 'Principal' },
   { value: 'total-divisi', label: 'Total Divisi' },
   { value: 'total', label: 'Total' },
+  { value: 'divisi', label: 'Divisi' },
 ];
 
 const EMPTY_MASTER = { principals: [], brands: [], regions: [], branches: [] };
@@ -20,7 +21,7 @@ const EMPTY_MASTER = { principals: [], brands: [], regions: [], branches: [] };
 const parseBrands = (s) => (s ? s.split(',').map((t) => t.replace(/^\s*&\s*/, '').trim()).filter(Boolean) : []);
 const joinBrands = (arr) => (arr.length <= 1 ? (arr[0] || '') : `${arr.slice(0, -1).join(', ')}, & ${arr[arr.length - 1]}`);
 
-function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit, dnd }) {
+function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit, dnd, divisions }) {
   const target = Number(row.target) || 0;
   const achievement = Number(row.achievement) || 0;
   const pct = target > 0 ? (achievement / target) * 100 : 0;
@@ -68,6 +69,29 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
     </span>
   ) : null;
 
+  // Divisi rows: section header with Divisi select (deletable + draggable like other rows)
+  if (row.type === 'divisi') {
+    return (
+      <tr {...trProps} className={`golongan-divisi-row${rowStateClass}`}>
+        <td colSpan={6}>
+          <label className="text-[11px] font-semibold text-ink-700 mr-2">Divisi</label>
+          <select
+            value={row.divisi || ''}
+            onChange={(e) => onUpdate(row.id, 'divisi', e.target.value)}
+            disabled={!canEdit}
+            className="input text-[11px] w-full"
+          >
+            <option value="">-- Pilih Divisi --</option>
+            {(divisions || []).filter((d) => d.is_active !== 0 && d.active !== 0).map((d) => (
+              <option key={d.id} value={d.name}>{d.name}</option>
+            ))}
+          </select>
+        </td>
+        <td className="text-center">{actionCell}</td>
+      </tr>
+    );
+  }
+
   // Total rows: auto-computed from principal + brand rows (not editable)
   if (row.type === 'total-divisi' || row.type === 'total') {
     const total = computeTotalFor(allRows, index);
@@ -91,7 +115,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
     let hasChildren = false;
     for (let i = index + 1; i < allRows.length; i++) {
       const r = allRows[i];
-      if (r.type === 'principal' || r.type === 'total-divisi' || r.type === 'total') break;
+      if (r.type === 'principal' || r.type === 'total-divisi' || r.type === 'total' || r.type === 'divisi') break;
       if (r.type === 'brand') { hasChildren = true; break; }
     }
     if (hasChildren) {
@@ -203,6 +227,7 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReord
               onJenisChange={onJenisChange}
               canEdit={canEdit}
               dnd={canEdit ? dnd : null}
+              divisions={divisions}
             />
           ))}
         </tbody>
@@ -212,7 +237,7 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReord
           <Button className="button secondary text-[12px] py-1.5 px-3" onClick={() => onAdd('brand')}>
             <Icon size={14}><path d="M12 5v14M5 12h14"/></Icon> Tambah Baris
           </Button>
-          <Button className="button secondary text-[12px] py-1.5 px-3" onClick={() => onAdd('total-divisi')}>
+          <Button className="button secondary text-[12px] py-1.5 px-3" onClick={() => onAdd('divisi')}>
             <Icon size={14}><path d="M12 5v14M5 12h14"/></Icon> Tambah Divisi
           </Button>
         </div>
@@ -382,7 +407,7 @@ export default function Documents({
     updateGolonganRow(row.id, 'isGroup', type !== 'brand');
     if (type === 'total-divisi' && (!row.label || isAutoLabel)) updateGolonganRow(row.id, 'label', 'TOTAL DIVISI');
     if (type === 'total' && (!row.label || isAutoLabel)) updateGolonganRow(row.id, 'label', 'TOTAL');
-    if ((type === 'brand' || type === 'principal') && isAutoLabel) updateGolonganRow(row.id, 'label', '');
+    if ((type === 'brand' || type === 'principal' || type === 'divisi') && isAutoLabel) updateGolonganRow(row.id, 'label', '');
   };
 
   // Picking a month keeps the typed year (or the current year) — year stays manual
