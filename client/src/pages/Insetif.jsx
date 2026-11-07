@@ -106,7 +106,7 @@ function FullDocPreview({ doc }) {
               <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TERCAPAI</th>
               <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">%</th>
               <th className="border border-[var(--line)] px-1 py-0.5 break-words">KET</th>
-              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">INSENTIF YG DIBERI</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-normal break-words leading-[1.15]">INSENTIF YG DIBERI</th>
             </tr>
           </thead>
           <tbody>
