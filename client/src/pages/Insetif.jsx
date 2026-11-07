@@ -487,8 +487,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                           ? 'bg-[var(--primary-soft)] ring-inset ring-2 ring-[var(--primary)]'
                           : 'hover:bg-[var(--bg)]'
                       }`}
-                      onClick={() => setActiveDocId(doc.id)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId(doc.id); }}}
+                      onClick={() => setActiveDocId((cur) => (cur === doc.id ? null : doc.id))}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId((cur) => (cur === doc.id ? null : doc.id)); }}}
                       tabIndex={0}
                       aria-current={isSelected ? 'true' : undefined}
                       aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${periodLabel(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
@@ -773,8 +773,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                           ? 'ring-2 ring-[var(--primary)] shadow-[var(--shadow-md)] bg-[var(--primary-soft)]'
                           : 'hover:ring-[var(--primary)]/50 hover:shadow-[var(--shadow-md)]'
                       }`}
-                      onClick={() => setActiveDocId(doc.id)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId(doc.id); }}}
+                      onClick={() => setActiveDocId((cur) => (cur === doc.id ? null : doc.id))}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId((cur) => (cur === doc.id ? null : doc.id)); }}}
                       tabIndex={0}
                       aria-current={isSelected ? 'true' : undefined}
                       aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${periodLabel(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
