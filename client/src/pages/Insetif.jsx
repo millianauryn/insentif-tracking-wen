@@ -20,7 +20,6 @@ import {
 import { Badge } from '../components/ui/badge';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
-import { useNavState } from '../components/Layout';
 import { fromApiPeriod } from '../lib/period';
 import { errMsg } from '../lib/api';
 import { listPositions, finalizeDocument, getDocument } from '../api';
@@ -195,7 +194,6 @@ function makeBadge(status) {
 export default function Insetif({ documents, setDocuments, onRefresh, onLoad, onNewDoc }) {
   const toast = useToast();
   const { user } = useAuth();
-  const { collapsed } = useNavState();
   const canFinalize = ['observer', 'superadmin'].includes(user?.role);
   const [searchParams] = useSearchParams();
   const nameParam = searchParams.get('name') || '';
@@ -260,6 +258,11 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
       setActiveDocId(openDocParam);
     }
   }, [openDocParam, documents]);
+
+  // Klik nama sales → tabel muncul + navbar ciut otomatis.
+  useEffect(() => {
+    if (activeDocId) window.dispatchEvent(new Event('insetif-narrow'));
+  }, [activeDocId]);
 
   // Ambil baris golongan/kriteria/kwitansi agar panel detail menampilkan input officer.
   useEffect(() => {
@@ -378,8 +381,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      {/* Desktop: selalu dua kolom berdampingan (detail satu layar), daftar menyempit saat nav expand */}
-      <div className={`hidden lg:grid lg:gap-5 lg:px-6 lg:py-6 ${activeDoc ? (collapsed ? 'lg:grid-cols-[360px_minmax(0,1fr)]' : 'lg:grid-cols-[300px_minmax(0,1fr)]') : 'lg:grid-cols-[minmax(0,1fr)]'}`}>
+      {/* Desktop: two-column layout */}
+      <div className={`hidden lg:grid lg:gap-6 lg:px-6 lg:py-6 ${activeDoc ? 'lg:grid-cols-[360px_minmax(0,1fr)]' : 'lg:grid-cols-[minmax(0,1fr)]'}`}>
         {/* Left: Document List */}
         <section
           className={`card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden ${
@@ -537,7 +540,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
 
         {/* Right: Detail Panel (muncul setelah dokumen dibuka) */}
         {activeDoc && (
-          <aside className="card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden flex flex-col lg:sticky lg:top-24 lg:max-h-[calc(100vh-120px)]" aria-label="Halaman detail dokumen" ref={detailRef}>
+          <aside className="card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden flex flex-col" aria-label="Halaman detail dokumen" ref={detailRef}>
           {activeDoc ? (
             <>
               <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-[var(--line)] bg-[var(--bg)]">
