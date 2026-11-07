@@ -60,7 +60,7 @@ function FullDocPreview({ doc }) {
       </div>
 
       <div className="border border-[var(--line)] rounded-lg overflow-hidden">
-        <table className="w-full table-fixed text-[10.5px] leading-[1.25]">
+        <table className="w-full table-fixed text-[10px] leading-[1.25]">
           <colgroup><col className="w-[28%]" /><col className="w-[17%]" /><col className="w-[23%]" /><col className="w-[16%]" /><col className="w-[16%]" /></colgroup>
           <thead>
             <tr className="bg-[#e8eef3] text-left">
@@ -97,7 +97,7 @@ function FullDocPreview({ doc }) {
       </div>
 
       <div className="border border-[var(--line)] rounded-lg overflow-hidden">
-        <table className="w-full table-fixed text-[10.5px] leading-[1.25]">
+        <table className="w-full table-fixed text-[10px] leading-[1.25]">
           <colgroup><col className="w-[28%]" /><col className="w-[12%]" /><col className="w-[19%]" /><col className="w-[9%]" /><col className="w-[13%]" /><col className="w-[19%]" /></colgroup>
           <thead>
             <tr className="bg-[#e8eef3] text-left">
@@ -487,7 +487,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                       aria-current={isSelected ? 'true' : undefined}
                       aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${periodLabel(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
                     >
-                      <p className="flex-1 min-w-0 font-medium text-[14px] text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
+                      <p className="flex-1 min-w-0 font-medium text-[13px] leading-[1.3] text-[var(--ink)] break-words group-hover:text-[var(--primary)] transition-colors">
                         {doc.salesman || 'Tanpa nama sales'}
                       </p>
                       {pos && (
@@ -769,7 +769,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                     >
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-[14px] text-[var(--ink)] truncate hover:text-[var(--primary)] transition-colors">
+                          <p className="font-semibold text-[14px] text-[var(--ink)] break-words hover:text-[var(--primary)] transition-colors">
                             {doc.salesman || 'Tanpa nama sales'}
                           </p>
                           {pos && (
