@@ -17,23 +17,30 @@ import PickerChips from '../components/PickerChips';
 
 const EMPTY_MASTER = { divisions: [], principals: [], brands: [], regions: [], branches: [] };
 
-function InlinePrincipalForm({ division, draft, busy, onChange, onSubmit }) {
+function InlinePrincipalForm({ division, draft, busy, existing, onChange, onSubmit }) {
+  const pick = existing.find((p) => p.name === draft.name);
   return (
     <form
-      className="flex flex-wrap items-end gap-2 mt-3 px-1"
+      className="mt-3 px-1 space-y-2"
       onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
     >
-      <div className="flex-1 min-w-[180px]">
-        <label className="label">Nama Principal *</label>
-        <input className="input" value={draft.name} onChange={(e) => onChange({ name: e.target.value })} placeholder={`Principal untuk ${division.name}`} required />
+      <div>
+        <label className="label">Principal (pilih yg sudah ada atau ketik baru) *</label>
+        <input className="input" value={draft.name} onChange={(e) => onChange({ name: e.target.value })} placeholder={`Principal untuk ${division.name}`} required list={`principals-${division.id}`} />
+        <datalist id={`principals-${division.id}`}>
+          {existing.map((p) => <option key={p.id} value={p.name}>{p.code ? `${p.code} · ${p.address || ''}` : (p.address || '')}</option>)}
+        </datalist>
+        {pick && <p className="text-[11px] text-ink-400 mt-1">Tautan: {pick.name}{pick.code ? ` · ${pick.code}` : ''} → divisi {division.name}</p>}
       </div>
-      <div className="w-28">
-        <label className="label">Kode</label>
-        <input className="input" value={draft.code} onChange={(e) => onChange({ code: e.target.value })} placeholder="Kode" />
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="w-32">
+          <label className="label">Kode</label>
+          <input className="input" value={draft.code} onChange={(e) => onChange({ code: e.target.value })} placeholder="Kode" />
+        </div>
+        <Button type="submit" size="sm" disabled={busy || !draft.name.trim()}>
+          {busy ? 'Menyimpan…' : `+ Principal`}
+        </Button>
       </div>
-      <Button type="submit" size="sm" disabled={busy || !draft.name.trim()}>
-        {busy ? 'Menyimpan…' : `+ Principal`}
-      </Button>
     </form>
   );
 }
@@ -605,6 +612,7 @@ const [createUser, setCreateUser] = useState(false);
               </div>
               <InlinePrincipalForm
                 division={item}
+                existing={activeItems.principal}
                 draft={inlinePrincipal[item.id] || { name: '', code: '' }}
                 busy={inlinePrincipal[item.id]?.busy}
                 onChange={(patch) => setInlinePrincipal((prev) => ({ ...prev, [item.id]: { ...(prev[item.id] || { name: '', code: '' }), ...patch } }))}
@@ -613,7 +621,14 @@ const [createUser, setCreateUser] = useState(false);
                   if (!draft.name.trim()) return;
                   setInlinePrincipal((prev) => ({ ...prev, [item.id]: { ...draft, busy: true } }));
                   try {
-                    await createPrincipal({ name: draft.name.trim(), code: draft.code?.trim() || null, address: null, division_id: item.id });
+                    const name = draft.name.trim();
+                    const linked = activeItems.principal.find((p) => p.name.toLowerCase() === name.toLowerCase());
+                    if (linked) {
+                      // Tautan ke principal lama: perbarui division_id-nya
+                      await updatePrincipal(linked.id, { name: linked.name, code: linked.code || draft.code?.trim() || null, address: linked.address || null, division_id: item.id, is_active: 1 });
+                    } else {
+                      await createPrincipal({ name, code: draft.code?.trim() || null, address: null, division_id: item.id });
+                    }
                     setInlinePrincipal((prev) => ({ ...prev, [item.id]: { name: '', code: '' } }));
                     await onRefresh();
                   } catch (e) {
