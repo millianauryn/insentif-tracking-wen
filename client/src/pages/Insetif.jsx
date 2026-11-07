@@ -377,10 +377,12 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       {/* Desktop: two-column layout */}
-      <div className="hidden lg:block lg:px-6 lg:py-6 lg:space-y-6">
+      <div className={`hidden lg:grid lg:gap-6 lg:px-6 lg:py-6 ${activeDoc ? 'lg:grid-cols-[360px_minmax(0,1fr)]' : 'lg:grid-cols-[minmax(0,1fr)]'}`}>
         {/* Left: Document List */}
         <section
-          className="card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden"
+          className={`card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden ${
+            !activeDoc ? 'lg:col-span-2' : ''
+          }`}
           aria-label="Daftar dokumen"
         >
           {/* Filters */}
@@ -485,17 +487,21 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                       aria-current={isSelected ? 'true' : undefined}
                       aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${periodLabel(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-[14px] whitespace-nowrap text-[var(--ink)] group-hover:text-[var(--primary)] transition-colors">
-                          {doc.salesman || 'Tanpa nama sales'}
-                        </p>
-                        {pos && (
-                          <span className={`mt-0.5 inline-block shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
-                        )}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <p className="flex-1 min-w-0 font-medium text-[13px] leading-[1.3] text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
+                            {doc.salesman || 'Tanpa nama sales'}
+                          </p>
+                          <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{periodLabel(doc.period)}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {pos && (
+                            <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
+                          )}
+                          <div className="shrink-0">{makeBadge(doc.status)}</div>
+                        </div>
                       </div>
-                      <p className="shrink-0 text-[12px] text-[var(--ink-2)] hidden sm:block">{periodLabel(doc.period)}</p>
-                      <div className="shrink-0">{makeBadge(doc.status)}</div>
-                      <ChevronRight className="shrink-0 size-4 text-[var(--ink-3)] group-hover:text-[var(--primary)] transition-colors" aria-hidden="true" />
+                      <ChevronRight className="shrink-0 size-4 mt-1 text-[var(--ink-3)] group-hover:text-[var(--primary)] transition-colors" aria-hidden="true" />
                     </div>
                   );
                 })}
@@ -767,19 +773,17 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                       aria-current={isSelected ? 'true' : undefined}
                       aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${periodLabel(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
                     >
-                      <div className="flex items-start justify-between gap-3 mb-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-[14px] text-[var(--ink)] whitespace-nowrap hover:text-[var(--primary)] transition-colors">
-                            {doc.salesman || 'Tanpa nama sales'}
-                          </p>
-                          {pos && (
-                            <span className={`mt-0.5 inline-block shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
-                          )}
-                          <p className="text-[12px] text-[var(--ink-2)] mt-0.5">{periodLabel(doc.period)}</p>
-                        </div>
-                        <div className="flex-shrink-0">
-                          {makeBadge(doc.status)}
-                        </div>
+                      <div className="flex items-baseline justify-between gap-3 mb-2">
+                        <p className="flex-1 min-w-0 font-semibold text-[14px] text-[var(--ink)] truncate hover:text-[var(--primary)] transition-colors">
+                          {doc.salesman || 'Tanpa nama sales'}
+                        </p>
+                        <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{periodLabel(doc.period)}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {pos && (
+                          <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
+                        )}
+                        <div className="flex-shrink-0">{makeBadge(doc.status)}</div>
                       </div>
                       <div className="flex items-center justify-between mt-auto pt-2 border-t border-[var(--line-soft)]">
                         <span className="text-[12px] font-medium text-[var(--link)] hover:underline transition-colors">
