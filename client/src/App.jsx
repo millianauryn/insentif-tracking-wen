@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { createDocument, updateDocument, finalizeDocument, getDocument, listCriteria, listDocumentFormats, listDocuments, listUsers, listMasterData } from './api';
+import { createDocument, updateDocument, finalizeDocument, deleteDocument, getDocument, listCriteria, listDocumentFormats, listDocuments, listUsers, listMasterData } from './api';
 import { canManageAdmin } from './access';
 import { useAuth } from './context/AuthContext';
 import { useToast } from './components/Toast';
@@ -223,6 +223,17 @@ function App() {
     }
   };
 
+  const removeDocument = async (id) => {
+    try {
+      await deleteDocument(id);
+      setDocuments((current) => current.filter((d) => String(d.id) !== String(id)));
+      if (String(documentId) === String(id)) cancelEdit();
+      toast('success', 'Dokumen dihapus.');
+    } catch (err) {
+      toast('error', errMsg(err));
+    }
+  };
+
   const loadDocument = async (doc) => {
     try {
       const { document: full } = await getDocument(doc.id);
@@ -373,6 +384,7 @@ function App() {
                 setDocuments={setDocuments}
                 onRefresh={listDocuments}
                 onLoad={(doc) => { loadDocument(doc); navigate('/documents'); }}
+                onDelete={removeDocument}
                 onNewDoc={() => { cancelEdit(); navigate('/documents'); }}
               />
             </Layout>

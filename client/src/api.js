@@ -54,6 +54,10 @@ export function finalizeDocument(id) {
   return apiRequest(`/api/documents/${id}/finalize`, { method: 'POST' })
 }
 
+export function deleteDocument(id) {
+  return apiRequest(`/api/documents/${id}`, { method: 'DELETE' })
+}
+
 export function getDocument(id) {
   return apiRequest(`/api/documents/${id}`)
 }

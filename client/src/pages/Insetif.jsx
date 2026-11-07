@@ -191,10 +191,11 @@ function makeBadge(status) {
   );
 }
 
-export default function Insetif({ documents, setDocuments, onRefresh, onLoad, onNewDoc }) {
+export default function Insetif({ documents, setDocuments, onRefresh, onLoad, onDelete, onNewDoc }) {
   const toast = useToast();
   const { user } = useAuth();
   const canFinalize = ['observer', 'superadmin'].includes(user?.role);
+  const isDraft = (s) => String(s).toLowerCase() !== 'final';
   const [searchParams] = useSearchParams();
   const nameParam = searchParams.get('name') || '';
   const openDocParam = searchParams.get('openDoc') || '';
@@ -379,6 +380,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
   };
 
   const activeDoc = documents.find((d) => d.id === activeDocId);
+  const canEditDoc = !!activeDoc && isDraft(activeDoc.status) && ['officer', 'superadmin'].includes(user?.role);
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
@@ -595,6 +597,31 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                 </section>
 
                 <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-[var(--line)]">
+                  {canEditDoc && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => onLoad?.(activeDoc)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        className="text-red-600 border-red-200 hover:bg-red-50"
+                        onClick={() => {
+                          if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${periodLabel(activeDoc.period)}?`)) return;
+                          onDelete?.(activeDocId);
+                          window.dispatchEvent(new Event('insetif-expand'));
+                        }}
+                      >
+                        Hapus
+                      </Button>
+                    </>
+                  )}
                   {canFinalize && String(activeDoc.status).toLowerCase() !== 'final' && (
                     <Button
                       variant="default"
@@ -879,6 +906,32 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                 </section>
 
                 <div className="flex flex-col gap-2 mt-8 pt-4 border-t border-[var(--line)]">
+                  {canEditDoc && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => onLoad?.(activeDoc)}
+                        className="min-h-[44px]"
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        className="min-h-[44px] text-red-600 border-red-200 hover:bg-red-50"
+                        onClick={() => {
+                          if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${periodLabel(activeDoc.period)}?`)) return;
+                          onDelete?.(activeDocId);
+                          window.dispatchEvent(new Event('insetif-expand'));
+                        }}
+                      >
+                        Hapus
+                      </Button>
+                    </>
+                  )}
                   {canFinalize && String(activeDoc.status).toLowerCase() !== 'final' && (
                     <Button
                       variant="default"

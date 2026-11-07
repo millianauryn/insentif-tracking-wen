@@ -87,6 +87,24 @@ function createDocumentsRouter(db, options = {}) {
     res.json({ document: getDocument(db, document.id) });
   });
 
+  router.delete('/:id', auth, (req, res) => {
+    const document = getReadableDocument(db, req.user, req.params.id);
+    if (!document) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
+    if (req.user.role !== 'superadmin' && document.owner_id !== req.user.id) {
+      return res.status(403).json({ error: { code: 'AUTH_FORBIDDEN', message: 'Cannot delete this document' } });
+    }
+    if (document.status !== 'Draft') {
+      return res.status(409).json({ error: { code: 'DOCUMENT_LOCKED', message: 'Only Draft documents can be deleted' } });
+    }
+    const remove = db.transaction(() => {
+      db.prepare('DELETE FROM golongan_rows WHERE document_id = ?').run(document.id);
+      db.prepare('DELETE FROM document_criteria_rows WHERE document_id = ?').run(document.id);
+      db.prepare('DELETE FROM incentive_documents WHERE id = ?').run(document.id);
+    });
+    remove();
+    res.json({ success: true });
+  });
+
   router.post('/:id/finalize', auth, (req, res) => {
     const document = getReadableDocument(db, req.user, req.params.id);
     if (!document) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Document not found' } });

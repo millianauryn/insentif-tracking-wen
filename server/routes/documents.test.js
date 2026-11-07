@@ -171,4 +171,18 @@ describe('Documents API', () => {
     await officer.post('/api/documents').send({ format_id: 1, salesman: '', period: '2026-11', golongan_rows: [] }).expect(201);
     await officer.post('/api/documents').send({ format_id: 1, salesman: '', period: '2026-11', golongan_rows: [] }).expect(201);
   });
+
+  it('allows owner to delete Draft but blocks delete of Final', async () => {
+    const created = await officer.post('/api/documents').send({ format_id: 1, period: '2026-10', golongan_rows: [] }).expect(201);
+    const id = created.body.document.id;
+    const observer = appFor(db, { id: 3, username: 'observer', role: 'observer' });
+    await observer.delete(`/api/documents/${id}`).expect(403);
+    await officer.delete(`/api/documents/${id}`).expect(200);
+    await officer.get(`/api/documents/${id}`).expect(404);
+
+    const created2 = await officer.post('/api/documents').send({ format_id: 1, period: '2026-10', golongan_rows: [] }).expect(201);
+    const id2 = created2.body.document.id;
+    await appFor(db, { id: 2, username: 'admin', role: 'superadmin' }).post(`/api/documents/${id2}/finalize`).expect(200);
+    await officer.delete(`/api/documents/${id2}`).expect(409);
+  });
 });
