@@ -162,4 +162,13 @@ describe('Documents API', () => {
     expect(row.percentage).toBeCloseTo((35 / 30) * 100, 1);
     expect(row.status).toBe('Tercapai');
   });
+
+  it('blocks a second document for the same sales in the same period', async () => {
+    await officer.post('/api/documents').send({ format_id: 1, salesman: 'BIDU', period: '2026-11', golongan_rows: [] }).expect(201);
+    await officer.post('/api/documents').send({ format_id: 1, salesman: 'bidu', period: '2026-11', golongan_rows: [] }).expect(409);
+    await officer.post('/api/documents').send({ format_id: 1, salesman: 'BIDU', period: '2026-12', golongan_rows: [] }).expect(201);
+    await officer.post('/api/documents').send({ format_id: 1, salesman: 'DONI', period: '2026-11', golongan_rows: [] }).expect(201);
+    await officer.post('/api/documents').send({ format_id: 1, salesman: '', period: '2026-11', golongan_rows: [] }).expect(201);
+    await officer.post('/api/documents').send({ format_id: 1, salesman: '', period: '2026-11', golongan_rows: [] }).expect(201);
+  });
 });

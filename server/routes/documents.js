@@ -25,6 +25,10 @@ function createDocumentsRouter(db, options = {}) {
     if (!validateGolonganRows(input.golongan_rows || [])) {
       return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid Golongan rows' } });
     }
+    const dup = findDuplicateDoc(db, input.salesman, input.period);
+    if (dup) {
+      return res.status(409).json({ error: { code: 'DUPLICATE_SALES_PERIOD', message: `Sales ${dup.salesman} sudah menerima insentif pada periode ${dup.period}` } });
+    }
 
     const create = db.transaction(() => {
       const ownerId = req.user.id;
@@ -63,7 +67,14 @@ function createDocumentsRouter(db, options = {}) {
       return res.status(409).json({ error: { code: 'DOCUMENT_LOCKED', message: 'Only owner can edit Draft documents' } });
     }
     try {
-      updateDocument(db, document, req.body || {});
+      const input = req.body || {};
+      const nextSalesman = input.salesman !== undefined ? input.salesman : document.salesman;
+      const nextPeriod = input.period !== undefined ? input.period : document.period;
+      const dup = findDuplicateDoc(db, nextSalesman, nextPeriod, document.id);
+      if (dup) {
+        return res.status(409).json({ error: { code: 'DUPLICATE_SALES_PERIOD', message: `Sales ${dup.salesman} sudah menerima insentif pada periode ${dup.period}` } });
+      }
+      updateDocument(db, document, input);
     } catch (error) {
       if (error.message === 'Invalid period' || error.message === 'Invalid Golongan rows') {
         return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: error.message } });
@@ -185,6 +196,17 @@ function upsertCriteriaRows(db, documentId, rows) {
 
 function isValidPeriod(value) {
   return typeof value === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+}
+
+// Batasan: satu sales = satu insentif per periode (nama case-insensitive, kosong dilewati).
+function findDuplicateDoc(db, salesman, period, excludeId = null) {
+  const name = String(salesman || '').trim().toLowerCase();
+  if (!name || !period) return null;
+  return db.prepare(`
+    SELECT id, salesman, period FROM incentive_documents
+    WHERE lower(trim(salesman)) = ? AND period = ? AND (? IS NULL OR id != ?)
+    LIMIT 1
+  `).get(name, period, excludeId, excludeId) || null;
 }
 
 // Insentif total stored as REAL; null/invalid → NULL (null = use auto-sum on the client)
