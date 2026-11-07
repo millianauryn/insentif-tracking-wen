@@ -6,7 +6,7 @@
 
 @theme {
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --color-canvas: #f4f8f6;
+  --color-canvas: #efede3;
   --color-ink-400: #64726b;
   --color-ink-500: #5b6b64;
   --color-ink-600: #46544e;
@@ -39,7 +39,7 @@
   :root {
     font-family: Inter, sans-serif;
     color: #16221e;
-    background: #f4f8f6;
+    background: #efede3;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -53,7 +53,7 @@
     min-width: 320px;
     font-size: 14px;
     line-height: 1.5;
-    background: #f4f8f6;
+    background: #efede3;
     @apply bg-background text-foreground;
   }
   button,
@@ -225,7 +225,7 @@
 }
 
 :root {
-  --background: #f4f8f6;
+  --background: #efede3;
   --foreground: #16221e;
   --card: #ffffff;
   --card-foreground: #16221e;
@@ -249,7 +249,7 @@
   --chart-4: #58665f;
   --chart-5: #0a493c;
   --radius: 9px;
-  --sidebar: #f4f8f6;
+  --sidebar: #efede3;
   --sidebar-foreground: #16221e;
   --sidebar-primary: #0f6b58;
   --sidebar-primary-foreground: #ffffff;
