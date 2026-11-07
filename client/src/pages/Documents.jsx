@@ -474,12 +474,7 @@ export default function Documents({
     : effectiveInsentif
       ? Number(effectiveInsentif).toLocaleString('en-US')
       : '';
-  const kwSignatureName = (() => {
-    const base = selectedPosition?.name || sales.name || '–';
-    return selectedPosition?.position_type === 'SALES' && selectedPosition?.sales_code
-      ? `${selectedPosition.sales_code} ${base}`
-      : base;
-  })();
+  const kwSignatureName = selectedPosition?.name || sales.name || '–';
   const kwSignatureRole = selectedPosition?.position_type === 'SALES'
     ? 'SALESMAN'
     : (selectedPosition?.position_type || 'SALESMAN');
