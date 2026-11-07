@@ -17,6 +17,27 @@ import PickerChips from '../components/PickerChips';
 
 const EMPTY_MASTER = { divisions: [], principals: [], brands: [], regions: [], branches: [] };
 
+function InlinePrincipalForm({ division, draft, busy, onChange, onSubmit }) {
+  return (
+    <form
+      className="flex flex-wrap items-end gap-2 mt-3 px-1"
+      onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
+    >
+      <div className="flex-1 min-w-[180px]">
+        <label className="label">Nama Principal *</label>
+        <input className="input" value={draft.name} onChange={(e) => onChange({ name: e.target.value })} placeholder={`Principal untuk ${division.name}`} required />
+      </div>
+      <div className="w-28">
+        <label className="label">Kode</label>
+        <input className="input" value={draft.code} onChange={(e) => onChange({ code: e.target.value })} placeholder="Kode" />
+      </div>
+      <Button type="submit" size="sm" disabled={busy || !draft.name.trim()}>
+        {busy ? 'Menyimpan…' : `+ Principal`}
+      </Button>
+    </form>
+  );
+}
+
 export default function Master({ data, onRefresh, user }) {
   const [tab, setTab] = useState('division');
   const [masterForm, setMasterForm] = useState(null);
@@ -26,6 +47,7 @@ export default function Master({ data, onRefresh, user }) {
   const [masterLimit, setMasterLimit] = useState(10);
   const [expandedDivisions, setExpandedDivisions] = useState(new Set());
   const [expandedBranches, setExpandedBranches] = useState(new Set());
+  const [inlinePrincipal, setInlinePrincipal] = useState({}); // divisionId -> {name, code, busy}
 
   // Akun tab state
   const [form, setForm] = useState({ username: '', password: '', role: 'officer', branch_ids: [], position_id: '', sales_code: '' });
@@ -581,6 +603,26 @@ const [createUser, setCreateUser] = useState(false);
                   );
                 })}
               </div>
+              <InlinePrincipalForm
+                division={item}
+                draft={inlinePrincipal[item.id] || { name: '', code: '' }}
+                busy={inlinePrincipal[item.id]?.busy}
+                onChange={(patch) => setInlinePrincipal((prev) => ({ ...prev, [item.id]: { ...(prev[item.id] || { name: '', code: '' }), ...patch } }))}
+                onSubmit={async () => {
+                  const draft = inlinePrincipal[item.id] || { name: '', code: '' };
+                  if (!draft.name.trim()) return;
+                  setInlinePrincipal((prev) => ({ ...prev, [item.id]: { ...draft, busy: true } }));
+                  try {
+                    await createPrincipal({ name: draft.name.trim(), code: draft.code?.trim() || null, address: null, division_id: item.id });
+                    setInlinePrincipal((prev) => ({ ...prev, [item.id]: { name: '', code: '' } }));
+                    await onRefresh();
+                  } catch (e) {
+                    setUserError(e.message);
+                  } finally {
+                    setInlinePrincipal((prev) => ({ ...prev, [item.id]: { name: prev[item.id]?.name || '', code: prev[item.id]?.code || '', busy: false } }));
+                  }
+                }}
+              />
             </div>
           </li>
         )}
