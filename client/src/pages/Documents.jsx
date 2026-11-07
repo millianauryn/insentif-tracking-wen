@@ -21,6 +21,18 @@ const EMPTY_MASTER = { divisions: [], principals: [], brands: [], regions: [], b
 const parseBrands = (s) => (s ? s.split(',').map((t) => t.replace(/^\s*&\s*/, '').trim()).filter(Boolean) : []);
 const joinBrands = (arr) => (arr.length <= 1 ? (arr[0] || '') : `${arr.slice(0, -1).join(', ')}, & ${arr[arr.length - 1]}`);
 
+// Brand yang sudah dipilih di baris lain disembunyikan dari dropdown (duplikat hanya lewat ketik manual).
+function buildBrandOptions(brands, principals, allRows, currentId) {
+  const used = new Set((allRows || []).filter((r) => r.type === 'brand' && r.id !== currentId).map((r) => (r.label || '').trim().toLowerCase()).filter(Boolean));
+  return (brands || [])
+    .filter((b) => b.is_active !== 0 && b.active !== 0)
+    .filter((b) => !used.has((b.name || '').trim().toLowerCase()))
+    .map((b) => ({
+      value: b.name,
+      hint: b.principal_id ? (principals || []).find((p) => p.id === b.principal_id)?.name : '',
+    }));
+}
+
 function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit, dnd, divisions, brands, principals }) {
   const target = Number(row.target) || 0;
   const achievement = Number(row.achievement) || 0;
@@ -92,12 +104,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
     );
   }
 
-  const brandOptions = (brands || [])
-    .filter((b) => b.is_active !== 0 && b.active !== 0)
-    .map((b) => ({
-      value: b.name,
-      hint: b.principal_id ? (principals || []).find((p) => p.id === b.principal_id)?.name : '',
-    }));
+  const brandOptions = buildBrandOptions(brands, principals, allRows, row.id);
   const principalOptions = (principals || [])
     .filter((p) => p.is_active !== 0 && p.active !== 0)
     .map((p) => ({ value: p.name }));
