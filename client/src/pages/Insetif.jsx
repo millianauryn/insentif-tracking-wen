@@ -138,7 +138,7 @@ function FullDocPreview({ doc }) {
           <p><span className="inline-block w-40 text-[var(--ink-3)]">Sudah terima dari :</span> {kw.penerima || 'PT. BINTANG SINAR JAYA'}</p>
           <p><span className="inline-block w-40 text-[var(--ink-3)]">Jumlah Uang</span> {tujuan}</p>
           <p><span className="inline-block w-40 text-[var(--ink-3)]">Buat Pembayaran</span> {tujuan}</p>
-          <p><span className="inline-block w-40 text-[var(--ink-3)]">Terbilang Rp.</span> <strong>{kw.nominal || fmtNum(totalInsentif)}</strong></p>
+          <p><span className="inline-block w-40 text-[var(--ink-3)]">Terbilang Rp.</span> <strong>{Number(totalInsentif) !== 0 ? fmtNum(totalInsentif) : '-'}</strong></p>
         </div>
         <div className="mt-6 text-right">
           <p className="font-bold uppercase">{doc.salesman || '-'}</p>
