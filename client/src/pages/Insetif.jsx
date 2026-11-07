@@ -549,7 +549,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                   variant="ghost"
                   size="sm"
                   type="button"
-                  onClick={() => setActiveDocId(null)}
+                  onClick={() => { window.dispatchEvent(new Event('insetif-expand')); setActiveDocId(null); }}
                   className="gap-1.5 h-8 px-3"
                 >
                   <ChevronLeft className="size-3.5" aria-hidden="true" />
@@ -844,7 +844,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                   variant="ghost"
                   size="sm"
                   type="button"
-                  onClick={() => setActiveDocId(null)}
+                  onClick={() => { window.dispatchEvent(new Event('insetif-expand')); setActiveDocId(null); }}
                   className="gap-1.5 h-9 px-3 min-h-[44px]"
                 >
                   <ChevronLeft className="size-4" aria-hidden="true" />
