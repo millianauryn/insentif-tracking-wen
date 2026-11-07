@@ -28,7 +28,7 @@ const DOC_CHILDREN = [
 ];
 
 // Sidebar + top bar share the canvas ground so the white panels carry the structure.
-const GROUND = '#efede3';
+const GROUND = '#F5F6F3';
 
 function LiveClock() {
   const [now, setNow] = useState(() => new Date());
