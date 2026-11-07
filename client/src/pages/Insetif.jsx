@@ -106,7 +106,7 @@ function FullDocPreview({ doc }) {
               <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TERCAPAI</th>
               <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">%</th>
               <th className="border border-[var(--line)] px-1 py-0.5 break-words">KET</th>
-              <th className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-normal break-words leading-[1.15]">INSENTIF YG DIBERI</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">INSENTIF YG DIBERI</th>
             </tr>
           </thead>
           <tbody>
@@ -118,7 +118,7 @@ function FullDocPreview({ doc }) {
                   <td className="border border-[var(--line)] px-1 py-0.5 break-words">- {r.label}</td>
                   <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{fmtNum(r.target_value)}</td>
                   <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{fmtNum(r.achievement_value)}</td>
-                  <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{Number(r.target_value) > 0 ? `${pct.toFixed(0)}%` : r.percentage_value ?? ''}</td>
+                  <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{Number(r.target_value) > 0 ? `${pct.toFixed(0)}%` : r.percentage_value != null && r.percentage_value !== '' ? `${Number(r.percentage_value).toFixed(1)}%` : ''}</td>
                   <td className="border border-[var(--line)] px-1 py-0.5 whitespace-nowrap">{ket}</td>
                   <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{fmtNum(r.incentive_amount)}</td>
                 </tr>

@@ -130,6 +130,18 @@
     color: #374151;
     border: 1px solid #e5e7eb;
   }
+  .pct-input {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .pct-input input {
+    width: 72px;
+  }
+  .pct-input > span {
+    font-size: 12px;
+    color: var(--ink-3);
+  }
   .btn-ghost:hover {
     background: #f9fafb;
   }

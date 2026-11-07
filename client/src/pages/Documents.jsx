@@ -336,7 +336,7 @@ function KriteriaRow({ row, onUpdate, canEdit }) {
       {isGugur50 ? (
         <td></td>
       ) : isCallCompliance ? (
-        <td><input type="number" min="0" step="0.01" value={row.percentage_value ?? percentage.toFixed(1)} onChange={(e) => onUpdate(row.criteria_id, 'percentage_value', e.target.value)} disabled={!canEdit} /></td>
+        <td><span className="pct-input"><input type="number" min="0" step="0.01" value={row.percentage_value ?? percentage.toFixed(1)} onChange={(e) => onUpdate(row.criteria_id, 'percentage_value', e.target.value)} disabled={!canEdit} aria-label="Call Compliance (%)" /><span>%</span></span></td>
       ) : (
         <td>{target > 0 ? `${percentage.toFixed(1)}%` : ''}</td>
       )}
