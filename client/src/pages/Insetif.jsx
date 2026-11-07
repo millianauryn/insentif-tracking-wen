@@ -61,13 +61,12 @@ function FullDocPreview({ doc }) {
 
       <div className="border border-[var(--line)] rounded-lg overflow-hidden">
         <table className="w-full table-fixed text-[10.5px] leading-[1.25]">
-          <colgroup><col className="w-[28%]" /><col className="w-[17%]" /><col className="w-[23%]" /><col className="w-[16%]" /><col className="w-[16%]" /></colgroup>
+          <colgroup><col className="w-[34%]" /><col className="w-[22%]" /><col className="w-[28%]" /><col className="w-[16%]" /></colgroup>
           <thead>
             <tr className="bg-[#e8eef3] text-left">
               <th className="border border-[var(--line)] px-1 py-0.5 break-words">GOLONGAN</th>
               <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TARGET</th>
               <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TERCAPAI</th>
-              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TERCAPAI (%)</th>
               <th className="border border-[var(--line)] px-1 py-0.5 break-words">KET</th>
             </tr>
           </thead>
@@ -76,22 +75,20 @@ function FullDocPreview({ doc }) {
               const label = displayLabel(r.label);
               const divisiRow = isDivisiLabel(r.label);
               const groupRow = !!r.is_group || isTotalDivisiLabel(r.label);
-              const pct = pctOf(r.achievement, r.target);
               const ket = ketOf(r.achievement, r.target);
               if (divisiRow) {
-                return <tr key={r.id} className="bg-[#f3e2c7] font-bold"><td colSpan={5} className="border border-[var(--line)] px-1.5 py-1 text-center">{label}</td></tr>;
+                return <tr key={r.id} className="bg-[#f3e2c7] font-bold"><td colSpan={4} className="border border-[var(--line)] px-1.5 py-1 text-center">{label}</td></tr>;
               }
               return (
                 <tr key={r.id} className={groupRow ? 'font-bold bg-[#f0f4f8]' : ''}>
                   <td className="border border-[var(--line)] px-1 py-0.5 break-words">{label}</td>
                   <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(r.target)}</td>
                   <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(r.achievement)}</td>
-                  <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{Number(r.target) > 0 ? `${pct.toFixed(0)}%` : ''}</td>
                   <td className="border border-[var(--line)] px-1.5 py-1 whitespace-nowrap">{ket}</td>
                 </tr>
               );
             })}
-            {!golongan.length && <tr><td colSpan={5} className="border border-[var(--line)] px-1.5 py-2 text-center text-[var(--ink-3)]">Golongan kosong.</td></tr>}
+            {!golongan.length && <tr><td colSpan={4} className="border border-[var(--line)] px-1.5 py-2 text-center text-[var(--ink-3)]">Golongan kosong.</td></tr>}
           </tbody>
         </table>
       </div>
