@@ -10,7 +10,7 @@ export default function ListPager({ page, pages, total, limit, onPage, onLimit }
         <span className="font-semibold">{total}</span> data
       </p>
       <div className="flex flex-nowrap items-center gap-1.5 shrink-0">
-        <select value={limit} onChange={(e) => onLimit(Number(e.target.value))} className="input h-7 w-[128px] min-h-0 py-0.5 px-2 text-[12px] leading-[1.4]">
+        <select value={limit} onChange={(e) => onLimit(Number(e.target.value))} className="input h-[26px] w-[112px] px-2 text-[12px] leading-none" style={{ minHeight: 26, padding: '0 6px' }}>
           {[10, 25, 50, 100].map((l) => (
             <option key={l} value={l}>{l} per halaman</option>
           ))}
