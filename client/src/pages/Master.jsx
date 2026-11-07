@@ -190,7 +190,7 @@ const [createUser, setCreateUser] = useState(false);
     setUserError('');
     try {
       const payload = {
-        username: form.username.trim(),
+        username: form.username.trim().toLowerCase(),
         role: form.role,
         branch_ids: form.branch_ids.map(Number),
         position_id: form.position_id ? Number(form.position_id) : undefined,

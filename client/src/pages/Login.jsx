@@ -52,7 +52,7 @@ export default function Login() {
     setSubmitting(true);
     setError('');
     try {
-      await login(username.trim(), password);
+      await login(username.trim().toLowerCase(), password);
     } catch (err) {
       setError(errMsg(err));
     } finally {
