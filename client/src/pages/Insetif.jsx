@@ -60,7 +60,7 @@ function FullDocPreview({ doc }) {
       </div>
 
       <div className="border border-[var(--line)] rounded-lg overflow-hidden">
-        <table className="w-full table-fixed text-[10px] leading-[1.25]">
+        <table className="w-full table-fixed text-[10.5px] leading-[1.25]">
           <colgroup><col className="w-[28%]" /><col className="w-[17%]" /><col className="w-[23%]" /><col className="w-[16%]" /><col className="w-[16%]" /></colgroup>
           <thead>
             <tr className="bg-[#e8eef3] text-left">
@@ -97,7 +97,7 @@ function FullDocPreview({ doc }) {
       </div>
 
       <div className="border border-[var(--line)] rounded-lg overflow-hidden">
-        <table className="w-full table-fixed text-[10px] leading-[1.25]">
+        <table className="w-full table-fixed text-[10.5px] leading-[1.25]">
           <colgroup><col className="w-[28%]" /><col className="w-[12%]" /><col className="w-[19%]" /><col className="w-[9%]" /><col className="w-[13%]" /><col className="w-[19%]" /></colgroup>
           <thead>
             <tr className="bg-[#e8eef3] text-left">
