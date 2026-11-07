@@ -450,6 +450,17 @@ export default function Documents({
   // Wilayah shown in doc header (kota)
   const wilayah = sales.region || '-';
 
+  // Penerima kwitansi = nama cabang yang di-link ke akun officer; superadmin pilih lewat dropdown
+  const ownBranchName = (!isSuper && (user.branch_ids || []).length)
+    ? masterData.branches.filter((b) => (user.branch_ids || []).includes(b.id))[0]?.name
+    : null;
+  useEffect(() => {
+    if (isSuper || !ownBranchName || !setKwitansi) return;
+    if (kwitansi?.penerima !== ownBranchName) setKwitansi({ ...kwitansi, penerima: ownBranchName });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuper, ownBranchName]);
+  const kwPenerima = isSuper ? (kwitansi.penerima || '') : (ownBranchName || kwitansi.penerima || '');
+
   // Selected salesman's position (kwitansi signature)
   const selectedPosition = positions.find(
     (p) => p.active && p.name.trim().toLowerCase() === (sales.name || '').trim().toLowerCase()
@@ -677,7 +688,16 @@ export default function Documents({
         <div className="kwitansi-card">
           <h3><u>KWITANSI</u></h3>
           <div className="kwitansi-grid">
-            <div className="kw-row"><label>Sudah terima dari :</label><span>{kwitansi.penerima}</span></div>
+            <div className="kw-row"><label>Sudah terima dari :</label>{isSuper ? (
+              <ComboSelect
+                value={kwPenerima}
+                onChange={(v) => setKwitansi({ ...kwitansi, penerima: v })}
+                options={masterData.branches.filter((b) => b.is_active !== 0 && b.active !== 0).map((b) => ({ value: b.name }))}
+                placeholder="Pilih cabang..."
+                disabled={!canEdit}
+                emptyHint="Tidak ada cabang cocok."
+              />
+            ) : <span>{kwPenerima}</span>}</div>
             <div className="kw-row"><label>Jumlah Uang</label><input value={kwitansi.jumlahUang || kwAutoPurpose} onChange={(e) => setKwitansi({ ...kwitansi, jumlahUang: e.target.value })} disabled={!canEdit} /></div>
             <div className="kw-row"><label>Buat Pembayaran</label><input value={kwitansi.keterangan || kwAutoPurpose} onChange={(e) => setKwitansi({ ...kwitansi, keterangan: e.target.value })} disabled={!canEdit} /></div>
             <div className="kw-row"><label>Terbilang Rp.</label><input value={kwEffectiveAmount} onChange={(e) => setKwitansi({ ...kwitansi, nominal: e.target.value, terbilang: terbilang(e.target.value.replace(/[^\d-]/g, '') || effectiveInsentif || 0) })} disabled={!canEdit} /></div>
