@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { createDocument, updateDocument, finalizeDocument, deleteDocument, getDocument, listCriteria, listDocumentFormats, listDocuments, listUsers, listMasterData } from './api';
 import { canManageAdmin } from './access';
@@ -8,11 +8,12 @@ import { errMsg } from './lib/api';
 import { reorder } from './lib/reorder';
 import { toApiPeriod, fromApiPeriod, currentPeriodLabel } from './lib/period';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import Insetif from './pages/Insetif';
-import Documents from './pages/Documents';
-import Master from './pages/Master';
 import Login from './pages/Login';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Insetif = lazy(() => import('./pages/Insetif'));
+const Documents = lazy(() => import('./pages/Documents'));
+const Master = lazy(() => import('./pages/Master'));
 import './App.css';
 import './auth.css';
 
@@ -312,6 +313,7 @@ function App() {
 
   const renderDocuments = (type) => (
     <Layout breadcrumb={['Dokumen', type === 'sales' ? 'Sales' : type.toUpperCase()]}>
+      <Suspense fallback={<div className="auth-shell" role="status">Memuat…</div>}>
       <Documents
         docType={type}
         user={user}
@@ -346,6 +348,7 @@ function App() {
         setSalesDivisi={(v) => updateSales('divisi', v)}
         divisions={adminData.masterData.divisions}
       />
+      </Suspense>
     </Layout>
   );
 
@@ -360,6 +363,7 @@ function App() {
         element={
           user ? (
             <Layout breadcrumb={['Dashboard']}>
+              <Suspense fallback={<div className="auth-shell" role="status">Memuat…</div>}>
               <Dashboard
                 documents={documents}
                 user={user}
@@ -368,6 +372,7 @@ function App() {
                 onNewDoc={() => { cancelEdit(); navigate('/documents'); }}
                 onLoadDoc={(doc) => { loadDocument(doc); navigate('/documents'); }}
               />
+              </Suspense>
             </Layout>
           ) : (
             <Navigate to="/login" replace />
@@ -379,6 +384,7 @@ function App() {
         element={
           user ? (
             <Layout title="Dokumen Tersimpan" breadcrumb={['Dokumen Tersimpan']}>
+              <Suspense fallback={<div className="auth-shell" role="status">Memuat…</div>}>
               <Insetif
                 documents={documents}
                 setDocuments={setDocuments}
@@ -387,6 +393,7 @@ function App() {
                 onDelete={removeDocument}
                 onNewDoc={() => { cancelEdit(); navigate('/documents'); }}
               />
+              </Suspense>
             </Layout>
           ) : (
             <Navigate to="/login" replace />
@@ -414,7 +421,9 @@ function App() {
         element={
           user && canManageAdmin(user) ? (
             <Layout title="Data Master" breadcrumb={['Data Master']}>
+              <Suspense fallback={<div className="auth-shell" role="status">Memuat…</div>}>
               <Master data={adminData} onRefresh={reloadAdminData} user={user} />
+              </Suspense>
             </Layout>
           ) : (
             <Navigate to="/login" replace />

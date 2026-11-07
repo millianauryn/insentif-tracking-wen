@@ -41,6 +41,23 @@ export default defineConfig({
       '/api': 'http://localhost:3002',
     },
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-router')) return 'vendor-router';
+            if (id.includes('@base-ui')) return 'vendor-base-ui';
+            if (id.includes('@tanstack')) return 'vendor-query';
+            if (id.includes('lucide-react')) return 'vendor-icons';
+            if (id.includes('react')) return 'vendor-react';
+            return 'vendor';
+          }
+        },
+      },
+    },
+  },
   test: {
     // render smoke tests import Chakra; 5s default flakes on a loaded machine
     testTimeout: 15000,
