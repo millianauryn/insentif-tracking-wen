@@ -22,18 +22,26 @@ const parseBrands = (s) => (s ? s.split(',').map((t) => t.replace(/^\s*&\s*/, ''
 const joinBrands = (arr) => (arr.length <= 1 ? (arr[0] || '') : `${arr.slice(0, -1).join(', ')}, & ${arr[arr.length - 1]}`);
 
 // Brand yang sudah dipilih di baris lain disembunyikan dari dropdown (duplikat hanya lewat ketik manual).
-function buildBrandOptions(brands, principals, allRows, currentId) {
+// Filter seksi Divisi: Brand hanya yang link ke divisi aktif (via principal.division_id); general (tanpa divisi) -> semua.
+function buildBrandOptions(brands, principals, allRows, currentId, activeDivisi, divisions) {
   const used = new Set((allRows || []).filter((r) => r.type === 'brand' && r.id !== currentId).map((r) => (r.label || '').trim().toLowerCase()).filter(Boolean));
+  const divisionId = activeDivisi ? (divisions || []).find((d) => d.name === activeDivisi)?.id : null;
+  const inDivision = (b) => {
+    if (!activeDivisi || divisionId == null) return true;
+    const principal = (principals || []).find((p) => p.id === b.principal_id);
+    return principal?.division_id === divisionId;
+  };
   return (brands || [])
     .filter((b) => b.is_active !== 0 && b.active !== 0)
     .filter((b) => !used.has((b.name || '').trim().toLowerCase()))
+    .filter(inDivision)
     .map((b) => ({
       value: b.name,
       hint: b.principal_id ? (principals || []).find((p) => p.id === b.principal_id)?.name : '',
     }));
 }
 
-function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit, dnd, divisions, brands, principals }) {
+function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit, dnd, divisions, brands, principals, activeDivisi }) {
   const target = Number(row.target) || 0;
   const achievement = Number(row.achievement) || 0;
   const pct = target > 0 ? (achievement / target) * 100 : 0;
@@ -104,9 +112,11 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
     );
   }
 
-  const brandOptions = buildBrandOptions(brands, principals, allRows, row.id);
+  const brandOptions = buildBrandOptions(brands, principals, allRows, row.id, activeDivisi, divisions);
+  const activeDivisionId = activeDivisi ? (divisions || []).find((d) => d.name === activeDivisi)?.id : null;
   const principalOptions = (principals || [])
     .filter((p) => p.is_active !== 0 && p.active !== 0)
+    .filter((p) => !activeDivisi || activeDivisionId == null || p.division_id === activeDivisionId)
     .map((p) => ({ value: p.name }));
   const activeDivisions = (divisions || []).filter((d) => d.is_active !== 0 && d.active !== 0);
   const nameFieldFor = (type) => {
@@ -209,6 +219,19 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReord
     },
   };
 
+  // Divisi seksi per baris: mulai dari Divisi atas (salesDivisi), ganti saat Divisi row,
+  // tutup (general) setelah Total Divisi/Total. Baris di dalam seksi hanya lihat Brand/Principal link divisi itu.
+  const sectionDivisi = (() => {
+    const out = [];
+    let current = salesDivisi && String(salesDivisi).trim() ? String(salesDivisi) : null;
+    rows.forEach((r) => {
+      out.push(current);
+      if (r.type === 'divisi') current = r.divisi ? String(r.divisi) : null;
+      else if (r.type === 'total-divisi' || r.type === 'total') current = null;
+    });
+    return out;
+  })();
+
   return (
     <div className="table-wrap">
       <table>
@@ -256,6 +279,7 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReord
               divisions={divisions}
               brands={brands}
               principals={principals}
+              activeDivisi={sectionDivisi[index] || null}
             />
           ))}
         </tbody>
