@@ -152,7 +152,7 @@ function SideNav({ onNavigate }) {
               title="Keluar"
               size="icon"
               variant="ghost"
-              onClick={() => { logout(); navigate('/login'); }}
+              onClick={async () => { await logout(); navigate('/login'); }}
               className="text-ink-500 hover:bg-black/5 hover:text-[#e11d48]"
             >
               <LogOut size={16} />

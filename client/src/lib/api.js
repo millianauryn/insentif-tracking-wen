@@ -41,6 +41,12 @@ api.interceptors.response.use(
 );
 
 export function errMsg(error) {
+  if (!error?.response) {
+    return 'Tidak dapat terhubung ke server. Pastikan API berjalan di port 3002.';
+  }
+  if (error.response.status === 429) {
+    return 'Terlalu banyak percobaan masuk, coba lagi 15 menit lagi.';
+  }
   return (
     error?.response?.data?.error?.message ||
     error?.response?.data?.message ||

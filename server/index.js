@@ -23,8 +23,13 @@ configureAuthDatabase(db);
 
 // Security middleware
 app.use(helmet());
+const allowedOrigins = [
+  process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+];
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  origin: allowedOrigins,
   credentials: true
 }));
 app.use(express.json({ limit: '100kb' }));
@@ -103,7 +108,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/auth/logout', authLimiter, (req, res) => {
+app.post('/api/auth/logout', (req, res) => {
   const token = req.cookies?.session_token;
   if (token) {
     deleteSession(db, token);

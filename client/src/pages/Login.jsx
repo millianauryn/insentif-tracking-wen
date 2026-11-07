@@ -7,16 +7,44 @@ import { useAuth } from '../context/AuthContext';
 import { errMsg } from '../lib/api';
 
 export default function Login() {
-  const { user, loading, login, devLogin } = useAuth();
+  const { user, loading, login, devLogin, logout } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const passwordRef = useRef(null);
 
   if (loading) return <div className="auth-shell" role="status">Memuat sesi...</div>;
-  if (user) return <Navigate to="/dashboard" replace />;
+  if (user && !switching) {
+    return (
+      <main className="auth-shell">
+        <section className="auth-form-panel">
+          <section className="auth-card" aria-label="Sudah masuk">
+            <header className="auth-card-head">
+              <h1>Sudah masuk</h1>
+              <p>Sesir masuk sebagai {user.username} ({user.role}).</p>
+            </header>
+            <Button
+              className="button secondary"
+              type="button"
+              onClick={async () => { await logout(); setSwitching(true); }}
+            >
+              Masuk akun lain
+            </Button>
+            <Button
+              className="button primary"
+              type="button"
+              onClick={() => { window.location.href = `${import.meta.env.BASE_URL}dashboard`; }}
+            >
+              Kembali ke dashboard
+            </Button>
+          </section>
+        </section>
+      </main>
+    );
+  }
 
   const submit = async (event) => {
     event.preventDefault();

@@ -35,8 +35,12 @@ export function AuthProvider({ children }) {
     return res.data.user;
   }
 
-  function logout() {
-    api.post('/auth/logout').catch(() => {});
+  async function logout() {
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // abaikan: tetap bersihkan state & cache sampel
+    }
     queryClient.clear();
     setUser(null);
   }
