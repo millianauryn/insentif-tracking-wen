@@ -8,6 +8,28 @@ import { listPositions, listMasterData } from '../api';
 import { computeTotalFor, computeGrandTotal, principalValueFor, principalAutoValue } from '../lib/golongan';
 import { monthNames } from '../lib/period';
 
+const TERBILANG_UNITS = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
+function terbilangWords(n) {
+  if (n === 0) return 'nol';
+  if (n < 12) return TERBILANG_UNITS[n];
+  if (n < 20) return `${terbilangWords(n - 10)} belas`;
+  if (n < 100) return `${terbilangWords(Math.floor(n / 10))} puluh ${n % 10 ? terbilangWords(n % 10) : ''}`.trim();
+  if (n < 200) return `seratus ${n - 100 ? terbilangWords(n - 100) : ''}`.trim();
+  if (n < 1000) return `${terbilangWords(Math.floor(n / 100))} ratus ${n % 100 ? terbilangWords(n % 100) : ''}`.trim();
+  if (n < 2000) return `seribu ${n - 1000 ? terbilangWords(n - 1000) : ''}`.trim();
+  if (n < 1_000_000) return `${terbilangWords(Math.floor(n / 1000))} ribu ${n % 1000 ? terbilangWords(n % 1000) : ''}`.trim();
+  if (n < 1_000_000_000) return `${terbilangWords(Math.floor(n / 1_000_000))} juta ${n % 1_000_000 ? terbilangWords(n % 1_000_000) : ''}`.trim();
+  if (n < 1_000_000_000_000) return `${terbilangWords(Math.floor(n / 1_000_000_000))} miliar ${n % 1_000_000_000 ? terbilangWords(n % 1_000_000_000) : ''}`.trim();
+  return `${terbilangWords(Math.floor(n / 1_000_000_000_000))} triliun ${n % 1_000_000_000_000 ? terbilangWords(n % 1_000_000_000_000) : ''}`.trim();
+}
+function terbilang(n) {
+  const num = Math.trunc(Number(n) || 0);
+  if (!num) return 'Nol rupiah';
+  const words = terbilangWords(Math.abs(num));
+  const cap = words.charAt(0).toUpperCase() + words.slice(1);
+  return `${num < 0 ? 'Minus ' : ''}${cap} rupiah`;
+}
+
 const JENIS_OPTIONS = [
   { value: 'brand', label: 'Brand' },
   { value: 'principal', label: 'Principal' },
@@ -323,13 +345,13 @@ function KriteriaRow({ row, onUpdate, canEdit }) {
       ) : (
         <td><span className={`result-badge ${status === 'Tercapai' ? 'success' : 'warning'}`}>{target > 0 ? status : ''}</span></td>
       )}
-      <td><input type="number" min="0" value={row.incentive_amount ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'incentive_amount', e.target.value)} disabled={!canEdit} /></td>
+      <td><input type="number" value={row.incentive_amount ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'incentive_amount', e.target.value)} disabled={!canEdit} aria-label={`Insentive ${row.label}`} /></td>
     </tr>
   );
 }
 
 function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalChange }) {
-  // Total = auto-sum of the incentive column, overridable by typing (empty = back to auto)
+  // Total = auto-sum of the incentive column (Gugur 50% diketik minus, jadi ikut dikurangi), overridable by typing
   const autoSum = rows.reduce((s, r) => s + (Number(r.incentive_amount) || 0), 0);
   const totalValue = totalOverride ?? autoSum;
 
@@ -359,7 +381,6 @@ function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalChange }
             <td>
               <input
                 type="number"
-                min="0"
                 value={totalValue === '' || totalValue === null || Number.isNaN(totalValue) ? '' : totalValue}
                 onChange={(e) => onTotalChange(e.target.value === '' ? null : Number(e.target.value))}
                 disabled={!canEdit}
@@ -443,6 +464,25 @@ export default function Documents({
   const visibleCriteriaRows = showAllCriteria
     ? criteriaRows
     : criteriaRows.filter((r) => myCriteriaIds.includes(r.criteria_id));
+
+  // Total insentif efektif: override manual atau jumlah kolom insentif (Gugur 50% minus berkurang dari yang di atas)
+  const criteriaAutoSum = visibleCriteriaRows.reduce((s, r) => s + (Number(r.incentive_amount) || 0), 0);
+  const effectiveInsentif = insentifTotal ?? criteriaAutoSum;
+  const kwAutoPurpose = period ? `Incentive penjualan bulan ${period}` : '';
+  const kwEffectiveAmount = kwitansi?.nominal?.trim()
+    ? kwitansi.nominal
+    : effectiveInsentif
+      ? Number(effectiveInsentif).toLocaleString('en-US')
+      : '';
+  const kwSignatureName = (() => {
+    const base = selectedPosition?.name || sales.name || '–';
+    return selectedPosition?.position_type === 'SALES' && selectedPosition?.sales_code
+      ? `${selectedPosition.sales_code} ${base}`
+      : base;
+  })();
+  const kwSignatureRole = selectedPosition?.position_type === 'SALES'
+    ? 'SALESMAN'
+    : (selectedPosition?.position_type || 'SALESMAN');
 
   const save = () => (documentId ? onUpdate() : onCreate());
 
@@ -640,21 +680,20 @@ export default function Documents({
         />
 
         <div className="kwitansi-card">
-          <h3>KWITANSI</h3>
+          <h3><u>KWITANSI</u></h3>
           <div className="kwitansi-grid">
             <div className="kw-row"><label>Sudah terima dari :</label><span>{kwitansi.penerima}</span></div>
-            <div className="kw-row"><label>Jumlah Uang</label><input value={kwitansi.jumlahUang} onChange={(e) => setKwitansi({ ...kwitansi, jumlahUang: e.target.value })} disabled={!canEdit} placeholder="Rp." /></div>
-            <div className="kw-row"><label>Bayar PemBayaran</label><input value={kwitansi.keterangan} onChange={(e) => setKwitansi({ ...kwitansi, keterangan: e.target.value })} disabled={!canEdit} placeholder="Contoh: Incentive penjualan bulan September 2026" /></div>
-            <div className="kw-row"><label>Terbilang</label><input value={kwitansi.terbilang} onChange={(e) => setKwitansi({ ...kwitansi, terbilang: e.target.value })} disabled={!canEdit} placeholder="Contoh: Delapan ratus delapan puluh dua ribu rupiah" /></div>
-            <div className="kw-row"><label>Rp.</label><input value={kwitansi.nominal} onChange={(e) => setKwitansi({ ...kwitansi, nominal: e.target.value })} disabled={!canEdit} placeholder="882.000" /></div>
+            <div className="kw-row"><label>Jumlah Uang</label><input value={kwitansi.jumlahUang || kwAutoPurpose} onChange={(e) => setKwitansi({ ...kwitansi, jumlahUang: e.target.value })} disabled={!canEdit} /></div>
+            <div className="kw-row"><label>Buat Pembayaran</label><input value={kwitansi.keterangan || kwAutoPurpose} onChange={(e) => setKwitansi({ ...kwitansi, keterangan: e.target.value })} disabled={!canEdit} /></div>
+            <div className="kw-row"><label>Terbilang Rp.</label><input value={kwEffectiveAmount} onChange={(e) => setKwitansi({ ...kwitansi, nominal: e.target.value, terbilang: terbilang(e.target.value.replace(/[^\d-]/g, '') || effectiveInsentif || 0) })} disabled={!canEdit} /></div>
           </div>
           <div className="kw-sign">
-            <span className="sig-name">{selectedPosition?.name || sales.name || '–'}</span>
-            <span className="sig-role">{selectedPosition?.position_type || 'SALES'}</span>
+            <span className="sig-name">{kwSignatureName?.toUpperCase()}</span>
+            <span className="sig-role">{kwSignatureRole}</span>
           </div>
           <div className="kw-total">
             <span>Total Keseluruhan</span>
-            <strong>Rp {totals.achievement.toLocaleString('id-ID')}</strong>
+            <strong>Rp {Number(effectiveInsentif || 0).toLocaleString('id-ID')}</strong>
           </div>
         </div>
       </section>
