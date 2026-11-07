@@ -55,12 +55,12 @@ function LiveClock() {
   );
 }
 
-function SideNav({ onNavigate }) {
+function SideNav({ onNavigate, collapsed = false, onToggle }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isSuper = user?.role === 'superadmin';
-  const itemClass = (active) => `nav-item ${active ? 'nav-item-active' : ''}`;
+  const itemClass = (active) => `nav-item ${active ? 'nav-item-active' : ''}${collapsed ? ' justify-center !px-2' : ''}`;
 
   const docActive = location.pathname.startsWith('/documents');
   const [docOpen, setDocOpen] = useState(false);
@@ -69,24 +69,38 @@ function SideNav({ onNavigate }) {
   return (
     <>
       <div className="flex items-center gap-2.5 px-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-brand-600">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-brand-600">
           <Database size={17} color="#fff" />
         </div>
-        <div className="leading-tight">
+        {!collapsed && (
+        <div className="leading-tight min-w-0">
           <p className="text-[13.5px] font-extrabold tracking-[-0.015em] text-ink-900">Insetive Tracking</p>
           <p className="mt-[2px] text-[11px] font-semibold text-ink-400">Insentif Sales</p>
         </div>
+        )}
+        {onToggle && (
+          <Button
+            aria-label={collapsed ? 'Perbesar menu' : 'Ciutkan menu'}
+            title={collapsed ? 'Perbesar menu' : 'Ciutkan menu'}
+            size="icon"
+            variant="ghost"
+            onClick={onToggle}
+            className={`text-ink-500 hover:bg-black/5 ${collapsed ? 'absolute left-1/2 -translate-x-1/2 top-[68px]' : 'ml-auto'}`}
+          >
+            <ChevronDown size={16} style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 0.2s' }} />
+          </Button>
+        )}
       </div>
 
       <nav className="mt-7 flex flex-col gap-1">
-        <p className="px-3 pb-2 text-[11px] font-bold text-ink-400">Menu utama</p>
+        {!collapsed && <p className="px-3 pb-2 text-[11px] font-bold text-ink-400">Menu utama</p>}
         {NAV.filter((item) => !item.roles || item.roles.includes(user?.role)).map((item) => {
           const Icon = item.icon;
           const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
           return (
-            <NavLink key={item.label} to={item.to} className={itemClass(active)} onClick={onNavigate}>
+            <NavLink key={item.label} to={item.to} className={itemClass(active)} onClick={onNavigate} title={collapsed ? item.label : undefined}>
               <Icon size={17} color={active ? '#0c5848' : '#6c7a73'} />
-              <span className="flex-1">{item.label}</span>
+              {!collapsed && <span className="flex-1">{item.label}</span>}
             </NavLink>
           );
         })}
@@ -95,19 +109,22 @@ function SideNav({ onNavigate }) {
         <div>
           <button
             type="button"
-            className={`nav-item w-full ${docActive ? 'nav-item-active' : ''}`}
-            onClick={() => setDocOpen((o) => !o)}
-            aria-expanded={docExpanded}
+            className={`nav-item w-full ${docActive ? 'nav-item-active' : ''}${collapsed ? ' justify-center !px-2' : ''}`}
+            onClick={() => (collapsed ? navigate('/documents/sales') : setDocOpen((o) => !o))}
+            aria-expanded={collapsed ? undefined : docExpanded}
+            title={collapsed ? 'Dokumen' : undefined}
           >
             <FileText size={17} color={docExpanded ? '#0c5848' : '#6c7a73'} />
-            <span className="flex-1 text-left">Dokumen</span>
+            {!collapsed && <span className="flex-1 text-left">Dokumen</span>}
+            {!collapsed && (
             <ChevronDown
               size={15}
               color="#7e8c85"
               style={{ transform: docExpanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
             />
+            )}
           </button>
-          {docExpanded && (
+          {!collapsed && docExpanded && (
             <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-l-[#dbe6e1] pl-3">
               {DOC_CHILDREN.map((child) => {
                 const ChildIcon = child.icon;
@@ -132,21 +149,23 @@ function SideNav({ onNavigate }) {
         </div>
 
         {isSuper && (
-          <NavLink to="/master" className={itemClass(location.pathname.startsWith('/master'))} onClick={onNavigate}>
+          <NavLink to="/master" className={itemClass(location.pathname.startsWith('/master'))} onClick={onNavigate} title={collapsed ? 'Data Master' : undefined}>
             <Database size={17} color={location.pathname.startsWith('/master') ? '#0c5848' : '#6c7a73'} />
-            <span className="flex-1">Data Master</span>
+            {!collapsed && <span className="flex-1">Data Master</span>}
           </NavLink>
         )}
       </nav>
 
       <div className="mt-auto pt-4">
-        <div className="rounded-lg border border-border bg-white p-3">
-          <div className="flex items-center gap-3">
+        <div className={`rounded-lg border border-border bg-white ${collapsed ? 'p-2' : 'p-3'}`}>
+          <div className={`flex items-center gap-3 ${collapsed ? 'flex-col' : ''}`}>
             <Avatar name={user?.name || user?.username} color={user?.avatar_color} emoji={user?.avatar_key} size="md" />
+            {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-bold text-ink-900">{user?.name}</p>
               <p className="truncate text-[11.5px] text-ink-500">{user?.role}</p>
             </div>
+            )}
             <Button
               aria-label="Keluar"
               title="Keluar"
@@ -167,6 +186,7 @@ function SideNav({ onNavigate }) {
 export default function Layout({ title, breadcrumb = [], actions, children }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
 
   useEffect(() => setOpen(false), [location.pathname, location.search]);
@@ -176,9 +196,9 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
       <a className="skip-link" href="#main-content">Lewati ke konten</a>
       <aside
         className="fixed inset-y-0 left-0 z-30 hidden lg:flex flex-col border-r border-border px-3 py-4"
-        style={{ width: '240px', backgroundColor: GROUND }}
+        style={{ width: collapsed ? '72px' : '240px', backgroundColor: GROUND, transition: 'width 0.2s' }}
       >
-        <SideNav />
+        <SideNav collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
       </aside>
 
       {open && (
@@ -199,7 +219,7 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
         </div>
       )}
 
-      <div className="flex min-h-screen flex-1 min-w-0 max-w-full flex-col ml-0 lg:ml-[240px]">
+      <div className={`flex min-h-screen flex-1 min-w-0 max-w-full flex-col ml-0 ${collapsed ? 'lg:ml-[72px]' : 'lg:ml-[240px]'}`} style={{ transition: 'margin 0.2s' }}>
         <header
           className="sticky top-0 z-20 border-b border-border"
           style={{ backgroundColor: GROUND }}

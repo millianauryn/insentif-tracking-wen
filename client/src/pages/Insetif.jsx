@@ -59,15 +59,16 @@ function FullDocPreview({ doc }) {
         <p>BULAN : {fromApiPeriod(doc.period)}</p>
       </div>
 
-      <div className="overflow-x-auto border border-[var(--line)] rounded-lg">
-        <table className="w-full min-w-[520px] text-[12px]">
+      <div className="border border-[var(--line)] rounded-lg overflow-hidden">
+        <table className="w-full table-fixed text-[11px] leading-[1.3]">
+          <colgroup><col className="w-[30%]" /><col className="w-[17%]" /><col className="w-[22%]" /><col className="w-[16%]" /><col className="w-[15%]" /></colgroup>
           <thead>
             <tr className="bg-[#e8eef3] text-left">
-              <th className="border border-[var(--line)] px-2 py-1.5">GOLONGAN</th>
-              <th className="border border-[var(--line)] px-2 py-1.5 text-right">TARGET</th>
-              <th className="border border-[var(--line)] px-2 py-1.5 text-right">TERCAPAI (Rp.)</th>
-              <th className="border border-[var(--line)] px-2 py-1.5 text-right">TERCAPAI (%)</th>
-              <th className="border border-[var(--line)] px-2 py-1.5">KET</th>
+              <th className="border border-[var(--line)] px-1.5 py-1">GOLONGAN</th>
+              <th className="border border-[var(--line)] px-1.5 py-1 text-right">TARGET</th>
+              <th className="border border-[var(--line)] px-1.5 py-1 text-right">TERCAPAI (Rp.)</th>
+              <th className="border border-[var(--line)] px-1.5 py-1 text-right">TERCAPAI (%)</th>
+              <th className="border border-[var(--line)] px-1.5 py-1">KET</th>
             </tr>
           </thead>
           <tbody>
@@ -78,33 +79,34 @@ function FullDocPreview({ doc }) {
               const pct = pctOf(r.achievement, r.target);
               const ket = ketOf(r.achievement, r.target);
               if (divisiRow) {
-                return <tr key={r.id} className="bg-[#f3e2c7] font-bold"><td colSpan={5} className="border border-[var(--line)] px-2 py-1.5 text-center">{label}</td></tr>;
+                return <tr key={r.id} className="bg-[#f3e2c7] font-bold"><td colSpan={5} className="border border-[var(--line)] px-1.5 py-1 text-center">{label}</td></tr>;
               }
               return (
                 <tr key={r.id} className={groupRow ? 'font-bold bg-[#f0f4f8]' : ''}>
-                  <td className="border border-[var(--line)] px-2 py-1.5">{label}</td>
-                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{fmtNum(r.target)}</td>
-                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{fmtNum(r.achievement)}</td>
-                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{Number(r.target) > 0 ? `${pct.toFixed(0)}%` : ''}</td>
-                  <td className="border border-[var(--line)] px-2 py-1.5">{ket}</td>
+                  <td className="border border-[var(--line)] px-1.5 py-1 break-words">{label}</td>
+                  <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(r.target)}</td>
+                  <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(r.achievement)}</td>
+                  <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{Number(r.target) > 0 ? `${pct.toFixed(0)}%` : ''}</td>
+                  <td className="border border-[var(--line)] px-1.5 py-1 whitespace-nowrap">{ket}</td>
                 </tr>
               );
             })}
-            {!golongan.length && <tr><td colSpan={5} className="border border-[var(--line)] px-2 py-2 text-center text-[var(--ink-3)]">Golongan kosong.</td></tr>}
+            {!golongan.length && <tr><td colSpan={5} className="border border-[var(--line)] px-1.5 py-2 text-center text-[var(--ink-3)]">Golongan kosong.</td></tr>}
           </tbody>
         </table>
       </div>
 
-      <div className="overflow-x-auto border border-[var(--line)] rounded-lg">
-        <table className="w-full min-w-[600px] text-[12px]">
+      <div className="border border-[var(--line)] rounded-lg overflow-hidden">
+        <table className="w-full table-fixed text-[11px] leading-[1.3]">
+          <colgroup><col className="w-[26%]" /><col className="w-[13%]" /><col className="w-[20%]" /><col className="w-[10%]" /><col className="w-[13%]" /><col className="w-[18%]" /></colgroup>
           <thead>
             <tr className="bg-[#e8eef3] text-left">
-              <th className="border border-[var(--line)] px-2 py-1.5">KRITERIA</th>
-              <th className="border border-[var(--line)] px-2 py-1.5 text-right">TARGET</th>
-              <th className="border border-[var(--line)] px-2 py-1.5 text-right">TERCAPAI (JUMLAH)</th>
-              <th className="border border-[var(--line)] px-2 py-1.5 text-right">%</th>
-              <th className="border border-[var(--line)] px-2 py-1.5">KET</th>
-              <th className="border border-[var(--line)] px-2 py-1.5 text-right">INSENTIF YG DIBERI</th>
+              <th className="border border-[var(--line)] px-1.5 py-1">KRITERIA</th>
+              <th className="border border-[var(--line)] px-1.5 py-1 text-right">TARGET</th>
+              <th className="border border-[var(--line)] px-1.5 py-1 text-right">TERCAPAI (JUMLAH)</th>
+              <th className="border border-[var(--line)] px-1.5 py-1 text-right">%</th>
+              <th className="border border-[var(--line)] px-1.5 py-1">KET</th>
+              <th className="border border-[var(--line)] px-1.5 py-1 text-right">INSENTIF YG DIBERI</th>
             </tr>
           </thead>
           <tbody>
@@ -113,20 +115,20 @@ function FullDocPreview({ doc }) {
               const ket = ketOf(r.achievement_value, r.target_value);
               return (
                 <tr key={r.criteria_id || r.id}>
-                  <td className="border border-[var(--line)] px-2 py-1.5">- {r.label}</td>
-                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{fmtNum(r.target_value)}</td>
-                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{fmtNum(r.achievement_value)}</td>
-                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{Number(r.target_value) > 0 ? `${pct.toFixed(0)}%` : r.percentage_value ?? ''}</td>
-                  <td className="border border-[var(--line)] px-2 py-1.5">{ket}</td>
-                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{fmtNum(r.incentive_amount)}</td>
+                  <td className="border border-[var(--line)] px-1.5 py-1 break-words">- {r.label}</td>
+                  <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(r.target_value)}</td>
+                  <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(r.achievement_value)}</td>
+                  <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{Number(r.target_value) > 0 ? `${pct.toFixed(0)}%` : r.percentage_value ?? ''}</td>
+                  <td className="border border-[var(--line)] px-1.5 py-1 whitespace-nowrap">{ket}</td>
+                  <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(r.incentive_amount)}</td>
                 </tr>
               );
             })}
-            {!kriteria.length && <tr><td colSpan={6} className="border border-[var(--line)] px-2 py-2 text-center text-[var(--ink-3)]">Kriteria kosong.</td></tr>}
+            {!kriteria.length && <tr><td colSpan={6} className="border border-[var(--line)] px-1.5 py-2 text-center text-[var(--ink-3)]">Kriteria kosong.</td></tr>}
             <tr className="font-bold bg-[#f0f4f8]">
-              <td className="border border-[var(--line)] px-2 py-1.5">TOTAL</td>
+              <td className="border border-[var(--line)] px-1.5 py-1">TOTAL</td>
               <td className="border border-[var(--line)]" colSpan={4} />
-              <td className="border border-[var(--line)] px-2 py-1.5 text-right">{fmtNum(totalInsentif)}</td>
+              <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(totalInsentif)}</td>
             </tr>
           </tbody>
         </table>
