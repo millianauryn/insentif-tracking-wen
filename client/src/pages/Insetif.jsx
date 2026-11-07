@@ -494,10 +494,10 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                           </p>
                           <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{periodLabel(doc.period)}</p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          {pos && (
+                        <div className="flex items-center justify-between gap-2">
+                          {pos ? (
                             <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
-                          )}
+                          ) : <span />}
                           <div className="shrink-0">{makeBadge(doc.status)}</div>
                         </div>
                       </div>
@@ -779,10 +779,10 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                         </p>
                         <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{periodLabel(doc.period)}</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {pos && (
+                      <div className="flex items-center justify-between gap-2">
+                        {pos ? (
                           <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
-                        )}
+                        ) : <span />}
                         <div className="flex-shrink-0">{makeBadge(doc.status)}</div>
                       </div>
                       <div className="flex items-center justify-between mt-auto pt-2 border-t border-[var(--line-soft)]">
