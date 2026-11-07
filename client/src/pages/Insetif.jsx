@@ -60,15 +60,15 @@ function FullDocPreview({ doc }) {
       </div>
 
       <div className="border border-[var(--line)] rounded-lg overflow-hidden">
-        <table className="w-full table-fixed text-[11px] leading-[1.3]">
-          <colgroup><col className="w-[30%]" /><col className="w-[17%]" /><col className="w-[22%]" /><col className="w-[16%]" /><col className="w-[15%]" /></colgroup>
+        <table className="w-full table-fixed text-[10.5px] leading-[1.25]">
+          <colgroup><col className="w-[28%]" /><col className="w-[17%]" /><col className="w-[23%]" /><col className="w-[16%]" /><col className="w-[16%]" /></colgroup>
           <thead>
             <tr className="bg-[#e8eef3] text-left">
-              <th className="border border-[var(--line)] px-1.5 py-1">GOLONGAN</th>
-              <th className="border border-[var(--line)] px-1.5 py-1 text-right">TARGET</th>
-              <th className="border border-[var(--line)] px-1.5 py-1 text-right">TERCAPAI (Rp.)</th>
-              <th className="border border-[var(--line)] px-1.5 py-1 text-right">TERCAPAI (%)</th>
-              <th className="border border-[var(--line)] px-1.5 py-1">KET</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 break-words">GOLONGAN</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TARGET</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TERCAPAI (Rp.)</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TERCAPAI (%)</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 break-words">KET</th>
             </tr>
           </thead>
           <tbody>
@@ -83,7 +83,7 @@ function FullDocPreview({ doc }) {
               }
               return (
                 <tr key={r.id} className={groupRow ? 'font-bold bg-[#f0f4f8]' : ''}>
-                  <td className="border border-[var(--line)] px-1.5 py-1 break-words">{label}</td>
+                  <td className="border border-[var(--line)] px-1 py-0.5 break-words">{label}</td>
                   <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(r.target)}</td>
                   <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(r.achievement)}</td>
                   <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{Number(r.target) > 0 ? `${pct.toFixed(0)}%` : ''}</td>
@@ -97,16 +97,16 @@ function FullDocPreview({ doc }) {
       </div>
 
       <div className="border border-[var(--line)] rounded-lg overflow-hidden">
-        <table className="w-full table-fixed text-[11px] leading-[1.3]">
-          <colgroup><col className="w-[26%]" /><col className="w-[13%]" /><col className="w-[20%]" /><col className="w-[10%]" /><col className="w-[13%]" /><col className="w-[18%]" /></colgroup>
+        <table className="w-full table-fixed text-[10.5px] leading-[1.25]">
+          <colgroup><col className="w-[28%]" /><col className="w-[12%]" /><col className="w-[19%]" /><col className="w-[9%]" /><col className="w-[13%]" /><col className="w-[19%]" /></colgroup>
           <thead>
             <tr className="bg-[#e8eef3] text-left">
-              <th className="border border-[var(--line)] px-1.5 py-1">KRITERIA</th>
-              <th className="border border-[var(--line)] px-1.5 py-1 text-right">TARGET</th>
-              <th className="border border-[var(--line)] px-1.5 py-1 text-right">TERCAPAI (JUMLAH)</th>
-              <th className="border border-[var(--line)] px-1.5 py-1 text-right">%</th>
-              <th className="border border-[var(--line)] px-1.5 py-1">KET</th>
-              <th className="border border-[var(--line)] px-1.5 py-1 text-right">INSENTIF YG DIBERI</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 break-words">KRITERIA</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TARGET</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TERCAPAI (JUMLAH)</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">%</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 break-words">KET</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">INSENTIF YG DIBERI</th>
             </tr>
           </thead>
           <tbody>
@@ -115,7 +115,7 @@ function FullDocPreview({ doc }) {
               const ket = ketOf(r.achievement_value, r.target_value);
               return (
                 <tr key={r.criteria_id || r.id}>
-                  <td className="border border-[var(--line)] px-1.5 py-1 break-words">- {r.label}</td>
+                  <td className="border border-[var(--line)] px-1 py-0.5 break-words">- {r.label}</td>
                   <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(r.target_value)}</td>
                   <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(r.achievement_value)}</td>
                   <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{Number(r.target_value) > 0 ? `${pct.toFixed(0)}%` : r.percentage_value ?? ''}</td>
@@ -377,10 +377,10 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       {/* Desktop: two-column layout */}
-      <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_680px] lg:gap-6 lg:px-6 lg:py-6">
+      <div className={`hidden lg:grid lg:gap-6 lg:px-6 lg:py-6 ${activeDoc ? 'lg:grid-cols-[360px_minmax(0,1fr)]' : 'lg:grid-cols-[minmax(0,1fr)]'}`}>
         {/* Left: Document List */}
         <section
-          className={`card bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden ${
+          className={`card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden ${
             !activeDoc ? 'lg:col-span-2' : ''
           }`}
           aria-label="Daftar dokumen"
@@ -529,7 +529,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
 
         {/* Right: Detail Panel (muncul setelah dokumen dibuka) */}
         {activeDoc && (
-          <aside className="card bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden flex flex-col" aria-label="Halaman detail dokumen" ref={detailRef}>
+          <aside className="card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden flex flex-col" aria-label="Halaman detail dokumen" ref={detailRef}>
           {activeDoc ? (
             <>
               <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-[var(--line)] bg-[var(--bg)]">

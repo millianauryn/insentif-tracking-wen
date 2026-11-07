@@ -78,19 +78,21 @@ function SideNav({ onNavigate, collapsed = false, onToggle }) {
           <p className="mt-[2px] text-[11px] font-semibold text-ink-400">Insentif Sales</p>
         </div>
         )}
-        {onToggle && (
+      </div>
+      {onToggle && (
+        <div className={`mt-2 flex ${collapsed ? 'justify-center' : 'justify-end'} px-2`}>
           <Button
             aria-label={collapsed ? 'Perbesar menu' : 'Ciutkan menu'}
             title={collapsed ? 'Perbesar menu' : 'Ciutkan menu'}
             size="icon"
             variant="ghost"
             onClick={onToggle}
-            className={`text-ink-500 hover:bg-black/5 ${collapsed ? 'absolute left-1/2 -translate-x-1/2 top-[68px]' : 'ml-auto'}`}
+            className="h-7 w-7 text-ink-500 hover:bg-black/5 shrink-0"
           >
             <ChevronDown size={16} style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 0.2s' }} />
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       <nav className="mt-7 flex flex-col gap-1">
         {!collapsed && <p className="px-3 pb-2 text-[11px] font-bold text-ink-400">Menu utama</p>}
