@@ -1,14 +1,21 @@
-// Principal value: takes target & achievement from the row immediately above,
-// not from brand children below.
+// Principal value: sum of brand children below (until next separator) — brands linked to this principal.
+// No children -> use own manual inputs.
 export function principalValueFor(rows, pi) {
-  if (pi > 0) {
-    const above = rows[pi - 1];
-    return {
-      target: Number(above.target) || 0,
-      achievement: Number(above.achievement) || 0,
-    };
+  const p = rows[pi];
+  let target = 0;
+  let achievement = 0;
+  let children = 0;
+  for (let i = pi + 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.type === 'principal' || r.type === 'total-divisi' || r.type === 'total' || r.type === 'divisi') break;
+    if (r.type === 'brand') {
+      target += Number(r.target) || 0;
+      achievement += Number(r.achievement) || 0;
+      children++;
+    }
   }
-  return { target: Number(rows[pi]?.target) || 0, achievement: Number(rows[pi]?.achievement) || 0 };
+  if (children > 0) return { target, achievement };
+  return { target: Number(p.target) || 0, achievement: Number(p.achievement) || 0 };
 }
 
 // Sum a scope without double-counting: principals contribute their effective value
@@ -38,14 +45,32 @@ function sumScope(scope) {
 }
 
 // Total rows auto-sum principal + brand rows (target & achievement).
-// 'total' = whole table; 'total-divisi' = rows since the previous total row (its section).
+// 'total' = whole table; 'total-divisi' = rows since the Divisi header above
+// (matching row.divisi if set, else nearest Divisi header; fallback: previous total/divisi separator).
 export function computeTotalFor(rows, rowIndex) {
   const row = rows[rowIndex];
   if (!row) return { target: 0, achievement: 0 };
+  if (row.type === 'total-divisi') {
+    let start = 0;
+    let found = false;
+    for (let i = rowIndex - 1; i >= 0; i--) {
+      if (rows[i].type !== 'divisi') continue;
+      if (row.divisi && (rows[i].divisi || rows[i].label) !== row.divisi) continue;
+      start = i + 1;
+      found = true;
+      break;
+    }
+    if (!found) {
+      for (let i = rowIndex - 1; i >= 0; i--) {
+        if (rows[i].type === 'total-divisi' || rows[i].type === 'total' || rows[i].type === 'divisi') { start = i + 1; break; }
+      }
+    }
+    return sumScope(rows.slice(start, rowIndex));
+  }
   let start = 0;
   if (row.type !== 'total') {
     for (let i = rowIndex - 1; i >= 0; i--) {
-      if (rows[i].type === 'total-divisi' || rows[i].type === 'total' || rows[i].type === 'divisi') { start = i + 1; break; }
+      if (rows[i].type === 'total-divisi' || rows[i].type === 'total') { start = i + 1; break; }
     }
   }
   const scope = rows.slice(start, row.type === 'total' ? rows.length : rowIndex);

@@ -119,12 +119,12 @@ function App() {
   };
 
   const buildGolonganRows = () => {
-    // shortcut: Divisi stored as label prefix "DIVISI:<nama>" — edit DB directly to change format
+    // shortcut: Divisi stored as label prefix "DIVISI:<nama>", Total Divisi as "TOTALDIVISI:<nama>" — edit DB directly to change format
     const filtered = golonganRows.filter((row) => row.label || row.target || row.achievement || row.divisi);
     let lastPrincipalIndex;
     return filtered.map((row, index) => {
       const result = {
-        label: row.type === 'divisi' ? `DIVISI:${row.divisi || ''}` : row.label || null,
+        label: row.type === 'divisi' ? `DIVISI:${row.divisi || ''}` : row.type === 'total-divisi' ? (row.divisi ? `TOTALDIVISI:${row.divisi}` : row.label || 'TOTAL DIVISI') : row.label || null,
         is_group: row.isGroup || false,
         target: row.target !== undefined && row.target !== '' ? Number(row.target) : null,
         achievement: row.achievement !== undefined && row.achievement !== '' ? Number(row.achievement) : null,
@@ -236,7 +236,11 @@ function App() {
               let divisi = '';
               if (row.is_group) {
                 const label = (row.label || '').toUpperCase();
-                if (label.startsWith('DIVISI:')) {
+                if (label.startsWith('TOTALDIVISI:')) {
+                  type = 'total-divisi';
+                  divisi = (row.label || '').slice(12);
+                }
+                else if (label.startsWith('DIVISI:')) {
                   type = 'divisi';
                   divisi = (row.label || '').slice(7);
                 }

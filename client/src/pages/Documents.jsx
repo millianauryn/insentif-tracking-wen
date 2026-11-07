@@ -16,12 +16,12 @@ const JENIS_OPTIONS = [
   { value: 'divisi', label: 'Divisi' },
 ];
 
-const EMPTY_MASTER = { principals: [], brands: [], regions: [], branches: [] };
+const EMPTY_MASTER = { divisions: [], principals: [], brands: [], regions: [], branches: [] };
 
 const parseBrands = (s) => (s ? s.split(',').map((t) => t.replace(/^\s*&\s*/, '').trim()).filter(Boolean) : []);
 const joinBrands = (arr) => (arr.length <= 1 ? (arr[0] || '') : `${arr.slice(0, -1).join(', ')}, & ${arr[arr.length - 1]}`);
 
-function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit, dnd, divisions }) {
+function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit, dnd, divisions, brands, principals }) {
   const target = Number(row.target) || 0;
   const achievement = Number(row.achievement) || 0;
   const pct = target > 0 ? (achievement / target) * 100 : 0;
@@ -92,6 +92,32 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
     );
   }
 
+  const brandOptions = (brands || [])
+    .filter((b) => b.is_active !== 0 && b.active !== 0)
+    .map((b) => ({
+      value: b.name,
+      hint: b.principal_id ? (principals || []).find((p) => p.id === b.principal_id)?.name : '',
+    }));
+  const principalOptions = (principals || [])
+    .filter((p) => p.is_active !== 0 && p.active !== 0)
+    .map((p) => ({ value: p.name }));
+  const activeDivisions = (divisions || []).filter((d) => d.is_active !== 0 && d.active !== 0);
+  const nameFieldFor = (type) => {
+    if (type === 'brand') return (
+      <ComboSelect value={row.label || ''} onChange={(v) => onUpdate(row.id, 'label', v)} options={brandOptions} placeholder="Nama brand" emptyHint="Tidak ada brand cocok." disabled={!canEdit} />
+    );
+    if (type === 'principal') return (
+      <ComboSelect value={row.label || ''} onChange={(v) => onUpdate(row.id, 'label', v)} options={principalOptions} placeholder="Nama principal" emptyHint="Tidak ada principal cocok." disabled={!canEdit} />
+    );
+    return <input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} placeholder="Nama golongan" />;
+  };
+  const divisiSelect = (value, onChangeValue) => (
+    <select value={value} onChange={(e) => onChangeValue(e.target.value)} disabled={!canEdit} className="input text-[12px] py-1.5 w-full">
+      <option value="">-- Pilih Divisi --</option>
+      {activeDivisions.map((d) => <option key={d.id} value={d.name}>{d.name}</option>)}
+    </select>
+  );
+
   // Total rows: auto-computed from principal + brand rows (not editable)
   if (row.type === 'total-divisi' || row.type === 'total') {
     const total = computeTotalFor(allRows, index);
@@ -99,7 +125,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
     const tStatus = total.target > 0 && tPct >= 100 ? 'Tercapai' : 'Gugur';
     return (
       <tr {...trProps} className={`font-semibold${rowStateClass}`}>
-        <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} /></td>
+        <td>{row.type === 'total-divisi' ? divisiSelect(row.divisi || '', (v) => onUpdate(row.id, 'divisi', v)) : <input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} />}</td>
         <td>{jenisSelect}</td>
         <td className="text-right">{total.target.toLocaleString('id-ID')}</td>
         <td className="text-right">{total.achievement.toLocaleString('id-ID')}</td>
@@ -124,7 +150,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
       const pStatus = v.target > 0 && pPct >= 100 ? 'Tercapai' : 'Gugur';
       return (
         <tr {...trProps} className={`font-semibold${rowStateClass}`}>
-          <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} placeholder="Nama principal" /></td>
+          <td>{nameFieldFor('principal')}</td>
           <td>{jenisSelect}</td>
           <td className="text-right">{v.target.toLocaleString('id-ID')}</td>
           <td className="text-right">{v.achievement.toLocaleString('id-ID')}</td>
@@ -139,7 +165,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
 
   return (
     <tr {...trProps} className={rowStateClass}>
-      <td><input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} placeholder="Nama golongan" /></td>
+      <td>{nameFieldFor(row.type || 'brand')}</td>
       <td>{jenisSelect}</td>
       <td><input type="number" min="0" value={row.target ?? ''} onChange={(e) => onUpdate(row.id, 'target', e.target.value)} disabled={!canEdit} /></td>
       <td><input type="number" min="0" value={row.achievement ?? ''} onChange={(e) => onUpdate(row.id, 'achievement', e.target.value)} disabled={!canEdit} /></td>
@@ -150,7 +176,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
   );
 }
 
-function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit, salesDivisi, setSalesDivisi, divisions }) {
+function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit, salesDivisi, setSalesDivisi, divisions, brands, principals }) {
   const [dragIndex, setDragIndex] = useState(null);
   const [overIndex, setOverIndex] = useState(null);
 
@@ -228,6 +254,8 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReord
               canEdit={canEdit}
               dnd={canEdit ? dnd : null}
               divisions={divisions}
+              brands={brands}
+              principals={principals}
             />
           ))}
         </tbody>
@@ -408,6 +436,7 @@ export default function Documents({
     if (type === 'total-divisi' && (!row.label || isAutoLabel)) updateGolonganRow(row.id, 'label', 'TOTAL DIVISI');
     if (type === 'total' && (!row.label || isAutoLabel)) updateGolonganRow(row.id, 'label', 'TOTAL');
     if ((type === 'brand' || type === 'principal' || type === 'divisi') && isAutoLabel) updateGolonganRow(row.id, 'label', '');
+    if (type === 'brand' || type === 'principal' || type === 'total') updateGolonganRow(row.id, 'divisi', '');
   };
 
   // Picking a month keeps the typed year (or the current year) — year stays manual
@@ -574,6 +603,8 @@ export default function Documents({
           salesDivisi={salesDivisi}
           setSalesDivisi={setSalesDivisi}
           divisions={masterData.divisions}
+          brands={masterData.brands}
+          principals={masterData.principals}
         />
 
         <KriteriaTable
