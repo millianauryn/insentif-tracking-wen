@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import {
@@ -15,6 +15,9 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Avatar from './Avatar';
+
+const NavStateContext = createContext({ collapsed: false, setCollapsed: () => {} });
+export const useNavState = () => useContext(NavStateContext);
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -194,6 +197,7 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
   useEffect(() => setOpen(false), [location.pathname, location.search]);
 
   return (
+  <NavStateContext.Provider value={{ collapsed, setCollapsed }}>
     <div className="flex min-h-screen overflow-x-hidden">
       <a className="skip-link" href="#main-content">Lewati ke konten</a>
       <aside
@@ -286,5 +290,6 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
         </footer>
       </div>
     </div>
+  </NavStateContext.Provider>
   );
 }

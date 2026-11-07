@@ -20,6 +20,7 @@ import {
 import { Badge } from '../components/ui/badge';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
+import { useNavState } from '../components/Layout';
 import { fromApiPeriod } from '../lib/period';
 import { errMsg } from '../lib/api';
 import { listPositions, finalizeDocument, getDocument } from '../api';
@@ -194,6 +195,7 @@ function makeBadge(status) {
 export default function Insetif({ documents, setDocuments, onRefresh, onLoad, onNewDoc }) {
   const toast = useToast();
   const { user } = useAuth();
+  const { collapsed } = useNavState();
   const canFinalize = ['observer', 'superadmin'].includes(user?.role);
   const [searchParams] = useSearchParams();
   const nameParam = searchParams.get('name') || '';
@@ -376,12 +378,12 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      {/* Desktop: two-column layout */}
-      <div className={`hidden lg:grid lg:gap-6 lg:px-6 lg:py-6 ${activeDoc ? 'lg:grid-cols-[360px_minmax(0,1fr)]' : 'lg:grid-cols-[minmax(0,1fr)]'}`}>
+      {/* Desktop: dua kolom saat nav ciut, satu kolom (detail di bawah daftar, full-width) saat nav expand */}
+      <div className={`hidden lg:grid lg:gap-6 lg:px-6 lg:py-6 ${activeDoc && collapsed ? 'lg:grid-cols-[360px_minmax(0,1fr)]' : 'lg:grid-cols-[minmax(0,1fr)]'}`}>
         {/* Left: Document List */}
         <section
           className={`card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden ${
-            !activeDoc ? 'lg:col-span-2' : ''
+            !activeDoc || !collapsed ? 'lg:col-span-2' : ''
           }`}
           aria-label="Daftar dokumen"
         >
