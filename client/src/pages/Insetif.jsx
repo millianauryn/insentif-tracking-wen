@@ -377,12 +377,10 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       {/* Desktop: two-column layout */}
-      <div className={`hidden lg:grid lg:gap-6 lg:px-6 lg:py-6 ${activeDoc ? 'lg:grid-cols-[minmax(0,1fr)]' : 'lg:grid-cols-[minmax(0,1fr)]'}`}>
+      <div className="hidden lg:block lg:px-6 lg:py-6 lg:space-y-6">
         {/* Left: Document List */}
         <section
-          className={`card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden ${
-            !activeDoc ? 'lg:col-span-2' : ''
-          }`}
+          className="card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden"
           aria-label="Daftar dokumen"
         >
           {/* Filters */}
@@ -487,17 +485,15 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                       aria-current={isSelected ? 'true' : undefined}
                       aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${periodLabel(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
                     >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-[13.5px] leading-[1.3] text-[var(--ink)] break-words group-hover:text-[var(--primary)] transition-colors whitespace-nowrap">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-[14px] whitespace-nowrap text-[var(--ink)] group-hover:text-[var(--primary)] transition-colors">
                           {doc.salesman || 'Tanpa nama sales'}
                         </p>
                         {pos && (
-                          <p className="mt-0.5">
-                            <span className={`inline-block shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
-                          </p>
+                          <span className={`mt-0.5 inline-block shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
                         )}
                       </div>
-                      <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{periodLabel(doc.period)}</p>
+                      <p className="shrink-0 text-[12px] text-[var(--ink-2)] hidden sm:block">{periodLabel(doc.period)}</p>
                       <div className="shrink-0">{makeBadge(doc.status)}</div>
                       <ChevronRight className="shrink-0 size-4 text-[var(--ink-3)] group-hover:text-[var(--primary)] transition-colors" aria-hidden="true" />
                     </div>
@@ -773,11 +769,11 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                     >
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-[14px] text-[var(--ink)] break-words hover:text-[var(--primary)] transition-colors">
+                          <p className="font-semibold text-[14px] text-[var(--ink)] whitespace-nowrap hover:text-[var(--primary)] transition-colors">
                             {doc.salesman || 'Tanpa nama sales'}
                           </p>
                           {pos && (
-                            <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
+                            <span className={`mt-0.5 inline-block shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
                           )}
                           <p className="text-[12px] text-[var(--ink-2)] mt-0.5">{periodLabel(doc.period)}</p>
                         </div>
