@@ -1,54 +1,26 @@
-# Insentif Tracking Wen
+# Insentif Tracking
 
-Prototype web untuk pencatatan insentif sales.
+Web pencatatan insentif sales: officer membuat Draft, observer (Direksi) menyetujui jadi Final.
+
+Canonical spec: [docs/architecture.md](docs/architecture.md) — fungsi saat ini tidak boleh berubah tanpa ADR.
 
 ## Stack
 
-- Frontend: React, Vite, Tailwind CSS dependency, CSS responsive
-- Backend: Express.js, Helmet, CORS
-- Prototype storage: `localStorage`
+- Frontend: React 19 + Vite 8 + Tailwind 4 (`client/`)
+- Backend: Express 5 + better-sqlite3 (`server/`, :3002)
+- DB: `server/data/incentive.sqlite`
 
-## Struktur
-
-```text
-client/   React frontend
-server/   Express API
- docs/    Product requirements and design documents
-```
-
-## Menjalankan frontend
+## Jalankan
 
 ```powershell
-cd client
-npm install
-npm run dev
+cd server; npm install; npm start
+cd client; npm install; npm run dev        # http://localhost:5173
+cd client; npm run build; npm run preview  # prod :4173
+cd client; npx vitest run
 ```
 
-Frontend berjalan pada URL yang ditampilkan Vite, biasanya `http://localhost:5173`.
+Health: `GET http://localhost:3002/api/health` → `{"status":"ok"}`
 
-## Menjalankan backend
+## Login
 
-```powershell
-cd server
-npm install
-npm start
-```
-
-Health check:
-
-```text
-GET http://localhost:3001/api/health
-```
-
-## Verifikasi frontend
-
-```powershell
-cd client
-npm test
-npm run lint
-npm run build
-```
-
-## Catatan prototype
-
-Data input masih tersimpan di browser melalui `localStorage`. Backend baru menyediakan health check. Autentikasi, database, PDF export, dan role enforcement belum termasuk prototype ini.
+UI: `/login` (username huruf kecil, password ≥6). Rate limit 10/15 mnt. Dev cepat tidak lewat password (`?__seed=1` / server `dev-login`, bukan production).
