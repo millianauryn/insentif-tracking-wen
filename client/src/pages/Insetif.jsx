@@ -22,9 +22,132 @@ import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import { fromApiPeriod } from '../lib/period';
 import { errMsg } from '../lib/api';
-import { listPositions, finalizeDocument } from '../api';
+import { listPositions, finalizeDocument, getDocument } from '../api';
 import ListPager from '../components/ListPager';
 import { Search, ChevronLeft, ChevronRight, Plus, Loader2, X, FolderOpen, RotateCcw } from 'lucide-react';
+
+const fmtNum = (n) => (n === null || n === undefined || n === '' ? '-' : Number(n).toLocaleString('id-ID'));
+const pctOf = (a, t) => (Number(t) > 0 ? (Number(a) / Number(t)) * 100 : 0);
+const ketOf = (a, t) => (Number(t) > 0 && pctOf(a, t) >= 100 ? 'Tercapai' : Number(t) > 0 ? 'Gugur' : '');
+
+function isDivisiLabel(label) {
+  return String(label || '').toUpperCase().startsWith('DIVISI:');
+}
+function isTotalDivisiLabel(label) {
+  return String(label || '').toUpperCase().startsWith('TOTALDIVISI:');
+}
+function displayLabel(label) {
+  if (isDivisiLabel(label)) return label.slice(7);
+  if (isTotalDivisiLabel(label)) return `TOTAL DIVISI ${label.slice(12)}`.trim();
+  return label || '';
+}
+
+function FullDocPreview({ doc }) {
+  const golongan = doc.golongan_rows || [];
+  const kriteria = doc.criteria_rows || [];
+  const sumInsentif = kriteria.reduce((s, r) => s + (Number(r.incentive_amount) || 0), 0);
+  const totalInsentif = doc.insentif_total ?? sumInsentif;
+  const kw = doc.kwitansi || {};
+  const tujuan = kw.keterangan || kw.jumlahUang || (doc.period ? `Incentive penjualan bulan ${fromApiPeriod(doc.period)}` : '');
+  return (
+    <div className="space-y-5 text-[13px]">
+      <div className="text-center border border-[var(--line)] rounded-lg px-3 py-3 bg-[#fbfdfc]">
+        <p className="font-bold tracking-wide text-[14px]">PERHITUNGAN INSENTIF</p>
+        <p className="mt-1">WILAYAH : {doc.wilayah || '-'}</p>
+        <p>SALESMAN : {doc.salesman || '-'}</p>
+        <p>PRODUK : {doc.product || '-'}</p>
+        <p>BULAN : {fromApiPeriod(doc.period)}</p>
+      </div>
+
+      <div className="overflow-x-auto border border-[var(--line)] rounded-lg">
+        <table className="w-full min-w-[520px] text-[12px]">
+          <thead>
+            <tr className="bg-[#e8eef3] text-left">
+              <th className="border border-[var(--line)] px-2 py-1.5">GOLONGAN</th>
+              <th className="border border-[var(--line)] px-2 py-1.5 text-right">TARGET</th>
+              <th className="border border-[var(--line)] px-2 py-1.5 text-right">TERCAPAI (Rp.)</th>
+              <th className="border border-[var(--line)] px-2 py-1.5 text-right">TERCAPAI (%)</th>
+              <th className="border border-[var(--line)] px-2 py-1.5">KET</th>
+            </tr>
+          </thead>
+          <tbody>
+            {golongan.map((r) => {
+              const label = displayLabel(r.label);
+              const divisiRow = isDivisiLabel(r.label);
+              const groupRow = !!r.is_group || isTotalDivisiLabel(r.label);
+              const pct = pctOf(r.achievement, r.target);
+              const ket = ketOf(r.achievement, r.target);
+              if (divisiRow) {
+                return <tr key={r.id} className="bg-[#f3e2c7] font-bold"><td colSpan={5} className="border border-[var(--line)] px-2 py-1.5 text-center">{label}</td></tr>;
+              }
+              return (
+                <tr key={r.id} className={groupRow ? 'font-bold bg-[#f0f4f8]' : ''}>
+                  <td className="border border-[var(--line)] px-2 py-1.5">{label}</td>
+                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{fmtNum(r.target)}</td>
+                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{fmtNum(r.achievement)}</td>
+                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{Number(r.target) > 0 ? `${pct.toFixed(0)}%` : ''}</td>
+                  <td className="border border-[var(--line)] px-2 py-1.5">{ket}</td>
+                </tr>
+              );
+            })}
+            {!golongan.length && <tr><td colSpan={5} className="border border-[var(--line)] px-2 py-2 text-center text-[var(--ink-3)]">Golongan kosong.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="overflow-x-auto border border-[var(--line)] rounded-lg">
+        <table className="w-full min-w-[600px] text-[12px]">
+          <thead>
+            <tr className="bg-[#e8eef3] text-left">
+              <th className="border border-[var(--line)] px-2 py-1.5">KRITERIA</th>
+              <th className="border border-[var(--line)] px-2 py-1.5 text-right">TARGET</th>
+              <th className="border border-[var(--line)] px-2 py-1.5 text-right">TERCAPAI (JUMLAH)</th>
+              <th className="border border-[var(--line)] px-2 py-1.5 text-right">%</th>
+              <th className="border border-[var(--line)] px-2 py-1.5">KET</th>
+              <th className="border border-[var(--line)] px-2 py-1.5 text-right">INSENTIF YG DIBERI</th>
+            </tr>
+          </thead>
+          <tbody>
+            {kriteria.map((r) => {
+              const pct = pctOf(r.achievement_value, r.target_value);
+              const ket = ketOf(r.achievement_value, r.target_value);
+              return (
+                <tr key={r.criteria_id || r.id}>
+                  <td className="border border-[var(--line)] px-2 py-1.5">- {r.label}</td>
+                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{fmtNum(r.target_value)}</td>
+                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{fmtNum(r.achievement_value)}</td>
+                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{Number(r.target_value) > 0 ? `${pct.toFixed(0)}%` : r.percentage_value ?? ''}</td>
+                  <td className="border border-[var(--line)] px-2 py-1.5">{ket}</td>
+                  <td className="border border-[var(--line)] px-2 py-1.5 text-right">{fmtNum(r.incentive_amount)}</td>
+                </tr>
+              );
+            })}
+            {!kriteria.length && <tr><td colSpan={6} className="border border-[var(--line)] px-2 py-2 text-center text-[var(--ink-3)]">Kriteria kosong.</td></tr>}
+            <tr className="font-bold bg-[#f0f4f8]">
+              <td className="border border-[var(--line)] px-2 py-1.5">TOTAL</td>
+              <td className="border border-[var(--line)]" colSpan={4} />
+              <td className="border border-[var(--line)] px-2 py-1.5 text-right">{fmtNum(totalInsentif)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="border border-[var(--line)] rounded-lg px-4 py-3">
+        <p className="text-center font-bold underline mb-3">KWITANSI</p>
+        <div className="space-y-2">
+          <p><span className="inline-block w-40 text-[var(--ink-3)]">Sudah terima dari :</span> {kw.penerima || 'PT. BINTANG SINAR JAYA'}</p>
+          <p><span className="inline-block w-40 text-[var(--ink-3)]">Jumlah Uang</span> {tujuan}</p>
+          <p><span className="inline-block w-40 text-[var(--ink-3)]">Buat Pembayaran</span> {tujuan}</p>
+          <p><span className="inline-block w-40 text-[var(--ink-3)]">Terbilang Rp.</span> <strong>{kw.nominal || fmtNum(totalInsentif)}</strong></p>
+        </div>
+        <div className="mt-6 text-right">
+          <p className="font-bold uppercase">{doc.salesman || '-'}</p>
+          <p className="text-[var(--ink-3)] text-[11px] uppercase">Salesman</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const childrenOf = (positions, id) => positions.filter((p) => p.parent_position_id === id);
 const descendantsOf = (positions, id) => {
@@ -85,6 +208,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
   const [limit, setLimit] = useState(10);
 
   const [activeDocId, setActiveDocId] = useState(null);
+  const [fullDoc, setFullDoc] = useState(null);
+  const [fullLoading, setFullLoading] = useState(false);
   const [newDialogOpen, setNewDialogOpen] = useState(false);
   const [newFormData, setNewFormData] = useState({
     sales: '',
@@ -131,6 +256,21 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
       setActiveDocId(openDocParam);
     }
   }, [openDocParam, documents]);
+
+  // Ambil baris golongan/kriteria/kwitansi agar panel detail menampilkan input officer.
+  useEffect(() => {
+    if (!activeDocId) {
+      setFullDoc(null);
+      return;
+    }
+    let cancelled = false;
+    setFullLoading(true);
+    getDocument(activeDocId)
+      .then((r) => { if (!cancelled) setFullDoc(r.document); })
+      .catch(() => { if (!cancelled) setFullDoc(null); })
+      .finally(() => { if (!cancelled) setFullLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeDocId]);
 
   const bms = positions.filter((p) => p.position_type === 'BM');
   const spvOptions = bmId
@@ -235,7 +375,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       {/* Desktop: two-column layout */}
-      <div className="hidden lg:grid lg:grid-cols-[1fr_480px] lg:gap-6 lg:px-6 lg:py-6">
+      <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_680px] lg:gap-6 lg:px-6 lg:py-6">
         {/* Left: Document List */}
         <section
           className={`card bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden ${
@@ -419,27 +559,25 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                 </header>
 
                 <section className="border-t border-[var(--line)] pt-5 mt-6" aria-labelledby="detailInfoTitle">
-                  <h3 id="detailInfoTitle" className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">
-                    Informasi dokumen
+                  <h3 id="detailInfoTitle" className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)] mb-4">
+                    Pratinjau dokumen (input officer)
                   </h3>
-                  <dl className="grid grid-cols-2 gap-x-5 gap-y-4 mt-4">
-                    <div className="col-span-2">
-                      <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">Produk</dt>
-                      <dd className="mt-1 text-[14px] font-medium text-[var(--ink)] overflow-wrap-anywhere">{activeDoc.product}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">BM</dt>
-                      <dd className="mt-1 text-[14px] font-medium text-[var(--ink)]">{activeDoc.bm}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">SPV</dt>
-                      <dd className="mt-1 text-[14px] font-medium text-[var(--ink)]">{activeDoc.spv}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">Periode</dt>
-                      <dd className="mt-1 text-[14px] font-medium text-[var(--ink)]">{periodLabel(activeDoc.period)}</dd>
-                    </div>
-                  </dl>
+                  {fullLoading ? (
+                    <p className="text-[13px] text-[var(--ink-2)] flex items-center gap-2"><Loader2 className="size-4 animate-spin" aria-hidden="true" /> Memuat isi dokumen…</p>
+                  ) : fullDoc ? (
+                    <FullDocPreview doc={fullDoc} />
+                  ) : (
+                    <dl className="grid grid-cols-2 gap-x-5 gap-y-4 mt-4">
+                      <div className="col-span-2">
+                        <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">Produk</dt>
+                        <dd className="mt-1 text-[14px] font-medium text-[var(--ink)] overflow-wrap-anywhere">{activeDoc.product || '-'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">Periode</dt>
+                        <dd className="mt-1 text-[14px] font-medium text-[var(--ink)]">{periodLabel(activeDoc.period)}</dd>
+                      </div>
+                    </dl>
+                  )}
                 </section>
 
                 <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-[var(--line)]">
@@ -718,27 +856,14 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                 </header>
 
                 <section className="border-t border-[var(--line)] pt-4 mt-5" aria-labelledby="detailInfoTitleMobile">
-                  <h3 id="detailInfoTitleMobile" className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">
-                    Informasi dokumen
+                  <h3 id="detailInfoTitleMobile" className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)] mb-4">
+                    Pratinjau dokumen (input officer)
                   </h3>
-                  <dl className="grid grid-cols-1 gap-4 mt-3">
-                    <div>
-                      <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">Produk</dt>
-                      <dd className="mt-1 text-[14px] font-medium text-[var(--ink)] overflow-wrap-anywhere">{activeDoc.product}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">BM</dt>
-                      <dd className="mt-1 text-[14px] font-medium text-[var(--ink)]">{activeDoc.bm}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">SPV</dt>
-                      <dd className="mt-1 text-[14px] font-medium text-[var(--ink)]">{activeDoc.spv}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">Periode</dt>
-                      <dd className="mt-1 text-[14px] font-medium text-[var(--ink)]">{periodLabel(activeDoc.period)}</dd>
-                    </div>
-                  </dl>
+                  {fullLoading ? (
+                    <p className="text-[13px] text-[var(--ink-2)]">Memuat isi dokumen…</p>
+                  ) : fullDoc ? (
+                    <FullDocPreview doc={fullDoc} />
+                  ) : null}
                 </section>
 
                 <div className="flex flex-col gap-2 mt-8 pt-4 border-t border-[var(--line)]">
