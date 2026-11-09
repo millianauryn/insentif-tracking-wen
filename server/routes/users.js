@@ -123,6 +123,12 @@ function createUsersRouter(db, options = {}) {
         return res.status(409).json({ error: { code: 'CONFLICT', message: 'Username already exists' } });
       }
 
+      // Validasi lengkap dulu (termasuk officer wajib cabang) sebelum menulis apa pun.
+      let finalRoleForCheck = userRole !== undefined ? userRole : user.role;
+      if (Array.isArray(branch_ids) && finalRoleForCheck === 'officer' && branch_ids.length === 0) {
+        return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Officer must have at least one branch' } });
+      }
+
       const updates = [];
       const values = [];
       if (username !== undefined) {
@@ -175,13 +181,8 @@ function createUsersRouter(db, options = {}) {
         values.push(id);
         db.prepare(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
       }
-      // Update branches if provided
+      // Update branches if provided (sudah divalidasi di atas)
       if (Array.isArray(branch_ids)) {
-        // Validate: officer must have at least 1 branch
-        const finalRole = userRole !== undefined ? userRole : user.role;
-        if (finalRole === 'officer' && branch_ids.length === 0) {
-          return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Officer must have at least one branch' } });
-        }
         db.transaction(() => {
           db.prepare('DELETE FROM user_branches WHERE user_id = ?').run(id);
           const insBranch = db.prepare('INSERT OR IGNORE INTO user_branches (user_id, branch_id) VALUES (?, ?)');

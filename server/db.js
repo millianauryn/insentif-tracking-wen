@@ -12,6 +12,9 @@ function openDatabase(filename = DEFAULT_DATABASE_PATH) {
   const db = new Database(filename);
   // Enable foreign keys for this connection
   db.pragma('foreign_keys = ON');
+  // WAL + busy timeout agar officer bersamaan tidak SQLITE_BUSY.
+  db.pragma('journal_mode = WAL');
+  db.pragma('busy_timeout = 5000');
   return db;
 }
 
@@ -87,6 +90,18 @@ function migrateDatabase(db) {
   // Migrate positions: add sales_code column
   const posCols = db.prepare('PRAGMA table_info(positions)').all().map((c) => c.name);
   if (!posCols.includes('sales_code')) db.exec('ALTER TABLE positions ADD COLUMN sales_code TEXT');
+
+  if (!db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_doc_sales_period'").get()) {
+    // Unique parsial hanya bila tidak ada duplikat historis (data lama mungkin dobel).
+    const dups = db.prepare(`
+      SELECT lower(trim(salesman)) AS n, period FROM incentive_documents
+      WHERE salesman IS NOT NULL AND trim(salesman) <> '' AND period IS NOT NULL
+      GROUP BY lower(trim(salesman)), period HAVING COUNT(*) > 1 LIMIT 1
+    `).get();
+    if (!dups) {
+      db.exec(`CREATE UNIQUE INDEX idx_doc_sales_period ON incentive_documents(lower(trim(salesman)), period) WHERE salesman IS NOT NULL AND trim(salesman) <> ''`);
+    }
+  }
 
   // Ensure position_criteria table exists (each position has own kriteria set)
   if (!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='position_criteria'").get()) {

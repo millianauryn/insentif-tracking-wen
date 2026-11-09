@@ -66,8 +66,15 @@ function createDocumentsRouter(db, options = {}) {
     if (req.user.role !== 'superadmin' && (document.owner_id !== req.user.id || document.status !== 'Draft')) {
       return res.status(409).json({ error: { code: 'DOCUMENT_LOCKED', message: 'Only owner can edit Draft documents' } });
     }
+    const input = req.body || {};
+    // Superadmin yang mengoreksi dokumen Final wajib mengisi alasan audit.
+    if (req.user.role === 'superadmin' && document.status === 'Final') {
+      const reason = String(input.audit_reason || '').trim();
+      if (reason.length < 3) {
+        return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'audit_reason wajib diisi (min 3 huruf) untuk koreksi Final' } });
+      }
+    }
     try {
-      const input = req.body || {};
       const nextSalesman = input.salesman !== undefined ? input.salesman : document.salesman;
       const nextPeriod = input.period !== undefined ? input.period : document.period;
       const dup = findDuplicateDoc(db, nextSalesman, nextPeriod, document.id);
@@ -82,7 +89,7 @@ function createDocumentsRouter(db, options = {}) {
       throw error;
     }
     if (req.user.role === 'superadmin' && document.status === 'Final') {
-      writeAudit(db, req.user.id, 'UPDATE', 'incentive_document', document.id, document, getDocument(db, document.id));
+      writeAudit(db, req.user.id, 'UPDATE', 'incentive_document', document.id, { ...document, audit_reason: String(input.audit_reason || '').trim() }, getDocument(db, document.id));
     }
     res.json({ document: getDocument(db, document.id) });
   });
@@ -172,8 +179,15 @@ function updateDocument(db, document, input) {
 }
 
 function validateGolonganRows(rows) {
-  if (!Array.isArray(rows) || rows.length > 500) return false;
-  return rows.every((row, index) => row && (row.parent_index === undefined || (Number.isInteger(row.parent_index) && row.parent_index >= 0 && row.parent_index < index)));
+  if (!Array.isArray(rows) || rows.length > 50) return false;
+  return rows.every((row, index) => {
+    if (!row) return false;
+    if (row.parent_index !== undefined && !(Number.isInteger(row.parent_index) && row.parent_index >= 0 && row.parent_index < index)) return false;
+    if (row.label != null && String(row.label).length > 80) return false;
+    if (row.target != null && !(Number.isFinite(Number(row.target)) && Number(row.target) >= 0)) return false;
+    if (row.achievement != null && !(Number.isFinite(Number(row.achievement)) && Number(row.achievement) >= 0)) return false;
+    return true;
+  });
 }
 
 function insertGolonganRows(db, documentId, rows) {
@@ -201,15 +215,23 @@ function upsertCriteriaRows(db, documentId, rows) {
   `);
   rows.forEach(row => {
     if (!existingIds.has(row.criteria_id)) return; // snapshot: only update existing, never insert new
-    const target = row.target_value != null && row.target_value !== '' ? Number(row.target_value) : null;
-    const achievement = row.achievement_value != null && row.achievement_value !== '' ? Number(row.achievement_value) : null;
-    const incentive = row.incentive_amount != null && row.incentive_amount !== '' ? Number(row.incentive_amount) : null;
+    const target = parseMoney(row.target_value);
+    const achievement = parseMoney(row.achievement_value);
+    const incentive = parseMoney(row.incentive_amount);
     const pctTarget = target ?? 0;
     const pctAchievement = achievement ?? 0;
     const percentage = pctTarget > 0 ? (pctAchievement / pctTarget) * 100 : 0;
     const status = pctTarget > 0 && percentage >= 100 ? 'Tercapai' : 'Gugur';
     update.run(target, achievement, percentage, status, incentive, documentId, row.criteria_id);
   });
+}
+
+function parseMoney(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const s = String(value).trim();
+  if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
 }
 
 function isValidPeriod(value) {

@@ -56,7 +56,8 @@ describe('Documents API', () => {
     await officer.post(`/api/documents/${id}/finalize`).expect(403);
     await observer.post(`/api/documents/${id}/finalize`).expect(200);
     await officer.patch(`/api/documents/${id}`).send({ period: '2026-12' }).expect(409);
-    await admin.patch(`/api/documents/${id}`).send({ period: '2027-01' }).expect(200);
+    await admin.patch(`/api/documents/${id}`).send({ period: '2027-01' }).expect(422); // Final wajib audit_reason
+    await admin.patch(`/api/documents/${id}`).send({ period: '2027-01', audit_reason: 'koreksi periode salah' }).expect(200);
     expect(db.prepare('SELECT COUNT(*) AS count FROM audit_logs WHERE entity_type = \'incentive_document\'').get().count).toBe(1);
   });
 

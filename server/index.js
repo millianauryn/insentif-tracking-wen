@@ -13,6 +13,10 @@ const createDocumentsRouter = require('./routes/documents.js');
 const createDevAuthRouter = require('./routes/dev-auth.js');
 const createPositionsRouter = require('./routes/positions.js');
 
+// Default lokal: tanpa NODE_ENV dianggap development (dev-login aktif).
+// Production WAJIB set NODE_ENV=production eksplisit — juga untuk cookie secure.
+if (!process.env.NODE_ENV) process.env.NODE_ENV = 'development';
+
 const app = express();
 const port = Number(process.env.PORT) || 3002;
 
@@ -47,10 +51,19 @@ const authLimiter = rateLimit({
 // Auth routes
 // Jabatan → kriteria bridge: officer's criteria = union of criteria from positions at their branches.
 // superadmin (or unconfigured) → null → client shows all criteria.
+const _criteriaCache = new Map();
+function invalidateCriteriaCache(userId = null) {
+  if (userId == null) _criteriaCache.clear();
+  else _criteriaCache.delete(userId);
+}
 function criteriaIdsForUser(userId, role) {
   if (role === 'superadmin') return null;
+  if (_criteriaCache.has(userId)) return _criteriaCache.get(userId);
   const branchIds = db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?').all(userId).map((r) => r.branch_id);
-  if (!branchIds.length) return [];
+  if (!branchIds.length) {
+    _criteriaCache.set(userId, []);
+    return [];
+  }
   const ph = branchIds.map(() => '?').join(',');
   const rows = db.prepare(`
     SELECT DISTINCT pc.criteria_id FROM position_criteria pc
@@ -62,7 +75,9 @@ function criteriaIdsForUser(userId, role) {
     JOIN positions p ON p.id = pc.position_id AND p.active = 1
     WHERE p.branch_id IN (${ph})
   `).all(...branchIds, ...branchIds);
-  return rows.map((r) => r.criteria_id);
+  const ids = rows.map((r) => r.criteria_id);
+  _criteriaCache.set(userId, ids);
+  return ids;
 }
 
 app.post('/api/auth/login', authLimiter, async (req, res) => {

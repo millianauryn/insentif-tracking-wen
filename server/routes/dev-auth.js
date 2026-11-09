@@ -17,9 +17,9 @@ function createDevAuthRouter(db) {
   const router = express.Router();
 
   router.post('/dev-login', async (req, res) => {
-    // Fail closed hanya di production (NODE_ENV unset = development lokal → dev-login aktif).
+    // Fail closed: hanya NODE_ENV=development/test yang mendapat rute ini.
     const nodeEnv = process.env.NODE_ENV;
-    if (nodeEnv === 'production') {
+    if (nodeEnv !== 'development' && nodeEnv !== 'test') {
       return notFound(res);
     }
 
