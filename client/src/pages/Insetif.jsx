@@ -554,7 +554,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                         variant="outline"
                         size="sm"
                         type="button"
-                        className="text-red-600 border-red-200 hover:bg-red-50"
+                        className="bg-white text-red-600 border-red-200 hover:bg-red-50"
                         onClick={() => {
                           if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${periodLabel(activeDoc.period)}?`)) return;
                           onDelete?.(activeDocId);
@@ -848,7 +848,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                   ) : null}
                 </section>
 
-                <div className="flex flex-col gap-2 mt-8 pt-4 border-t border-[var(--line)]">
+                <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-[var(--line)]">
                   {canEditDoc && (
                     <>
                       <Button
@@ -864,7 +864,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                         variant="outline"
                         size="sm"
                         type="button"
-                        className="min-h-[44px] text-red-600 border-red-200 hover:bg-red-50"
+                        className="min-h-[44px] bg-white text-red-600 border-red-200 hover:bg-red-50"
                         onClick={() => {
                           if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${periodLabel(activeDoc.period)}?`)) return;
                           onDelete?.(activeDocId);
