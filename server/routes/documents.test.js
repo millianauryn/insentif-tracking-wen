@@ -186,4 +186,34 @@ describe('Documents API', () => {
     await appFor(db, { id: 2, username: 'admin', role: 'superadmin' }).post(`/api/documents/${id2}/finalize`).expect(200);
     await officer.delete(`/api/documents/${id2}`).expect(409);
   });
+
+  it('persists divisi selection on create, update and clear', async () => {
+    const created = await officer.post('/api/documents').send({ format_id: 1, period: '2026-11', divisi: 'Pulau Baru', golongan_rows: [] }).expect(201);
+    const id = created.body.document.id;
+    expect((await officer.get(`/api/documents/${id}`)).body.document.divisi).toBe('Pulau Baru');
+
+    await officer.patch(`/api/documents/${id}`).send({ divisi: 'Laut Indah' }).expect(200);
+    expect((await officer.get(`/api/documents/${id}`)).body.document.divisi).toBe('Laut Indah');
+
+    await officer.patch(`/api/documents/${id}`).send({ divisi: null }).expect(200);
+    expect((await officer.get(`/api/documents/${id}`)).body.document.divisi).toBeNull();
+  });
+
+  it('supports limit/offset pagination and reports total', async () => {
+    for (const period of ['2026-07', '2026-08', '2026-09']) {
+      await officer.post('/api/documents').send({ format_id: 1, period, golongan_rows: [] }).expect(201);
+    }
+    const page1 = await officer.get('/api/documents?limit=2').expect(200);
+    expect(page1.body.total).toBe(3);
+    expect(page1.body.documents).toHaveLength(2);
+
+    const page2 = await officer.get('/api/documents?limit=2&offset=2').expect(200);
+    expect(page2.body.total).toBe(3);
+    expect(page2.body.documents).toHaveLength(1);
+
+    // tanpa param -> semua (kompatibel lama)
+    const all = await officer.get('/api/documents').expect(200);
+    expect(all.body.total).toBe(3);
+    expect(all.body.documents).toHaveLength(3);
+  });
 });

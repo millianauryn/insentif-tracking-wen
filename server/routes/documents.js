@@ -6,10 +6,18 @@ function createDocumentsRouter(db, options = {}) {
   const auth = options.requireAuth || requireAuth;
 
   router.get('/', auth, (req, res) => {
-    const documents = ['superadmin', 'observer'].includes(req.user.role)
-      ? db.prepare('SELECT * FROM incentive_documents ORDER BY updated_at DESC').all()
-      : db.prepare('SELECT * FROM incentive_documents WHERE owner_id = ? ORDER BY updated_at DESC').all(req.user.id);
-    res.json({ documents });
+    const wide = ['superadmin', 'observer'].includes(req.user.role);
+    const limitParam = req.query.limit === undefined ? null : Number(req.query.limit);
+    const limit = limitParam === null ? null : Math.min(Math.max(Math.trunc(limitParam) || 1, 1), 500);
+    const offset = Math.max(Math.trunc(Number(req.query.offset)) || 0, 0);
+    const where = wide ? '' : 'WHERE owner_id = ?';
+    const args = wide ? [] : [req.user.id];
+    const total = db.prepare(`SELECT COUNT(*) c FROM incentive_documents ${where}`).get(...args).c;
+    const sql = `SELECT * FROM incentive_documents ${where} ORDER BY updated_at DESC${limit === null ? '' : ' LIMIT ? OFFSET ?'}`;
+    const documents = limit === null
+      ? db.prepare(sql).all(...args)
+      : db.prepare(sql).all(...args, limit, offset);
+    res.json({ documents, total });
   });
 
   router.post('/', auth, (req, res) => {
@@ -33,9 +41,9 @@ function createDocumentsRouter(db, options = {}) {
     const create = db.transaction(() => {
       const ownerId = req.user.id;
       const result = db.prepare(`
-        INSERT INTO incentive_documents (owner_id, format_id, division_id, salesman, product, period, status, wilayah, insentif_total, kwitansi)
-        VALUES (?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?)
-      `).run(ownerId, input.format_id, input.division_id || null, input.salesman || null, input.product || null, input.period, input.wilayah || null, encodeNumber(input.insentif_total), encodeKwitansi(input.kwitansi));
+        INSERT INTO incentive_documents (owner_id, format_id, division_id, salesman, product, period, status, wilayah, insentif_total, kwitansi, divisi)
+        VALUES (?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?, ?)
+      `).run(ownerId, input.format_id, input.division_id || null, input.salesman || null, input.product || null, input.period, input.wilayah || null, encodeNumber(input.insentif_total), encodeKwitansi(input.kwitansi), input.divisi || null);
       const documentId = result.lastInsertRowid;
       const criteria = db.prepare(`
         SELECT id, label, target_unit, formula, sort_order
@@ -104,8 +112,7 @@ function createDocumentsRouter(db, options = {}) {
       return res.status(409).json({ error: { code: 'DOCUMENT_LOCKED', message: 'Only Draft documents can be deleted' } });
     }
     const remove = db.transaction(() => {
-      db.prepare('DELETE FROM golongan_rows WHERE document_id = ?').run(document.id);
-      db.prepare('DELETE FROM document_criteria_rows WHERE document_id = ?').run(document.id);
+      // anak (golongan/criteria) ikut terhapus via ON DELETE CASCADE di schema.sql
       db.prepare('DELETE FROM incentive_documents WHERE id = ?').run(document.id);
     });
     remove();
@@ -146,7 +153,7 @@ function getDocument(db, id) {
 function updateDocument(db, document, input) {
   const fields = [];
   const values = [];
-  for (const field of ['division_id', 'salesman', 'product', 'period', 'format_id', 'wilayah']) {
+  for (const field of ['division_id', 'salesman', 'product', 'period', 'format_id', 'wilayah', 'divisi']) {
     if (input[field] !== undefined) {
       if (field === 'period' && !isValidPeriod(input[field])) throw new Error('Invalid period');
       fields.push(`${field} = ?`);

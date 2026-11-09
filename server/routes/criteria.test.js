@@ -59,4 +59,19 @@ describe('Criteria API', () => {
     expect(response.body.criteria.label).toBe('New label');
     expect(db.prepare('SELECT COUNT(*) AS count FROM audit_logs').get().count).toBe(2);
   });
+
+  it('blocks creating or renaming reserved special labels', async () => {
+    // buat label terlarang -> 409
+    await adminRequest.post('/api/criteria-definitions')
+      .send({ label: 'CALL COMPLIANCE', sort_order: 6 })
+      .expect(409);
+
+    // baris reserved ada (seperti seed) -> rename diblokir, field lain tetap jalan
+    db.prepare("INSERT INTO criteria_definitions (label, sort_order) VALUES ('GOL YG GUGUR KURANG DARI 50%', 6)").run();
+    const row = db.prepare("SELECT id FROM criteria_definitions WHERE label = 'GOL YG GUGUR KURANG DARI 50%'").get();
+
+    await adminRequest.patch(`/api/criteria-definitions/${row.id}`).send({ label: 'Gugur < 50%' }).expect(409);
+    const ok = await adminRequest.patch(`/api/criteria-definitions/${row.id}`).send({ sort_order: 7 }).expect(200);
+    expect(ok.body.criteria.label).toBe('GOL YG GUGUR KURANG DARI 50%');
+  });
 });

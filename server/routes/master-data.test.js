@@ -207,4 +207,33 @@ describe('Master Data API', () => {
       .send({ principal_id: principalId, name: 'Test Brand 2' })
       .expect(409);
   });
+
+  it('rejects division rename to an existing name with 409', async () => {
+    const a = await request
+      .post('/api/master-data/divisions')
+      .set('Authorization', 'Bearer superadmin-token')
+      .send({ name: 'Divisi A' })
+      .expect(201);
+    const b = await request
+      .post('/api/master-data/divisions')
+      .set('Authorization', 'Bearer superadmin-token')
+      .send({ name: 'Divisi B' })
+      .expect(201);
+
+    await request
+      .patch(`/api/master-data/divisions/${b.body.division.id}`)
+      .set('Authorization', 'Bearer superadmin-token')
+      .send({ name: 'Divisi A' })
+      .expect(409);
+
+    // rename unik + trim tetap jalan
+    const ok = await request
+      .patch(`/api/master-data/divisions/${a.body.division.id}`)
+      .set('Authorization', 'Bearer superadmin-token')
+      .send({ name: '  Divisi A Baru  ' })
+      .expect(200);
+    expect(ok.body.message).toBe('Division updated');
+    const renamed = await request.get('/api/master-data').set('Authorization', 'Bearer superadmin-token').expect(200);
+    expect(renamed.body.divisions.map((d) => d.name)).toContain('Divisi A Baru');
+  });
 });

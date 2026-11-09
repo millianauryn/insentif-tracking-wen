@@ -8,17 +8,25 @@ function createPositionsRouter(db, options = {}) {
   const auth = options.requireAuth || requireAuth;
   const role = options.requireRole || requireRole;
 
-  // List all positions with their branches and criteria.
+  // List all positions with their branches and criteria (2 query total, bukan per baris).
   // Any authed user (officer picks salesman names for document header).
   router.get('/', auth, (req, res) => {
     try {
       const positions = db.prepare('SELECT id, name, sales_code, position_type, join_date, parent_position_id, branch_id, active FROM positions ORDER BY position_type, name').all();
-      const branchStmt = db.prepare('SELECT branch_id FROM position_branches WHERE position_id = ?');
-      const criteriaStmt = db.prepare('SELECT criteria_id FROM position_criteria WHERE position_id = ?');
+      const branchesBy = new Map();
+      for (const r of db.prepare('SELECT position_id, branch_id FROM position_branches').all()) {
+        if (!branchesBy.has(r.position_id)) branchesBy.set(r.position_id, []);
+        branchesBy.get(r.position_id).push(r.branch_id);
+      }
+      const criteriaBy = new Map();
+      for (const r of db.prepare('SELECT position_id, criteria_id FROM position_criteria').all()) {
+        if (!criteriaBy.has(r.position_id)) criteriaBy.set(r.position_id, []);
+        criteriaBy.get(r.position_id).push(r.criteria_id);
+      }
       const result = positions.map((p) => ({
         ...p,
-        branch_ids: branchStmt.all(p.id).map((r) => r.branch_id),
-        criteria_ids: criteriaStmt.all(p.id).map((r) => r.criteria_id),
+        branch_ids: branchesBy.get(p.id) || [],
+        criteria_ids: criteriaBy.get(p.id) || [],
       }));
       res.json({ positions: result });
     } catch (err) {

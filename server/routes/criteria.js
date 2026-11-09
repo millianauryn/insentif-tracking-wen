@@ -6,6 +6,9 @@ function createCriteriaRouter(db, options = {}) {
   const auth = options.requireAuth || requireAuth;
   const role = options.requireRole || requireRole;
 
+  // Label khusus yang dipakai klien untuk input minus/percent — jangan diubah/diduplikasi.
+  const RESERVED_LABELS = new Set(['GOL YG GUGUR KURANG DARI 50%', 'CALL COMPLIANCE']);
+
   router.get('/document-formats', auth, (req, res) => {
     const formats = db.prepare(`
       SELECT id, name, version, active
@@ -30,6 +33,9 @@ function createCriteriaRouter(db, options = {}) {
     const { label, target_unit = null, formula = null, sort_order = 0 } = req.body;
     if (!isValidText(label, 120) || !Number.isInteger(sort_order) || sort_order < 0) {
       return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid criteria data' } });
+    }
+    if (RESERVED_LABELS.has(String(label).trim())) {
+      return res.status(409).json({ error: { code: 'RESERVED_LABEL', message: 'Label ini dipakai khusus input insentif, tidak bisa dibuat ulang' } });
     }
 
     const result = db.prepare(`
@@ -57,6 +63,11 @@ function createCriteriaRouter(db, options = {}) {
     };
     if (!isValidText(next.label, 120) || !Number.isInteger(next.sort_order) || next.sort_order < 0) {
       return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid criteria data' } });
+    }
+    const wasReserved = RESERVED_LABELS.has(String(current.label).trim());
+    const willBeReserved = RESERVED_LABELS.has(String(next.label).trim());
+    if ((wasReserved || willBeReserved) && String(current.label).trim() !== String(next.label).trim()) {
+      return res.status(409).json({ error: { code: 'RESERVED_LABEL', message: 'Label khusus input insentif tidak bisa diubah' } });
     }
 
     db.prepare(`

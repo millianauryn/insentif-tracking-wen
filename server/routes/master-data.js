@@ -62,7 +62,7 @@ function createMasterDataRouter(db, options = {}) {
 // Create division (Super Admin only)
 router.post('/divisions', auth, role('superadmin'), async (req, res) => {
   try {
-    const { name } = req.body;
+    const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
     if (!name) {
       return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Division name required' } });
     }
@@ -95,6 +95,10 @@ router.patch('/divisions/:id', auth, role('superadmin'), async (req, res) => {
     const nextActive = is_active === undefined ? division.is_active : (is_active ? 1 : 0);
     if (typeof nextName !== 'string' || !nextName.trim()) {
       return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Division name required' } });
+    }
+    const dup = db.prepare('SELECT id FROM divisions WHERE name = ? AND id != ?').get(nextName.trim(), id);
+    if (dup) {
+      return res.status(409).json({ error: { code: 'CONFLICT', message: 'Division name already exists' } });
     }
     db.prepare('UPDATE divisions SET name = ?, is_active = ? WHERE id = ?').run(nextName.trim(), nextActive, id);
 

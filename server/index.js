@@ -51,17 +51,16 @@ const authLimiter = rateLimit({
 // Auth routes
 // Jabatan → kriteria bridge: officer's criteria = union of criteria from positions at their branches.
 // superadmin (or unconfigured) → null → client shows all criteria.
-const _criteriaCache = new Map();
-function invalidateCriteriaCache(userId = null) {
-  if (userId == null) _criteriaCache.clear();
-  else _criteriaCache.delete(userId);
-}
+// Cache 30 detik per user: perubahan jabatan/kriteria superadmin terlihat maks 30 dtk kemudian.
+const CRITERIA_TTL_MS = 30_000;
+const _criteriaCache = new Map(); // userId -> { ids, at }
 function criteriaIdsForUser(userId, role) {
   if (role === 'superadmin') return null;
-  if (_criteriaCache.has(userId)) return _criteriaCache.get(userId);
+  const hit = _criteriaCache.get(userId);
+  if (hit && Date.now() - hit.at < CRITERIA_TTL_MS) return hit.ids;
   const branchIds = db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?').all(userId).map((r) => r.branch_id);
   if (!branchIds.length) {
-    _criteriaCache.set(userId, []);
+    _criteriaCache.set(userId, { ids: [], at: Date.now() });
     return [];
   }
   const ph = branchIds.map(() => '?').join(',');
@@ -76,7 +75,7 @@ function criteriaIdsForUser(userId, role) {
     WHERE p.branch_id IN (${ph})
   `).all(...branchIds, ...branchIds);
   const ids = rows.map((r) => r.criteria_id);
-  _criteriaCache.set(userId, ids);
+  _criteriaCache.set(userId, { ids, at: Date.now() });
   return ids;
 }
 
@@ -168,6 +167,10 @@ app.get('/api/health', (_req, res) => {
 });
 
 async function start() {
+  // Buang sesi kedaluwarsa saat start + sekali sehari (proses tunggal, SQLite sinkron).
+  const sweep = () => db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run();
+  sweep();
+  setInterval(sweep, 24 * 60 * 60 * 1000).unref();
   await seedDatabase(db);
   app.listen(port, () => {
     console.log(`Incentive API listening on http://localhost:${port}`);
