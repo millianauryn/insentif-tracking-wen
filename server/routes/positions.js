@@ -3,6 +3,16 @@ const { requireAuth, requireRole } = require('../middleware.js');
 
 const VALID_TYPES = ['BM', 'SPV', 'SALES'];
 
+// Aturan hierarki: SPV wajib parent BM; SALES wajib parent SPV. Berlaku untuk create & update.
+function hierarchyError(db, position_type, parent_position_id) {
+  const want = position_type === 'SPV' ? 'BM' : position_type === 'SALES' ? 'SPV' : null;
+  if (!want) return null;
+  if (!parent_position_id) return `${position_type} must be linked to a ${want}`;
+  const parent = db.prepare('SELECT position_type FROM positions WHERE id = ?').get(parent_position_id);
+  if (!parent || parent.position_type !== want) return `${position_type} parent must be a ${want}`;
+  return null;
+}
+
 function createPositionsRouter(db, options = {}) {
   const router = express.Router();
   const auth = options.requireAuth || requireAuth;
@@ -42,23 +52,9 @@ function createPositionsRouter(db, options = {}) {
       if (!name || !position_type || !VALID_TYPES.includes(position_type)) {
         return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Name and valid position_type (BM/SPV/SALES) required' } });
       }
-      if (position_type === 'SPV') {
-        if (!parent_position_id) {
-          return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'SPV must be linked to a BM' } });
-        }
-        const parent = db.prepare('SELECT position_type FROM positions WHERE id = ?').get(parent_position_id);
-        if (!parent || parent.position_type !== 'BM') {
-          return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'SPV parent must be a BM' } });
-        }
-      }
-      if (position_type === 'SALES') {
-        if (!parent_position_id) {
-          return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'SALES must be linked to a SPV' } });
-        }
-        const parent = db.prepare('SELECT position_type FROM positions WHERE id = ?').get(parent_position_id);
-        if (!parent || parent.position_type !== 'SPV') {
-          return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'SALES parent must be a SPV' } });
-        }
+      const hierarchyMsg = hierarchyError(db, position_type, parent_position_id);
+      if (hierarchyMsg) {
+        return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: hierarchyMsg } });
       }
 
       const create = db.transaction(() => {
@@ -92,12 +88,23 @@ function createPositionsRouter(db, options = {}) {
     try {
       const { id } = req.params;
       const { name, position_type, join_date, parent_position_id, branch_ids, criteria_ids, active, sales_code } = req.body;
-      const position = db.prepare('SELECT id, position_type FROM positions WHERE id = ?').get(id);
+      const position = db.prepare('SELECT id, position_type, parent_position_id FROM positions WHERE id = ?').get(id);
       if (!position) {
         return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Position not found' } });
       }
       if (position_type !== undefined && !VALID_TYPES.includes(position_type)) {
         return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid position type' } });
+      }
+      // Aturan hierarki sama dengan create — validasi gabungan nilai lama + perubahan.
+      if (position_type !== undefined || parent_position_id !== undefined) {
+        const hierarchyMsg = hierarchyError(
+          db,
+          position_type !== undefined ? position_type : position.position_type,
+          parent_position_id !== undefined ? (parent_position_id || null) : position.parent_position_id
+        );
+        if (hierarchyMsg) {
+          return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: hierarchyMsg } });
+        }
       }
 
       const updates = [];

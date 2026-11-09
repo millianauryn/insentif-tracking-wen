@@ -25,32 +25,6 @@ function createUsersRouter(db, options = {}) {
     }
   });
 
-  // Get hierarchy chain for current user (BM → SPV → Sales)
-  router.get('/hierarchy', auth, (req, res) => {
-    try {
-      const userId = req.user.id;
-      // Build chain: walk up parent_id from current user
-      const chain = [];
-      let currentId = userId;
-      const visited = new Set();
-      while (currentId && !visited.has(currentId)) {
-        visited.add(currentId);
-        const u = db.prepare('SELECT id, username, role, parent_id FROM users WHERE id = ? AND active = 1').get(currentId);
-        if (!u) break;
-        chain.unshift({ id: u.id, username: u.username, role: u.role });
-        currentId = u.parent_id;
-      }
-      // Get subordinates (people who report to anyone in chain)
-      const subordinateIds = chain.map((u) => u.id);
-      const placeholders = subordinateIds.map(() => '?').join(',');
-      const subordinates = db.prepare(`SELECT id, username, role, parent_id FROM users WHERE active = 1 AND parent_id IN (${placeholders})`).all(...subordinateIds);
-      res.json({ chain, subordinates });
-    } catch (err) {
-      console.error('GET /api/users/hierarchy error:', err);
-      res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Internal server error' } });
-    }
-  });
-
   router.post('/', auth, role('superadmin'), async (req, res) => {
     try {
       const { username, password, role: userRole, branch_ids, sales_code, position_id } = req.body;
@@ -177,18 +151,19 @@ function createUsersRouter(db, options = {}) {
           values.push(position_id);
         }
       }
-      if (updates.length > 0) {
-        values.push(id);
-        db.prepare(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
-      }
-      // Update branches if provided (sudah divalidasi di atas)
-      if (Array.isArray(branch_ids)) {
-        db.transaction(() => {
+      // Satu transaksi: field user + branch sync gagal/bersama — tidak ada update setengah jadi.
+      db.transaction(() => {
+        if (updates.length > 0) {
+          values.push(id);
+          db.prepare(`UPDATE users SET ${updates.join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...values);
+        }
+        // Update branches if provided (sudah divalidasi di atas)
+        if (Array.isArray(branch_ids)) {
           db.prepare('DELETE FROM user_branches WHERE user_id = ?').run(id);
           const insBranch = db.prepare('INSERT OR IGNORE INTO user_branches (user_id, branch_id) VALUES (?, ?)');
           branch_ids.forEach((bid) => insBranch.run(id, bid));
-        })();
-      }
+        }
+      })();
 
       res.json({ message: 'User updated' });
     } catch (err) {

@@ -18,3 +18,8 @@ npm-debug.log*
 .vscode/
 .idea/
 .DS_Store
+
+# Local SQLite databases (berisi password hash — jangan pernah di-commit)
+*.sqlite
+*.sqlite-*
+server/data/

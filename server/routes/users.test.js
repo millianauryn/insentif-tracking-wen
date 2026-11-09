@@ -173,6 +173,26 @@ describe('Users and Master Data API', () => {
       
       expect(response.body.message).toBe('User deleted');
     });
+
+    it('does not half-commit when branch sync fails (single transaction)', async () => {
+      const createResponse = await request
+        .post('/api/users')
+        .set('Authorization', 'Bearer superadmin-token')
+        .send({ username: 'halftest', password: 'password123', role: 'officer', branch_ids: [1] })
+        .expect(201);
+      const userId = createResponse.body.user.id;
+
+      // branch 999 tidak ada -> gagal di tengah transaksi
+      const res = await request
+        .patch(`/api/users/${userId}`)
+        .set('Authorization', 'Bearer superadmin-token')
+        .send({ role: 'observer', branch_ids: [999] });
+      expect(res.status).toBeGreaterThanOrEqual(400);
+
+      // field user TIDAK boleh tersimpan (rollback penuh)
+      const after = db.prepare('SELECT role FROM users WHERE id = ?').get(userId);
+      expect(after.role).toBe('officer');
+    });
   });
 
   describe('Master Data API (Super Admin only)', () => {

@@ -65,4 +65,18 @@ describe('Positions API', () => {
     await officer.post('/api/positions').send({ name: 'X', position_type: 'BM' }).expect(403);
     await officer.delete('/api/positions/1').expect(403);
   });
+
+  it('enforces the same hierarchy rules on update', async () => {
+    const bm = await admin.post('/api/positions').send({ name: 'BUDI', position_type: 'BM' }).expect(201);
+    const spv = await admin.post('/api/positions').send({ name: 'BUDO', position_type: 'SPV', parent_position_id: bm.body.position.id }).expect(201);
+    const sales = await admin.post('/api/positions').send({ name: 'BIDU', position_type: 'SALES', parent_position_id: spv.body.position.id }).expect(201);
+    const salesId = sales.body.position.id;
+
+    // SALES dengan parent BM -> ditolak (create menolak, update juga harus)
+    await admin.patch(`/api/positions/${salesId}`).send({ parent_position_id: bm.body.position.id }).expect(400);
+    // ganti type ke SALES dengan parent diri sendiri (bukan SPV) -> ditolak
+    await admin.patch(`/api/positions/${bm.body.position.id}`).send({ position_type: 'SALES', parent_position_id: bm.body.position.id }).expect(400);
+    // perubahan tanpa sentuh hierarki tetap jalan
+    await admin.patch(`/api/positions/${salesId}`).send({ name: 'BIDU BARU' }).expect(200);
+  });
 });

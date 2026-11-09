@@ -15,7 +15,10 @@ const createPositionsRouter = require('./routes/positions.js');
 
 // Default lokal: tanpa NODE_ENV dianggap development (dev-login aktif).
 // Production WAJIB set NODE_ENV=production eksplisit — juga untuk cookie secure.
-if (!process.env.NODE_ENV) process.env.NODE_ENV = 'development';
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'development';
+  console.warn('WARNING: NODE_ENV tidak diset -> development. /api/auth/dev-login AKTIF (bisa login sebagai superadmin). Untuk production: set NODE_ENV=production.');
+}
 
 const app = express();
 const port = Number(process.env.PORT) || 3002;
