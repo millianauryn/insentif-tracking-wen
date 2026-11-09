@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Avatar from './Avatar';
+import pbgLogo from '../assets/logo-pbg.png';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -69,8 +70,8 @@ function SideNav({ onNavigate, collapsed = false, onToggle }) {
   return (
     <>
       <div className="flex items-center gap-2.5 px-2">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-brand-600">
-          <Database size={17} color="#fff" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-brand-600 overflow-hidden">
+          <img src={pbgLogo} alt="Pulau Baru Group" className="h-full w-full object-contain" />
         </div>
         {!collapsed && (
         <div className="leading-tight min-w-0">

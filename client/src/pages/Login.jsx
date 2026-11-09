@@ -81,7 +81,7 @@ export default function Login() {
           </ul>
         </div>
 
-        <p className="auth-brand-foot">PT. Bintang Sinar Jaya · Sales Incentive</p>
+        <p className="auth-brand-foot">Pulau Baru Group · Sales Incentive</p>
       </section>
 
       <section className="auth-form-panel">
