@@ -13,7 +13,7 @@
 
 **Roles**: `superadmin` (manage + approve), `officer` (create/edit Draft), `observer` (Direksi — approve/read-only). `super`/`officer`/`direksi` are dev quick-login accounts (`/api/auth/dev-login`, only when not production).
 
-**Login/logout**: `POST /api/auth/login` → session cookie; `GET /api/auth/me` restores user; `POST /api/auth/logout` deletes session. Rate limit 10/15 min/IP. `pbg_csrf` double-submit on non-GET. Username lowercased client-side; password ≥6.
+**Login/logout**: `POST /api/auth/login` → session cookie; `GET /api/auth/me` restores user; `POST /api/auth/logout` deletes session. Rate limit 10/15 min/IP. Pengaman = cookie httpOnly + `SameSite=Lax` + aksi tulis selalu non-GET (tidak ada token CSRF). Username lowercased client-side; password ≥6.
 
 **Documents (Dokumen Sales)** (`server/routes/documents.js`):
 - Status `Draft` → `Final`. Officer creates/edits/deletes Draft (own docs). Observer + superadmin finalize; superadmin may correct Final (audited). Observer POST create is 403.

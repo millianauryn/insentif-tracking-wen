@@ -151,16 +151,6 @@ const descendantsOf = (positions, id) => {
 };
 const parentOf = (positions, p) => positions.find((x) => x.id === p.parent_position_id);
 
-const PERIOD_LABELS = {
-  '2026-10': 'Oktober 2026',
-  '2026-11': 'November 2026',
-  '2026-12': 'Desember 2026',
-};
-
-function periodLabel(key) {
-  return PERIOD_LABELS[key] || key;
-}
-
 function makeBadge(status) {
   if (String(status).toLowerCase() === 'final') {
     return (
@@ -199,6 +189,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
   const [limit, setLimit] = useState(10);
 
   const [activeDocId, setActiveDocId] = useState(null);
+  const [finalBusy, setFinalBusy] = useState(false);
   const [fullDoc, setFullDoc] = useState(null);
   const [fullLoading, setFullLoading] = useState(false);
 
@@ -402,12 +393,12 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                   <label htmlFor="filter-periode" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode</label>
                   <Select value={periode} onValueChange={setPeriode}>
                     <SelectTrigger id="filter-periode" className="h-10 w-full">
-                      <SelectValue placeholder="Semua periode">{periode ? periodLabel(periode) : 'Semua periode'}</SelectValue>
+                      <SelectValue placeholder="Semua periode">{periode ? fromApiPeriod(periode) : 'Semua periode'}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Semua periode</SelectItem>
                       {periodeOptions.map((key) => (
-                        <SelectItem key={key} value={key}>{periodLabel(key)}</SelectItem>
+                        <SelectItem key={key} value={key}>{fromApiPeriod(key)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -436,14 +427,14 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId((cur) => (cur === doc.id ? null : doc.id)); }}}
                       tabIndex={0}
                       aria-current={isSelected ? 'true' : undefined}
-                      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${periodLabel(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
+                      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${fromApiPeriod(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
                     >
                       <div className="flex-1 min-w-0 flex flex-col gap-1.5">
                         <div className="flex items-baseline justify-between gap-2">
                           <p className="flex-1 min-w-0 font-medium text-[13px] leading-[1.3] text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
                             {doc.salesman || 'Tanpa nama sales'}
                           </p>
-                          <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{periodLabel(doc.period)}</p>
+                          <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{fromApiPeriod(doc.period)}</p>
                         </div>
                         <div className="flex items-center justify-between gap-2">
                           {pos ? (
@@ -512,7 +503,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                     <h2 id="detailHeading" className="mt-1 text-[clamp(20px,2.4vw,24px)] font-bold tracking-[-0.02em] leading-[1.25] overflow-wrap-anywhere">
                       {activeDoc.salesman || 'Tanpa nama sales'}
                     </h2>
-                    <p className="mt-1 text-[13px] text-[var(--ink-2)]">{periodLabel(activeDoc.period)}</p>
+                    <p className="mt-1 text-[13px] text-[var(--ink-2)]">{fromApiPeriod(activeDoc.period)}</p>
                   </div>
                   <div className="flex-shrink-0 mt-1">{makeBadge(activeDoc.status)}</div>
                 </header>
@@ -533,7 +524,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                       </div>
                       <div>
                         <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">Periode</dt>
-                        <dd className="mt-1 text-[14px] font-medium text-[var(--ink)]">{periodLabel(activeDoc.period)}</dd>
+                        <dd className="mt-1 text-[14px] font-medium text-[var(--ink)]">{fromApiPeriod(activeDoc.period)}</dd>
                       </div>
                     </dl>
                   )}
@@ -556,7 +547,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                         type="button"
                         className="bg-white text-red-600 border-red-200 hover:bg-red-50" style={{ borderColor: '#fecdd3' }}
                         onClick={() => {
-                          if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${periodLabel(activeDoc.period)}?`)) return;
+                          if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${fromApiPeriod(activeDoc.period)}?`)) return;
                           onDelete?.(activeDocId);
                           window.dispatchEvent(new Event('insetif-expand'));
                         }}
@@ -570,13 +561,18 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                       variant="default"
                       size="sm"
                       type="button"
+                      disabled={finalBusy}
                       onClick={async () => {
+                        if (finalBusy) return;
+                        setFinalBusy(true);
                         try {
                           const result = await finalizeDocument(activeDocId);
                           setDocuments((prev) => prev.map((d) => d.id === result.document.id ? { ...d, status: result.document.status } : d));
                           toast('success', 'Dokumen ditandai sebagai final.');
                         } catch (err) {
                           toast('error', errMsg(err));
+                        } finally {
+                          setFinalBusy(false);
                         }
                       }}
                     >
@@ -714,12 +710,12 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                 <label htmlFor="filter-periode-m" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode</label>
                 <Select value={periode} onValueChange={setPeriode}>
                   <SelectTrigger id="filter-periode-m" className="h-10 w-full">
-                    <SelectValue placeholder="Semua periode">{periode ? periodLabel(periode) : 'Semua periode'}</SelectValue>
+                    <SelectValue placeholder="Semua periode">{periode ? fromApiPeriod(periode) : 'Semua periode'}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Semua periode</SelectItem>
                     {periodeOptions.map((key) => (
-                      <SelectItem key={key} value={key}>{periodLabel(key)}</SelectItem>
+                      <SelectItem key={key} value={key}>{fromApiPeriod(key)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -747,13 +743,13 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId((cur) => (cur === doc.id ? null : doc.id)); }}}
                       tabIndex={0}
                       aria-current={isSelected ? 'true' : undefined}
-                      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${periodLabel(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
+                      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${fromApiPeriod(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
                     >
                       <div className="flex items-baseline justify-between gap-3 mb-2">
                         <p className="flex-1 min-w-0 font-semibold text-[14px] text-[var(--ink)] truncate hover:text-[var(--primary)] transition-colors">
                           {doc.salesman || 'Tanpa nama sales'}
                         </p>
-                        <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{periodLabel(doc.period)}</p>
+                        <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{fromApiPeriod(doc.period)}</p>
                       </div>
                       <div className="flex items-center justify-between gap-2">
                         {pos ? (
@@ -832,7 +828,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                     <h2 id="mobile-detail-heading" className="mt-1 text-[clamp(20px,2.4vw,24px)] font-bold tracking-[-0.02em] leading-[1.25] overflow-wrap-anywhere">
                       {activeDoc.salesman || 'Tanpa nama sales'}
                     </h2>
-                    <p className="mt-1 text-[13px] text-[var(--ink-2)]">{periodLabel(activeDoc.period)}</p>
+                    <p className="mt-1 text-[13px] text-[var(--ink-2)]">{fromApiPeriod(activeDoc.period)}</p>
                   </div>
                   <div className="flex-shrink-0 mt-1">{makeBadge(activeDoc.status)}</div>
                 </header>
@@ -866,7 +862,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                         type="button"
                         className="min-h-[44px] bg-white text-red-600 border-red-200 hover:bg-red-50" style={{ borderColor: '#fecdd3' }}
                         onClick={() => {
-                          if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${periodLabel(activeDoc.period)}?`)) return;
+                          if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${fromApiPeriod(activeDoc.period)}?`)) return;
                           onDelete?.(activeDocId);
                           window.dispatchEvent(new Event('insetif-expand'));
                         }}
@@ -880,7 +876,10 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                       variant="default"
                       size="sm"
                       type="button"
+                      disabled={finalBusy}
                       onClick={async () => {
+                        if (finalBusy) return;
+                        setFinalBusy(true);
                         try {
                           const result = await finalizeDocument(activeDocId);
                           setDocuments((prev) => prev.map((d) => d.id === result.document.id ? { ...d, status: result.document.status } : d));
@@ -888,6 +887,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                           setActiveDocId(null);
                         } catch (err) {
                           toast('error', errMsg(err));
+                        } finally {
+                          setFinalBusy(false);
                         }
                       }}
                       className="min-h-[44px]"

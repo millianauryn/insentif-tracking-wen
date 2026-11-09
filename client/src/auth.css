@@ -196,14 +196,14 @@ div.auth-shell[role='status'] {
 }
 
 .auth-card .button.primary {
-  background: #5C786C;
-  border: 1px solid #5C786C;
+  background: var(--color-action);
+  border: 1px solid var(--color-action);
   color: #fff;
 }
 
 .auth-card .button.primary:hover {
-  background: #7EA796;
-  border-color: #7EA796;
+  background: var(--color-action-hover);
+  border-color: var(--color-action-hover);
 }
 
 .password-wrapper {

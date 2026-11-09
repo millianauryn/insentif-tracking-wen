@@ -9,20 +9,10 @@ function buildUrl(path) {
   return `${BASE}${rel}`;
 }
 
-function readCookie(name) {
-  if (typeof document === 'undefined') return '';
-  const m = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-  return m ? decodeURIComponent(m[1]) : '';
-}
-
 async function raw(method, path, { params, data, timeout = 20000 } = {}) {
   const qs = params ? `?${new URLSearchParams(params).toString()}` : '';
   const headers = new Headers();
   if (data !== undefined) headers.set('Content-Type', 'application/json');
-  if (!['get', 'head', 'options'].includes(String(method).toLowerCase())) {
-    const csrf = readCookie('pbg_csrf');
-    if (csrf) headers.set('X-CSRF-Token', csrf);
-  }
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
   let res;
@@ -124,10 +114,6 @@ export function listDocumentFormats() {
 
 export function listUsers() {
   return apiRequest('/api/users')
-}
-
-export function listHierarchy() {
-  return apiRequest('/api/users/hierarchy')
 }
 
 export function createUser(input) {

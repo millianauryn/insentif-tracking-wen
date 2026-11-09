@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Minus } from 'lucide-react';
 import { Button, buttonVariants } from '../components/ui/button';
@@ -6,7 +6,6 @@ import { Badge } from '../components/ui/badge';
 import { cn } from 'cn';
 import Icon from '../components/Icon';
 import { fromApiPeriod } from '../lib/period';
-import { listPositions, listUsers } from '../api';
 
 function EmptyState({ title, copy }) {
   return (
@@ -90,9 +89,7 @@ function OrgNode({ position, childrenOf, depth, collapsed, onToggle, documentsFi
   );
 }
 
-export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc }) {
-  const [positions, setPositions] = useState([]);
-  const [users, setUsers] = useState([]);
+export default function Dashboard({ documents = [], user, positions = [], users = [], onNewDoc, onLoadDoc }) {
   const [collapsed, setCollapsed] = useState(() => new Set());
   const navigate = useNavigate();
 
@@ -103,18 +100,11 @@ export default function Dashboard({ documents = [], user, onNewDoc, onLoadDoc })
     return next;
   });
 
-  useEffect(() => {
-    listPositions()
-      .then((res) => setPositions((res.positions || []).filter((p) => p.active !== 0)))
-      .catch(() => setPositions([]));
-    listUsers()
-      .then((res) => setUsers(res.users || []))
-      .catch(() => setUsers([]));
-  }, []);
+  const activePositions = useMemo(() => positions.filter((p) => p.active !== 0), [positions]);
 
-  const childrenOf = (id) => positions.filter((p) => p.parent_position_id === id);
-  const roots = positions.filter((p) => !p.parent_position_id);
-  const totalSales = positions.filter((p) => p.position_type === 'SALES').length;
+  const childrenOf = (id) => activePositions.filter((p) => p.parent_position_id === id);
+  const roots = activePositions.filter((p) => !p.parent_position_id);
+  const totalSales = activePositions.filter((p) => p.position_type === 'SALES').length;
   const recentDocs = [...documents].sort((a, b) => b.id - a.id).slice(0, 5);
 
   const userByPosition = useMemo(() => {

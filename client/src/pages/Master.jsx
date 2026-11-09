@@ -624,8 +624,8 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
                     const name = draft.name.trim();
                     const linked = activeItems.principal.find((p) => p.name.toLowerCase() === name.toLowerCase());
                     if (linked) {
-                      // Tautan ke principal lama: perbarui division_id-nya
-                      await updatePrincipal(linked.id, { name: linked.name, code: linked.code || draft.code?.trim() || null, address: linked.address || null, division_id: item.id, is_active: 1 });
+                      // Tautan ke principal lama: perbarui division_id-nya (status aktif/nonaktif dibiarkan)
+                      await updatePrincipal(linked.id, { name: linked.name, code: linked.code || draft.code?.trim() || null, address: linked.address || null, division_id: item.id });
                     } else {
                       await createPrincipal({ name, code: draft.code?.trim() || null, address: null, division_id: item.id });
                     }

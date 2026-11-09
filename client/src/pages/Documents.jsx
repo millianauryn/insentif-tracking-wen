@@ -321,8 +321,8 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReord
 }
 
 function KriteriaRow({ row, onUpdate, canEdit }) {
-  const target = Number(row.target_value) || 0;
-  const achievement = Number(row.achievement_value) || 0;
+  const target = parseMoney(row.target_value) ?? 0;
+  const achievement = parseMoney(row.achievement_value) ?? 0;
   const percentage = target > 0 ? (achievement / target) * 100 : 0;
   const status = target > 0 && percentage >= 100 ? 'Tercapai' : 'Gugur';
   const isGugur50 = row.label === 'GOL YG GUGUR KURANG DARI 50%';

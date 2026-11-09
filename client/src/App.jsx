@@ -46,6 +46,7 @@ function App() {
   const [positions, setPositions] = useState([]);
   const [period, setPeriod] = useState(currentPeriodLabel());
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [insentifTotal, setInsentifTotal] = useState(null); // null = auto-sum of kriteria incentives
   const [kwitansi, setKwitansi] = useState({
     penerima: 'PT. BINTANG SINAR JAYA',
@@ -55,11 +56,13 @@ function App() {
     nominal: '',
   });
 
+  // Refresh setelah edit di Data Master: users + kriteria + master + posisi (agar props ke halaman lain tidak basi).
   const reloadAdminData = useCallback(async () => {
     if (!user) return;
     try {
-      const [{ users }, { criteria: crit }, { divisions, principals, brands, regions, branches }] = await Promise.all([listUsers(), listCriteria(), listMasterData()]);
+      const [{ users }, { criteria: crit }, { divisions, principals, brands, regions, branches }, pos] = await Promise.all([listUsers(), listCriteria(), listMasterData(), listPositions()]);
       setAdminData({ users, criteria: crit, masterData: { divisions, principals, brands, regions, branches } });
+      setPositions(pos.positions || []);
     } catch (err) {
       toast('error', errMsg(err));
     }
@@ -182,10 +185,12 @@ function App() {
 
   const saveDraft = async () => {
     if (user?.role === 'observer') return;
+    if (saving) return;
     if (!documentFormatId) {
       toast('error', 'Format dokumen belum tersedia.');
       return;
     }
+    setSaving(true);
     try {
       const result = await createDocument({
         format_id: documentFormatId,
@@ -205,12 +210,16 @@ function App() {
       toast('success', 'Dokumen Draft tersimpan.');
     } catch (err) {
       toast('error', errMsg(err));
+    } finally {
+      setSaving(false);
     }
   };
 
   const updateDraft = async () => {
     if (user?.role === 'observer') return;
+    if (saving) return;
     if (!documentId) return;
+    setSaving(true);
     try {
       const result = await updateDocument(documentId, {
         salesman: sales.name,
@@ -228,6 +237,8 @@ function App() {
       toast('success', 'Dokumen terupdate.');
     } catch (err) {
       toast('error', errMsg(err));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -388,6 +399,8 @@ function App() {
               <Dashboard
                 documents={documents}
                 user={user}
+                positions={positions}
+                users={adminData.users}
                 period={period}
                 setPeriod={setPeriod}
                 onNewDoc={() => { cancelEdit(); navigate('/documents'); }}
