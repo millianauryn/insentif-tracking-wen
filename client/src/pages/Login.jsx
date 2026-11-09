@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Database, FileText, GitBranch, Printer } from 'lucide-react';
+import { FileText, GitBranch, Printer } from 'lucide-react';
+import pbgLogoWhite from '../assets/logo-pbg-white.png';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useAuth } from '../context/AuthContext';
@@ -52,7 +53,7 @@ export default function Login() {
     <main className="auth-shell">
       <section className="auth-brand" aria-label="Tentang Insetive Tracking">
         <div className="auth-brand-head">
-          <span className="auth-mark" aria-hidden="true"><Database size={18} /></span>
+          <span className="auth-mark" aria-hidden="true"><img src={pbgLogoWhite} alt="" className="w-full h-full object-contain" /></span>
           <span className="auth-brand-name">
             Insetive Tracking
             <small>Insentif Sales</small>
