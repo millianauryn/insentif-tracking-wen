@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { createDocument, updateDocument, finalizeDocument, deleteDocument, getDocument, listCriteria, listDocumentFormats, listDocuments, listUsers, listMasterData } from './api';
+import { createDocument, updateDocument, finalizeDocument, deleteDocument, getDocument, listCriteria, listDocumentFormats, listDocuments, listUsers, listMasterData, listPositions, errMsg } from './api';
 import { canManageAdmin } from './access';
 import { useAuth } from './context/AuthContext';
 import { useToast } from './components/Toast';
-import { errMsg } from './lib/api';
 import { reorder } from './lib/reorder';
 import { toApiPeriod, fromApiPeriod, currentPeriodLabel } from './lib/period';
+import { parseMoney } from './lib/money';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 
@@ -43,6 +43,7 @@ function App() {
   const [documents, setDocuments] = useState([]);
   const [documentStatus, setDocumentStatus] = useState('Draft');
   const [adminData, setAdminData] = useState({ users: [], criteria: [], masterData: { divisions: [], principals: [], brands: [], regions: [], branches: [] } });
+  const [positions, setPositions] = useState([]);
   const [period, setPeriod] = useState(currentPeriodLabel());
   const [saved, setSaved] = useState(false);
   const [insentifTotal, setInsentifTotal] = useState(null); // null = auto-sum of kriteria incentives
@@ -64,18 +65,38 @@ function App() {
     }
   }, [user, toast]);
 
+  // Satu muat untuk semua role: formats, dokumen, kriteria, master data, posisi (tak diulang tiap buka halaman).
   useEffect(() => {
     if (!user) return;
-    Promise.all([listDocumentFormats(), listDocuments(), listCriteria()])
-      .then(([{ formats }, { documents: next }, { criteria: crit }]) => {
+    const admin = canManageAdmin(user);
+    Promise.all([
+      listDocumentFormats(),
+      listDocuments(),
+      listCriteria(),
+      listMasterData(),
+      listPositions(),
+      admin ? listUsers() : Promise.resolve(null),
+    ])
+      .then(([{ formats }, { documents: next }, { criteria: crit }, master, pos, usersRes]) => {
         setDocumentFormatId(formats[0]?.id ?? null);
         setDocuments(next);
         setCriteria(crit);
         setCriteriaRows(crit.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', percentage_value: '', incentive_amount: '' })));
-        if (canManageAdmin(user)) return reloadAdminData();
+        setPositions(pos.positions || []);
+        setAdminData((prev) => ({
+          users: usersRes ? usersRes.users : prev.users,
+          criteria: crit,
+          masterData: {
+            divisions: master.divisions,
+            principals: master.principals,
+            brands: master.brands,
+            regions: master.regions,
+            branches: master.branches,
+          },
+        }));
       })
       .catch((err) => toast('error', errMsg(err)));
-  }, [user, toast, reloadAdminData]);
+  }, [user, toast]);
 
   const updateSales = (field, value) => {
     if (user?.role === 'observer') return;
@@ -153,11 +174,10 @@ function App() {
       )
       .map((row) => ({
         criteria_id: row.criteria_id,
-        target_value: row.target_value != null && row.target_value !== '' ? Number(row.target_value) : null,
-        achievement_value: row.achievement_value != null && row.achievement_value !== '' ? Number(row.achievement_value) : null,
-        percentage_value:
-          row.percentage_value != null && row.percentage_value !== '' ? Number(row.percentage_value) : null,
-        incentive_amount: row.incentive_amount != null && row.incentive_amount !== '' ? Number(row.incentive_amount) : null,
+        target_value: parseMoney(row.target_value),
+        achievement_value: parseMoney(row.achievement_value),
+        percentage_value: parseMoney(row.percentage_value),
+        incentive_amount: parseMoney(row.incentive_amount),
       }));
 
   const saveDraft = async () => {
@@ -346,7 +366,8 @@ function App() {
         saved={saved}
         salesDivisi={sales.divisi}
         setSalesDivisi={(v) => updateSales('divisi', v)}
-        divisions={adminData.masterData.divisions}
+        masterData={adminData.masterData}
+        positions={positions}
       />
       </Suspense>
     </Layout>
@@ -389,6 +410,7 @@ function App() {
                 documents={documents}
                 setDocuments={setDocuments}
                 onRefresh={listDocuments}
+                positions={positions}
                 onLoad={(doc) => { loadDocument(doc); navigate('/documents'); }}
                 onDelete={removeDocument}
                 onNewDoc={() => { cancelEdit(); navigate('/documents'); }}

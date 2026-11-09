@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '../components/ui/button';
 import { canFinalizeDocument } from '../access';
 import Icon from '../components/Icon';
 import PickerChips from '../components/PickerChips';
 import ComboSelect from '../components/ComboSelect';
-import { listPositions, listMasterData } from '../api';
 import { computeTotalFor, computeGrandTotal, principalValueFor, principalAutoValue } from '../lib/golongan';
 import { monthNames } from '../lib/period';
+import { parseMoney } from '../lib/money';
 
 const TERBILANG_UNITS = ['', 'satu', 'dua', 'tiga', 'empat', 'lima', 'enam', 'tujuh', 'delapan', 'sembilan', 'sepuluh', 'sebelas'];
 function terbilangWords(n) {
@@ -351,8 +351,8 @@ function KriteriaRow({ row, onUpdate, canEdit }) {
 }
 
 function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalChange }) {
-  // Total = auto-sum of the incentive column (Gugur 50% diketik minus, jadi ikut dikurangi), overridable by typing
-  const autoSum = rows.reduce((s, r) => s + (Number(r.incentive_amount) || 0), 0);
+  // Total = auto-sum kolom insentif (angka valid saja; Gugur 50% minus ikut kurangi), overridable by typing
+  const autoSum = rows.reduce((s, r) => s + (parseMoney(r.incentive_amount) ?? 0), 0);
   const totalValue = totalOverride ?? autoSum;
 
   return (
@@ -405,16 +405,11 @@ export default function Documents({
   insentifTotal, setInsentifTotal,
   documentStatus, saved,
   salesDivisi, setSalesDivisi,
+  masterData = EMPTY_MASTER,
+  positions = [],
 }) {
-  const [positions, setPositions] = useState([]);
-  const [masterData, setMasterData] = useState(EMPTY_MASTER);
   const canEdit = ['superadmin', 'officer'].includes(user.role) && documentStatus === 'Draft';
   const canFinalize = canFinalizeDocument(user, documentStatus);
-
-  useEffect(() => {
-    listPositions().then((r) => setPositions(r.positions || [])).catch(() => setPositions([]));
-    listMasterData().then(setMasterData).catch(() => setMasterData(EMPTY_MASTER));
-  }, []);
 
   // Officer: wilayah auto-fills from own linked cabang (city → region fallback)
   const isSuper = user.role === 'superadmin';
@@ -428,17 +423,20 @@ export default function Documents({
   }, [isSuper, user.branch_ids, masterData, sales.region, updateSales]);
 
   // Sales options: officer → positions at own branches; superadmin → positions at branches in chosen kota
-  const positionsAtBranches = (branchIds) =>
-    positions.filter((p) => p.active && (p.branch_ids || []).some((id) => branchIds.includes(id)));
-  const salesOptions = isSuper
-    ? (sales.region
-        ? positionsAtBranches(masterData.branches.filter((b) => b.city === sales.region).map((b) => b.id))
-        : [])
-    : positionsAtBranches(user.branch_ids || []);
-  const salesList = (() => {
+  // (memo: dihitung ulang hanya saat inputs berubah, bukan tiap ketik di form dokumen)
+  const salesOptions = useMemo(() => {
+    const positionsAtBranches = (branchIds) =>
+      positions.filter((p) => p.active && (p.branch_ids || []).some((id) => branchIds.includes(id)));
+    return isSuper
+      ? (sales.region
+          ? positionsAtBranches(masterData.branches.filter((b) => b.city === sales.region).map((b) => b.id))
+          : [])
+      : positionsAtBranches(user.branch_ids || []);
+  }, [positions, isSuper, sales.region, masterData.branches, user.branch_ids]);
+  const salesList = useMemo(() => {
     const salesOnly = salesOptions.filter((p) => p.position_type === 'SALES');
     return salesOnly.length ? salesOnly : salesOptions;
-  })();
+  }, [salesOptions]);
 
   // Superadmin wilayah dropdown: distinct kota from active branches
   const kotaOptions = [...new Set(

@@ -1,39 +1,90 @@
-export async function apiRequest(path, options = {}) {
-  const headers = new Headers(options.headers)
-  if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+// Satu-satunya lapisan HTTP klien: CSRF double-submit, timeout 20dtk, redirect 401, format error seragam.
+// apiRequest dipakai endpoint (path diawali '/api'), `api` dipakai AuthContext (path relatif: '/auth/me').
+// Keduanya lewat buildUrl sehingga aturan BASE_URL cuma satu tempat.
+const BASE = `${import.meta.env.BASE_URL}api`;
+const LOGIN_PATH = `${import.meta.env.BASE_URL}login`.replace(/\/+$/, '');
 
-  const response = await fetch(path, {
-    ...options,
-    headers,
-    credentials: 'include',
-  })
-  const body = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    const error = new Error(body.error?.message || 'Request failed')
-    error.code = body.error?.code || 'REQUEST_FAILED'
-    error.status = response.status
-    throw error
-  }
-  return body
+function buildUrl(path) {
+  const rel = path.startsWith('/api') ? path.slice(4) : path;
+  return `${BASE}${rel}`;
 }
 
-export function login(username, password) {
-  return apiRequest('/api/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ username, password }),
-  })
+function readCookie(name) {
+  if (typeof document === 'undefined') return '';
+  const m = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return m ? decodeURIComponent(m[1]) : '';
+}
+
+async function raw(method, path, { params, data, timeout = 20000 } = {}) {
+  const qs = params ? `?${new URLSearchParams(params).toString()}` : '';
+  const headers = new Headers();
+  if (data !== undefined) headers.set('Content-Type', 'application/json');
+  if (!['get', 'head', 'options'].includes(String(method).toLowerCase())) {
+    const csrf = readCookie('pbg_csrf');
+    if (csrf) headers.set('X-CSRF-Token', csrf);
+  }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeout);
+  let res;
+  try {
+    res = await fetch(`${buildUrl(path)}${qs}`, {
+      method,
+      headers,
+      credentials: 'include',
+      body: data === undefined ? undefined : (typeof data === 'string' ? data : JSON.stringify(data)),
+      signal: ctrl.signal,
+    });
+  } catch (err) {
+    const error = new Error(err.name === 'AbortError' ? 'Timeout' : err.message);
+    error.code = 'NETWORK_ERROR';
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+  let body = null;
+  try { body = await res.json(); } catch { body = null; }
+  if (!res.ok) {
+    const error = new Error(body?.error?.message || 'Request failed');
+    error.code = body?.error?.code || 'REQUEST_FAILED';
+    error.status = res.status;
+    error.response = { status: res.status, data: body || {} };
+    if (res.status === 401 && typeof window !== 'undefined' && !window.location.pathname.startsWith(LOGIN_PATH)) {
+      window.location.href = LOGIN_PATH;
+    }
+    throw error;
+  }
+  return body;
+}
+
+// Dipakai AuthContext: api.post('/auth/login', {...}) -> BASE + path.
+export const api = {
+  get: (path, opts) => raw('get', path, opts),
+  post: (path, data) => raw('post', path, { data }),
+};
+
+export async function apiRequest(path, options = {}) {
+  const { params, body, ...rest } = options;
+  const method = rest.method || 'GET';
+  return raw(method, path, { params, data: body, ...rest });
+}
+
+export function errMsg(error) {
+  if (!error?.response) {
+    return 'Tidak dapat terhubung ke server. Pastikan API berjalan di port 3002.';
+  }
+  if (error.response.status === 429) {
+    return 'Terlalu banyak percobaan masuk, coba lagi 15 menit lagi.';
+  }
+  return (
+    error?.response?.data?.error?.message ||
+    error?.response?.data?.message ||
+    error?.message ||
+    'Terjadi kesalahan.'
+  );
 }
 
 export function devLogin(name) {
   return apiRequest(`/api/auth/dev-login?user=${encodeURIComponent(name)}`, { method: 'POST' })
-}
-
-export function logout() {
-  return apiRequest('/api/auth/logout', { method: 'POST' })
-}
-
-export function currentUser() {
-  return apiRequest('/api/auth/me')
 }
 
 export function createDocument(input) {
@@ -62,8 +113,9 @@ export function getDocument(id) {
   return apiRequest(`/api/documents/${id}`)
 }
 
-export function listDocuments() {
-  return apiRequest('/api/documents')
+// Default batas 500: daftar tumbuh per bulan, muat 500 teratas cukup untuk bertahun-tahun kantor.
+export function listDocuments(params = { limit: 500 }) {
+  return apiRequest('/api/documents', { params })
 }
 
 export function listDocumentFormats() {

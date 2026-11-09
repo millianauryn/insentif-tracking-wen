@@ -4,7 +4,7 @@ import { Database, FileText, GitBranch, Printer } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useAuth } from '../context/AuthContext';
-import { errMsg } from '../lib/api';
+import { errMsg } from '../api';
 
 export default function Login() {
   const { user, loading, login, devLogin } = useAuth();

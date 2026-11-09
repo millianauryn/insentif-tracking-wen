@@ -59,7 +59,7 @@ export default function Master({ data, onRefresh, user }) {
   // Akun tab state
   const [form, setForm] = useState({ username: '', password: '', role: 'officer', branch_ids: [], position_id: '', sales_code: '' });
   const [editingUser, setEditingUser] = useState(null);
-const [createUser, setCreateUser] = useState(false);
+const [createUserOpen, setCreateUserOpen] = useState(false);
   const [userError, setUserError] = useState('');
   const usernameRef = useRef(null);
 
@@ -202,7 +202,7 @@ const [createUser, setCreateUser] = useState(false);
 
   const cancelEdit = () => {
     setEditingUser(null);
-    setCreateUser(false);
+    setCreateUserOpen(false);
     resetUserForm();
     setUserError('');
     usernameRef.current?.blur();
@@ -686,14 +686,14 @@ const [createUser, setCreateUser] = useState(false);
             <h2>Akun</h2>
             <p>Daftar akun aktif dan nonaktif.</p>
           </div>
-          {!editingUser && !createUser && (
+          {!editingUser && !createUserOpen && (
             <div className="flex flex-wrap items-center gap-2">
               <input type="text" className="input flex-1 min-w-[200px]" placeholder="Cari username, role…" value={masterSearch} onChange={(e) => { setMasterSearch(e.target.value); setMasterPage(1); }} />
-              <Button onClick={() => setCreateUser(true)}>Tambah Akun</Button>
+              <Button onClick={() => setCreateUserOpen(true)}>Tambah Akun</Button>
             </div>
           )}
         </div>
-        {(createUser || editingUser) && (
+        {(createUserOpen || editingUser) && (
           <div className="modal-overlay" onClick={cancelEdit}>
             <div className="modal-content modal-wide" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">

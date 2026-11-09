@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import api from '../lib/api';
-import { queryClient } from '../lib/queryClient';
+import { api } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -13,35 +12,29 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     api
       .get('/auth/me')
-      .then((res) => setUser(res.data.user))
+      .then((res) => setUser(res.user))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);
 
   async function login(username, password) {
     const res = await api.post('/auth/login', { username, password });
-    // Sesi BARU → buang SEMUA cache query. Respons server per-user
-    // (list & stats officer ter-scope cabang) — tanpa ini, user berikut
-    // di tab yang sama bisa melihat data user sebelumnya sampai staleTime.
-    queryClient.clear();
-    setUser(res.data.user);
-    return res.data.user;
+    setUser(res.user);
+    return res.user;
   }
 
   async function devLogin(name) {
     const res = await api.post(`/auth/dev-login?user=${name}`);
-    queryClient.clear();
-    setUser(res.data.user);
-    return res.data.user;
+    setUser(res.user);
+    return res.user;
   }
 
   async function logout() {
     try {
       await api.post('/auth/logout');
     } catch {
-      // abaikan: tetap bersihkan state & cache sampel
+      // abaikan: state tetap dibersihkan
     }
-    queryClient.clear();
     setUser(null);
   }
 

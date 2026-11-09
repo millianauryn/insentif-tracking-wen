@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -9,22 +9,13 @@ import {
   SelectItem,
   SelectValue,
 } from '../components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '../components/ui/dialog';
 import { Badge } from '../components/ui/badge';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
 import { fromApiPeriod } from '../lib/period';
-import { errMsg } from '../lib/api';
-import { listPositions, finalizeDocument, getDocument } from '../api';
+import { errMsg, finalizeDocument, getDocument } from '../api';
 import ListPager from '../components/ListPager';
-import { Search, ChevronLeft, ChevronRight, Plus, Loader2, X, FolderOpen, RotateCcw } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Plus, Loader2, FolderOpen, RotateCcw } from 'lucide-react';
 
 const fmtNum = (n) => (n === null || n === undefined || n === '' ? '-' : Number(n).toLocaleString('id-ID'));
 const pctOf = (a, t) => (Number(t) > 0 ? (Number(a) / Number(t)) * 100 : 0);
@@ -170,10 +161,6 @@ function periodLabel(key) {
   return PERIOD_LABELS[key] || key;
 }
 
-function positionOf(positions, name) {
-  return positions.find((p) => p.name === name);
-}
-
 function makeBadge(status) {
   if (String(status).toLowerCase() === 'final') {
     return (
@@ -191,8 +178,10 @@ function makeBadge(status) {
   );
 }
 
-export default function Insetif({ documents, setDocuments, onRefresh, onLoad, onDelete, onNewDoc }) {
+export default function Insetif({ documents, setDocuments, onRefresh, positions = [], onLoad, onDelete, onNewDoc }) {
   const toast = useToast();
+  // Map nama -> posisi: lookup per baris O(1), bukan find O(n) tiap render.
+  const positionByName = useMemo(() => new Map(positions.map((p) => [p.name, p])), [positions]);
   const { user } = useAuth();
   const canFinalize = ['observer', 'superadmin'].includes(user?.role);
   const isDraft = (s) => String(s).toLowerCase() !== 'final';
@@ -201,7 +190,6 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
   const openDocParam = searchParams.get('openDoc') || '';
 
   const [search, setSearch] = useState(nameParam);
-  const [positions, setPositions] = useState([]);
   const [bmId, setBmId] = useState('');
   const [spvId, setSpvId] = useState('');
   const [salesId, setSalesId] = useState('');
@@ -213,23 +201,9 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
   const [activeDocId, setActiveDocId] = useState(null);
   const [fullDoc, setFullDoc] = useState(null);
   const [fullLoading, setFullLoading] = useState(false);
-  const [newDialogOpen, setNewDialogOpen] = useState(false);
-  const [newFormData, setNewFormData] = useState({
-    sales: '',
-    product: '',
-    bm: 'Andi Pratama',
-    spv: 'Budi Santoso',
-    period: '2026-11',
-    status: 'draft',
-  });
-  const [newFormErrors, setNewFormErrors] = useState({});
 
   const listRef = useRef(null);
   const detailRef = useRef(null);
-
-  useEffect(() => {
-    listPositions().then((r) => setPositions(r.positions || [])).catch(() => setPositions([]));
-  }, []);
 
   useEffect(() => {
     if (!nameParam || !positions.length) return;
@@ -348,37 +322,6 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
     }
   };
 
-  const handleNewDocSubmit = (e) => {
-    e.preventDefault();
-    const errors = {};
-    if (!newFormData.sales.trim()) errors.sales = 'Nama sales wajib diisi.';
-    if (!newFormData.product.trim()) errors.product = 'Nama produk wajib diisi.';
-    if (Object.keys(errors).length) {
-      setNewFormErrors(errors);
-      return;
-    }
-    const doc = {
-      id: Date.now(),
-      sales: newFormData.sales.trim(),
-      product: newFormData.product.trim(),
-      bm: newFormData.bm,
-      spv: newFormData.spv,
-      period: newFormData.period,
-      status: newFormData.status,
-    };
-    setDocuments((prev) => [doc, ...prev]);
-    setNewDialogOpen(false);
-    setNewFormData({ sales: '', product: '', bm: 'Andi Pratama', spv: 'Budi Santoso', period: '2026-11', status: 'draft' });
-    setNewFormErrors({});
-    toast('success', 'Dokumen baru berhasil ditambahkan.');
-  };
-
-  const validateField = (name) => {
-    if (name === 'sales' && !newFormData.sales.trim()) return 'Nama sales wajib diisi.';
-    if (name === 'product' && !newFormData.product.trim()) return 'Nama produk wajib diisi.';
-    return '';
-  };
-
   const activeDoc = documents.find((d) => d.id === activeDocId);
   const canEditDoc = !!activeDoc && isDraft(activeDoc.status) && ['officer', 'superadmin'].includes(user?.role);
 
@@ -479,7 +422,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
               <div className="flex flex-col divide-y divide-[var(--line)]" id="docList" aria-label="Daftar dokumen tersimpan" role="list">
                 {paginatedDocs.map((doc) => {
                   const isSelected = doc.id === activeDocId;
-                  const pos = positionOf(positions, doc.salesman);
+                  const pos = positionByName.get(doc.salesman);
                   return (
                     <div
                       key={doc.id}
@@ -695,7 +638,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
                 variant="default"
                 size="sm"
                 type="button"
-                onClick={() => setNewDialogOpen(true)}
+                onClick={onNewDoc}
                 className="flex-1 gap-1.5 h-9 justify-center"
               >
                 <Plus className="size-4" aria-hidden="true" />
@@ -790,7 +733,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
               <div className="flex flex-col gap-2 px-3 pb-4" id="docList" aria-label="Daftar dokumen tersimpan" role="list">
                 {paginatedDocs.map((doc) => {
                   const isSelected = doc.id === activeDocId;
-                  const pos = positionOf(positions, doc.salesman);
+                  const pos = positionByName.get(doc.salesman);
                   return (
                     <article
                       key={doc.id}
@@ -958,140 +901,6 @@ export default function Insetif({ documents, setDocuments, onRefresh, onLoad, on
           </div>
         </div>
       )}
-
-      {/* New Document Dialog */}
-      <Dialog open={newDialogOpen} onOpenChange={setNewDialogOpen}>
-        <DialogContent className="max-w-[560px] sm:max-w-[560px]">
-          <DialogHeader>
-            <DialogTitle>Dokumen Baru</DialogTitle>
-            <DialogDescription>Isi detail dokumen penjualan yang ingin disimpan.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleNewDocSubmit} noValidate>
-            <div className="grid grid-cols-1 gap-4 py-2">
-              <div className="col-span-1">
-                <label htmlFor="f-sales" className="block text-[12.5px] font-semibold text-[var(--ink)] mb-1">
-                  Nama sales <span className="text-[var(--danger)] font-semibold" aria-hidden="true">*</span>
-                </label>
-                <Input
-                  id="f-sales"
-                  name="sales"
-                  type="text"
-                  placeholder="Contoh: Rina Kusuma"
-                  value={newFormData.sales}
-                  onChange={(e) => setNewFormData((prev) => ({ ...prev, sales: e.target.value }))}
-                  onBlur={() => setNewFormErrors((prev) => ({ ...prev, sales: validateField('sales') }))}
-                  className={`h-10 ${newFormErrors.sales ? 'border-[var(--danger)] focus-visible:ring-[var(--danger)]/40' : ''}`}
-                  aria-invalid={newFormErrors.sales ? 'true' : 'false'}
-                  aria-describedby={newFormErrors.sales ? 'f-sales-err' : undefined}
-                  required
-                  autoComplete="off"
-                />
-                {newFormErrors.sales && (
-                  <p id="f-sales-err" className="mt-1 text-[12px] text-[var(--danger)]" role="alert">
-                    {newFormErrors.sales}
-                  </p>
-                )}
-              </div>
-              <div className="col-span-1">
-                <label htmlFor="f-product" className="block text-[12.5px] font-semibold text-[var(--ink)] mb-1">
-                  Produk <span className="text-[var(--danger)] font-semibold" aria-hidden="true">*</span>
-                </label>
-                <Input
-                  id="f-product"
-                  name="product"
-                  type="text"
-                  placeholder="Contoh: Sabun Cair Refill 1L"
-                  value={newFormData.product}
-                  onChange={(e) => setNewFormData((prev) => ({ ...prev, product: e.target.value }))}
-                  onBlur={() => setNewFormErrors((prev) => ({ ...prev, product: validateField('product') }))}
-                  className={`h-10 ${newFormErrors.product ? 'border-[var(--danger)] focus-visible:ring-[var(--danger)]/40' : ''}`}
-                  aria-invalid={newFormErrors.product ? 'true' : 'false'}
-                  aria-describedby={newFormErrors.product ? 'f-product-err' : undefined}
-                  required
-                  autoComplete="off"
-                />
-                {newFormErrors.product && (
-                  <p id="f-product-err" className="mt-1 text-[12px] text-[var(--danger)]" role="alert">
-                    {newFormErrors.product}
-                  </p>
-                )}
-              </div>
-              <div className="col-span-1">
-                <label htmlFor="f-bm" className="block text-[12.5px] font-semibold text-[var(--ink)] mb-1">BM</label>
-                <Select value={newFormData.bm} onValueChange={(v) => setNewFormData((prev) => ({ ...prev, bm: v }))}>
-                  <SelectTrigger id="f-bm" className="h-10 w-full">
-                    <SelectValue placeholder="Pilih BM" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Andi Pratama">Andi Pratama</SelectItem>
-                    <SelectItem value="Sari Wijaya">Sari Wijaya</SelectItem>
-                    <SelectItem value="Dimas Nugroho">Dimas Nugroho</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="col-span-1">
-                <label htmlFor="f-spv" className="block text-[12.5px] font-semibold text-[var(--ink)] mb-1">SPV</label>
-                <Select value={newFormData.spv} onValueChange={(v) => setNewFormData((prev) => ({ ...prev, spv: v }))}>
-                  <SelectTrigger id="f-spv" className="h-10 w-full">
-                    <SelectValue placeholder="Pilih SPV" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Budi Santoso">Budi Santoso</SelectItem>
-                    <SelectItem value="Maya Kartika">Maya Kartika</SelectItem>
-                    <SelectItem value="Rizky Hidayat">Rizky Hidayat</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="col-span-1">
-                <label htmlFor="f-period" className="block text-[12.5px] font-semibold text-[var(--ink)] mb-1">Periode</label>
-                <Select value={newFormData.period} onValueChange={(v) => setNewFormData((prev) => ({ ...prev, period: v }))}>
-                  <SelectTrigger id="f-period" className="h-10 w-full">
-                    <SelectValue placeholder="Pilih Periode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="2026-10">Oktober 2026</SelectItem>
-                    <SelectItem value="2026-11">November 2026</SelectItem>
-                    <SelectItem value="2026-12">Desember 2026</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="col-span-1">
-                <fieldset className="border-0 p-0 m-0 min-w-0">
-                  <legend className="block text-[12.5px] font-semibold text-[var(--ink)] mb-2">Status</legend>
-                  <div className="flex gap-6">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="status"
-                        value="draft"
-                        checked={newFormData.status === 'draft'}
-                        onChange={(e) => setNewFormData((prev) => ({ ...prev, status: e.target.value }))}
-                        className="h-4 w-4 accent-[var(--primary)]"
-                      />
-                      <span className="text-[13px] font-medium text-[var(--ink)]">Draft</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="status"
-                        value="final"
-                        checked={newFormData.status === 'final'}
-                        onChange={(e) => setNewFormData((prev) => ({ ...prev, status: e.target.value }))}
-                        className="h-4 w-4 accent-[var(--primary)]"
-                      />
-                      <span className="text-[13px] font-medium text-[var(--ink)]">Final</span>
-                    </label>
-                  </div>
-                </fieldset>
-              </div>
-            </div>
-            <DialogFooter className="gap-2">
-              <Button type="button" variant="outline" onClick={() => setNewDialogOpen(false)}>Batal</Button>
-              <Button type="submit" variant="default">Simpan dokumen</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
