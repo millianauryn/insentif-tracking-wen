@@ -1,0 +1,17 @@
+# /etc/systemd/system/incentive-api.service
+[Unit]
+Description=Incentive Tracking API (Express :3002)
+After=network.target
+
+[Service]
+Type=simple
+User=incentive
+WorkingDirectory=/srv/incentive/server
+EnvironmentFile=/etc/incentive-api.env
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

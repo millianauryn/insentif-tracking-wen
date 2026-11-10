@@ -23,4 +23,4 @@ Health: `GET http://localhost:3002/api/health` → `{"status":"ok"}`
 
 ## Login
 
-UI: `/login` (username huruf kecil, password ≥6). Rate limit 10/15 mnt. Dev cepat tidak lewat password (`?__seed=1` / server `dev-login`, bukan production).
+UI: `/login` (username huruf kecil, password ≥6). Rate limit 10/15 mnt. Masuk cepat hanya di development (server `dev-login`, mati di production).
