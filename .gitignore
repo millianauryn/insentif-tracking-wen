@@ -23,3 +23,10 @@ npm-debug.log*
 *.sqlite
 *.sqlite-*
 server/data/
+
+# Agent/tool caches — output lokal, bukan bagian produk
+.taste-skill/
+.superpowers/
+graphify-out/
+opencode.jsonc
+skills-lock.json
