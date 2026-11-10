@@ -1,0 +1,31 @@
+# Jalankan: cp .env.example .env (isi DOMAIN), lalu `docker compose up -d --build`
+services:
+  api:
+    build: ./server
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      CLIENT_ORIGIN: https://${DOMAIN}
+    ports:
+      - "127.0.0.1:3002:3002" # health check dari host, tidak publik
+    volumes:
+      - ./data:/app/data # sqlite di /srv/incentive/data/incentive.sqlite
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3002/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  web:
+    build: ./client
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      DOMAIN: ${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped

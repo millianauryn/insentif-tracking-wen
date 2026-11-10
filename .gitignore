@@ -23,6 +23,7 @@ npm-debug.log*
 *.sqlite
 *.sqlite-*
 server/data/
+data/ # bind mount docker compose (sqlite produksi)
 
 # Agent/tool caches — output lokal, bukan bagian produk
 .taste-skill/

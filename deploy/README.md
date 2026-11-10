@@ -1,6 +1,44 @@
 # Deploy
 
-Production: nginx sajikan `client/dist`, Express jalan sebagai API di `:3002`. Tidak ada Dockerfile — install manual di server Linux.
+Production: sajikan `client/dist` sebagai web, Express jalan sebagai API di `:3002`. Dua jalur: **Docker (disarankan)** atau manual (nginx + systemd di bawah).
+
+## Docker (disarankan)
+
+Domain dan path diatur di **satu file `.env`**:
+
+- **Domain** → `DOMAIN=` di `.env` (contoh `incentive.example.com`). DNS A record domain itu harus menunjuk IP server; port 80 + 443 harus terbuka. Caddy (container `web`) ambil sertifikat Let's Encrypt otomatis — tanpa certbot.
+- **Path** → repo di `/srv/incentive`; database produksi di `/srv/incentive/data/incentive.sqlite` (bind mount `./data:/app/data`); file web tidak ada di host (tertanam di image `web`).
+
+```bash
+git clone <repo-url> /srv/incentive
+cd /srv/incentive
+cp .env.example .env         # isi DOMAIN, SUPERADMIN_PASSWORD
+docker compose up -d --build
+```
+
+Verifikasi:
+
+```bash
+curl https://<domain>/api/health     # → {"status":"ok",...}
+docker compose ps                    # api healthy, web running
+```
+
+Operasi harian:
+
+```bash
+docker compose logs -f api           # log API
+docker compose restart api           # restart API
+git pull && docker compose up -d --build   # update
+# backup: salin /srv/incentive/data/incentive.sqlite
+```
+
+Catatan Docker:
+
+- `NODE_ENV=production` dipaksa di `docker-compose.yml` — dev-login mati, cookie `secure` aktif (itu sebabnya HTTPS wajib).
+- `SUPERADMIN_PASSWORD` hanya dipakai saat database pertama dibuat; sesudah itu ganti di aplikasi.
+- Tanpa Docker Desktop/Engine, `docker compose` tidak jalan — pakai jalur manual di bawah.
+
+## Manual (tanpa Docker)
 
 ## Posisi di server
 
