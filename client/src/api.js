@@ -73,10 +73,6 @@ export function errMsg(error) {
   );
 }
 
-export function devLogin(name) {
-  return apiRequest(`/api/auth/dev-login?user=${encodeURIComponent(name)}`, { method: 'POST' })
-}
-
 export function createDocument(input) {
   return apiRequest('/api/documents', {
     method: 'POST',

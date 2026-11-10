@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { apiRequest, devLogin } from './api'
+import { apiRequest } from './api'
 
 describe('apiRequest', () => {
   it('sends credentials for cookie sessions and returns JSON', async () => {
@@ -23,19 +23,5 @@ describe('apiRequest', () => {
       message: 'Invalid credentials',
       status: 401,
     })
-  })
-})
-
-describe('devLogin', () => {
-  it('posts to the dev endpoint with the name in the query', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ user: { id: 1, username: 'super', role: 'superadmin' } }), { status: 200 }),
-    ))
-
-    await expect(devLogin('super')).resolves.toEqual({ user: { id: 1, username: 'super', role: 'superadmin' } })
-    expect(fetch).toHaveBeenCalledWith('/api/auth/dev-login?user=super', expect.objectContaining({
-      method: 'POST',
-      credentials: 'include',
-    }))
   })
 })
