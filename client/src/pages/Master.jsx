@@ -62,7 +62,7 @@ export default function Master({ data, onRefresh, user }) {
   const [inlinePrincipal, setInlinePrincipal] = useState({}); // divisionId -> {name, code, busy}
 
   // Akun tab state
-  const [form, setForm] = useState({ username: '', password: '', role: 'officer', branch_ids: [], position_id: '', sales_code: '', avatar_key: '', avatar_color: AVATAR_COLORS[0] });
+  const [form, setForm] = useState({ username: '', password: '', role: 'officer', branch_ids: [], avatar_key: '', avatar_color: AVATAR_COLORS[0] });
   const [editingUser, setEditingUser] = useState(null);
 const [createUserOpen, setCreateUserOpen] = useState(false);
   const [userError, setUserError] = useState('');
@@ -203,7 +203,7 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
   };
 
   // ---------- Akun tab ----------
-  const resetUserForm = () => setForm({ username: '', password: '', role: 'officer', branch_ids: [], position_id: '', sales_code: '', avatar_key: '', avatar_color: AVATAR_COLORS[0] });
+  const resetUserForm = () => setForm({ username: '', password: '', role: 'officer', branch_ids: [], avatar_key: '', avatar_color: AVATAR_COLORS[0] });
 
   const cancelEdit = () => {
     setEditingUser(null);
@@ -227,8 +227,6 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
         username: form.username.trim().toLowerCase(),
         role: form.role,
         branch_ids: form.branch_ids.map(Number),
-        position_id: form.position_id ? Number(form.position_id) : undefined,
-        sales_code: form.sales_code.trim() || undefined,
         avatar_key: form.avatar_key || null,
         avatar_color: form.avatar_color || AVATAR_COLORS[0]
       };
@@ -254,8 +252,6 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
       password: '',
       role: target.role,
       branch_ids: (target.branch_ids || []).map(Number),
-      position_id: target.position_id || '',
-      sales_code: target.sales_code || '',
       avatar_key: target.avatar_key || '',
       avatar_color: target.avatar_color || AVATAR_COLORS[0]
     });
@@ -360,10 +356,6 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
   const branchItems = masterData.branches
     .filter((b) => b.is_active !== 0 && b.active !== 0)
     .map((b) => ({ id: b.id, name: b.name, subtitle: masterData.regions.find((r) => r.id === b.region_id)?.name || '' }));
-
-  const filteredPositions = positions.filter((p) =>
-    p.active !== 0 && p.position_type === 'SALES' && p.branch_ids.some((bid) => form.branch_ids.includes(bid))
-  );
 
   const tabConfig = {
     division: {
@@ -724,56 +716,11 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
                     searchPlaceholder="Cari cabang... (mis. Banjarmasin, Kapuas)"
                     items={branchItems}
                     selected={form.branch_ids}
-                    onChange={(ids) => {
-                      const next = { ...form, branch_ids: ids };
-                      if (form.position_id) {
-                        const pos = positions.find((p) => p.id === Number(form.position_id));
-                        if (pos && !pos.branch_ids.some((bid) => ids.includes(bid))) {
-                          next.position_id = '';
-                        }
-                      }
-                      setForm(next);
-                    }}
+                    onChange={(ids) => setForm({ ...form, branch_ids: ids })}
                   />
                   {form.role === 'officer' && form.branch_ids.length === 0 && (
                     <p className="text-[12px] text-rose-600 mt-1 font-semibold">Wajib pilih minimal satu cabang untuk Officer.</p>
                   )}
-                </div>
-
-                {/* Position dropdown, filtered by selected branches */}
-                {form.role === 'officer' && (
-                  <div className="col-span-2">
-                    <label className="text-[13px] font-semibold">Jabatan (Sales)</label>
-                    <select
-                      className="input w-full mt-1"
-                      value={form.position_id || ''}
-                      onChange={(e) => setForm({ ...form, position_id: e.target.value || '' })}
-                    >
-                      <option value="">-- Pilih Jabatan --</option>
-                      {filteredPositions.map((p) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                    {form.branch_ids.length === 0 && (
-                      <p className="text-[12px] text-ink-400 mt-1">Pilih cabang dulu untuk melihat jabatan.</p>
-                    )}
-                    {form.branch_ids.length > 0 && filteredPositions.length === 0 && (
-                      <p className="text-[12px] text-amber-600 mt-1">Tidak ada jabatan SALES di cabang terpilih.</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Sales code (optional) */}
-                <div className="col-span-2">
-                  <label className="text-[13px] font-semibold">Kode Sales</label>
-                  <input
-                    className="input w-full mt-1"
-                    type="text"
-                    value={form.sales_code || ''}
-                    onChange={(e) => setForm({ ...form, sales_code: e.target.value })}
-                    placeholder="Contoh: 11111"
-                  />
-                  <p className="text-[12px] text-ink-400 mt-1">Opsional. Ditampilkan di dashboard sebagai (kode nama).</p>
                 </div>
 
                 {/* Icon akun: superadmin pilih emoji + warna; kosong → inisial nama */}
