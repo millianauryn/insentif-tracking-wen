@@ -26,6 +26,8 @@ describe('Dev quick-login API', () => {
     configureAuthDatabase(db);
     request = createTestApp(db);
     previousNodeEnv = process.env.NODE_ENV;
+    // Kunci env agar suite hijau dari host mana pun (termasuk NODE_ENV=production).
+    process.env.NODE_ENV = 'development';
   });
 
   afterEach(() => {

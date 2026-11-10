@@ -248,22 +248,24 @@ function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReord
           </tr>
         </thead>
         {canEdit && (
-          <tr className="golongan-divisi-row">
-            <td colSpan={6}>
-              <label className="text-[11px] font-semibold text-ink-700 mr-2">Divisi</label>
-              <select
-                value={salesDivisi || ''}
-                onChange={(e) => setSalesDivisi(e.target.value)}
-                className="input text-[11px] w-full"
-              >
-                <option value="">-- Pilih Divisi --</option>
-                {(divisions || []).filter((d) => d.is_active !== 0 && d.active !== 0).map((d) => (
-                  <option key={d.id} value={d.name}>{d.name}</option>
-                ))}
-              </select>
-            </td>
-            <td className="text-center" />
-          </tr>
+          <tbody>
+            <tr className="golongan-divisi-row">
+              <td colSpan={6}>
+                <label className="text-[11px] font-semibold text-ink-700 mr-2">Divisi</label>
+                <select
+                  value={salesDivisi || ''}
+                  onChange={(e) => setSalesDivisi(e.target.value)}
+                  className="input text-[11px] w-full"
+                >
+                  <option value="">-- Pilih Divisi --</option>
+                  {(divisions || []).filter((d) => d.is_active !== 0 && d.active !== 0).map((d) => (
+                    <option key={d.id} value={d.name}>{d.name}</option>
+                  ))}
+                </select>
+              </td>
+              <td className="text-center" />
+            </tr>
+          </tbody>
         )}
         <tbody>
           {rows.map((row, index) => (
