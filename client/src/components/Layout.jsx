@@ -161,7 +161,7 @@ function SideNav({ onNavigate, collapsed = false, onToggle }) {
       <div className="mt-auto pt-4">
         <div className={`rounded-lg border border-border bg-white ${collapsed ? 'p-2' : 'p-3'}`}>
           <div className={`flex items-center gap-3 ${collapsed ? 'flex-col' : ''}`}>
-            <Avatar name={user?.name || user?.username} color={user?.avatar_color} emoji={user?.avatar_key} avatar_letter={user?.avatar_letter} size="md" />
+            <Avatar name={user?.name || user?.username} color={user?.avatar_color} emoji={user?.avatar_key} size="md" />
             {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-bold text-ink-900">{user?.name || user?.username}</p>
@@ -270,7 +270,7 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
                   {user?.role}
                 </p>
               </div>
-              <Avatar name={user?.name || user?.username} color={user?.avatar_color} emoji={user?.avatar_key} avatar_letter={user?.avatar_letter} size="sm" ring />
+              <Avatar name={user?.name || user?.username} color={user?.avatar_color} emoji={user?.avatar_key} size="sm" ring />
             </div>
           </div>
         </header>

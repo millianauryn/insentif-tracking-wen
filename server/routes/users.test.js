@@ -177,23 +177,6 @@ describe('Users and Master Data API', () => {
       expect(after.body.users.find((u) => u.username === 'avataruser')).toMatchObject({ avatar_key: null, avatar_color: '#E11D48' });
     });
 
-    it('accepts a picked letter avatar', async () => {
-      const created = await request
-        .post('/api/users')
-        .set('Authorization', 'Bearer superadmin-token')
-        .send({ username: 'letteruser', password: 'password123', role: 'observer', avatar_letter: 'x', avatar_color: '#0C5848' })
-        .expect(201);
-      expect(created.body.user.avatar_letter).toBe('X');
-
-      await request
-        .patch(`/api/users/${created.body.user.id}`)
-        .set('Authorization', 'Bearer superadmin-token')
-        .send({ avatar_letter: null })
-        .expect(200);
-      const after = await request.get('/api/users').set('Authorization', 'Bearer superadmin-token').expect(200);
-      expect(after.body.users.find((u) => u.username === 'letteruser').avatar_letter).toBeNull();
-    });
-
     it('should delete a user', async () => {
       // First create a user to delete
       const createResponse = await request

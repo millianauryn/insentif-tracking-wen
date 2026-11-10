@@ -71,9 +71,6 @@ function migrateDatabase(db) {
   if (!userCols.includes('avatar_key')) {
     db.exec('ALTER TABLE users ADD COLUMN avatar_key TEXT');
   }
-  if (!userCols.includes('avatar_letter')) {
-    db.exec('ALTER TABLE users ADD COLUMN avatar_letter TEXT');
-  }
   if (!userCols.includes('avatar_color')) {
     db.exec('ALTER TABLE users ADD COLUMN avatar_color TEXT');
   }

@@ -20,7 +20,7 @@ function requireAuth(req, res, next) {
 
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
   const session = getDb().prepare(`
-    SELECT s.*, u.id AS userId, u.username, u.role, u.avatar_key, u.avatar_letter, u.avatar_color
+    SELECT s.*, u.id AS userId, u.username, u.role, u.avatar_key, u.avatar_color
     FROM sessions s
     JOIN users u ON s.user_id = u.id
     WHERE s.token_hash = ? AND s.expires_at > datetime('now') AND u.active = 1
@@ -30,7 +30,7 @@ function requireAuth(req, res, next) {
     return res.status(401).json({ error: { code: 'AUTH_INVALID', message: 'Invalid or expired session' } });
   }
 
-  req.user = { id: session.userId, username: session.username, role: session.role, avatar_key: session.avatar_key, avatar_letter: session.avatar_letter, avatar_color: session.avatar_color };
+  req.user = { id: session.userId, username: session.username, role: session.role, avatar_key: session.avatar_key, avatar_color: session.avatar_color };
   next();
 }
 
