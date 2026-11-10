@@ -14,7 +14,6 @@ import {
   Clock,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import Avatar from './Avatar';
 import pbgLogo from '../assets/logo-pbg.png';
 
 const NAV = [
@@ -162,7 +161,7 @@ function SideNav({ onNavigate, collapsed = false, onToggle }) {
       <div className="mt-auto pt-4">
         <div className={`rounded-lg border border-border bg-white ${collapsed ? 'p-2' : 'p-3'}`}>
           <div className={`flex items-center gap-3 ${collapsed ? 'flex-col' : ''}`}>
-            <Avatar name={user?.name || user?.username} color={user?.avatar_color} emoji={user?.avatar_key} size="md" />
+            <img src={pbgLogo} alt={user?.name || user?.username} className="h-8 w-8 shrink-0 object-contain" />
             {!collapsed && (
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-bold text-ink-900">{user?.name}</p>
@@ -271,7 +270,7 @@ export default function Layout({ title, breadcrumb = [], actions, children }) {
                   {user?.role}
                 </p>
               </div>
-              <Avatar name={user?.name || user?.username} color={user?.avatar_color} emoji={user?.avatar_key} size="sm" ring />
+              <img src={pbgLogo} alt={user?.name || user?.username} className="h-6 w-6 shrink-0 object-contain" />
             </div>
           </div>
         </header>
