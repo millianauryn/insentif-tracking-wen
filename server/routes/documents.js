@@ -97,7 +97,13 @@ function createDocumentsRouter(db, options = {}) {
       throw error;
     }
     if (req.user.role === 'superadmin' && document.status === 'Final') {
-      writeAudit(db, req.user.id, 'UPDATE', 'incentive_document', document.id, { ...document, audit_reason: String(input.audit_reason || '').trim() }, getDocument(db, document.id));
+      // Audit: hanya baris skalar (tanpa golongan/kriteria children) agar baris tidak membengkak.
+      const scalars = (d) => ({
+        id: d.id, salesman: d.salesman, product: d.product, period: d.period,
+        status: d.status, wilayah: d.wilayah, divisi: d.divisi ?? null,
+        insentif_total: d.insentif_total, kwitansi: d.kwitansi ?? null,
+      });
+      writeAudit(db, req.user.id, 'UPDATE', 'incentive_document', document.id, { ...scalars(document), audit_reason: String(input.audit_reason || '').trim() }, scalars(getDocument(db, document.id)));
     }
     res.json({ document: getDocument(db, document.id) });
   });
