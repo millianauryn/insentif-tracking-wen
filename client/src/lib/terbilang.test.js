@@ -16,7 +16,8 @@ describe('terbilang', () => {
     expect(terbilang(0)).toBe('Nol rupiah');
     expect(terbilang('')).toBe('Nol rupiah');
     expect(terbilang(-500)).toBe('Minus Lima ratus rupiah');
-    expect(terbilang('862.000')).toBe('Nol rupiah'); // format ribuan bukan angka valid
+    expect(terbilang('862.000')).toBe('Delapan ratus enam puluh dua ribu rupiah');
+    expect(terbilang('abc')).toBe('Nol rupiah');
   });
 
   it('truncates decimals', () => {

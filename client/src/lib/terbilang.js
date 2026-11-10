@@ -17,7 +17,10 @@ function terbilangWords(n) {
 }
 
 export function terbilang(n) {
-  const num = Math.trunc(Number(n) || 0);
+  // String = teks input pengguna: buang pemisah ribuan (sama dengan input kwitansi).
+  const num = typeof n === 'string'
+    ? Math.trunc(Number(n.replace(/[^\d-]/g, '')) || 0)
+    : Math.trunc(Number(n) || 0);
   if (!num) return 'Nol rupiah';
   const words = terbilangWords(Math.abs(num));
   const cap = words.charAt(0).toUpperCase() + words.slice(1);
