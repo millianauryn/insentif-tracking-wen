@@ -156,6 +156,44 @@ describe('Users and Master Data API', () => {
       expect(response.body.message).toBe('User updated');
     });
 
+    it('stores superadmin-picked avatar', async () => {
+      const created = await request
+        .post('/api/users')
+        .set('Authorization', 'Bearer superadmin-token')
+        .send({ username: 'avataruser', password: 'password123', role: 'observer', avatar_key: '🦊', avatar_color: '#3B82F6' })
+        .expect(201);
+      expect(created.body.user.avatar_key).toBe('🦊');
+      expect(created.body.user.avatar_color).toBe('#3B82F6');
+
+      const list = await request.get('/api/users').set('Authorization', 'Bearer superadmin-token').expect(200);
+      expect(list.body.users.find((u) => u.username === 'avataruser')).toMatchObject({ avatar_key: '🦊', avatar_color: '#3B82F6' });
+
+      await request
+        .patch(`/api/users/${created.body.user.id}`)
+        .set('Authorization', 'Bearer superadmin-token')
+        .send({ avatar_key: null, avatar_color: '#E11D48' })
+        .expect(200);
+      const after = await request.get('/api/users').set('Authorization', 'Bearer superadmin-token').expect(200);
+      expect(after.body.users.find((u) => u.username === 'avataruser')).toMatchObject({ avatar_key: null, avatar_color: '#E11D48' });
+    });
+
+    it('accepts a picked letter avatar', async () => {
+      const created = await request
+        .post('/api/users')
+        .set('Authorization', 'Bearer superadmin-token')
+        .send({ username: 'letteruser', password: 'password123', role: 'observer', avatar_letter: 'x', avatar_color: '#0C5848' })
+        .expect(201);
+      expect(created.body.user.avatar_letter).toBe('X');
+
+      await request
+        .patch(`/api/users/${created.body.user.id}`)
+        .set('Authorization', 'Bearer superadmin-token')
+        .send({ avatar_letter: null })
+        .expect(200);
+      const after = await request.get('/api/users').set('Authorization', 'Bearer superadmin-token').expect(200);
+      expect(after.body.users.find((u) => u.username === 'letteruser').avatar_letter).toBeNull();
+    });
+
     it('should delete a user', async () => {
       // First create a user to delete
       const createResponse = await request

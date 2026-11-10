@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS users (
     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     sales_code TEXT,
     position_id INTEGER REFERENCES positions(id) ON DELETE SET NULL,
+    avatar_key TEXT,
+    avatar_letter TEXT,
+    avatar_color TEXT,
     active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))

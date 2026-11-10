@@ -89,7 +89,7 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
       return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Username must be lowercase and password must contain at least 6 characters' } });
     }
 
-    const user = db.prepare('SELECT id, username, password_hash, role, active FROM users WHERE username = ?').get(username);
+    const user = db.prepare('SELECT id, username, password_hash, role, active, avatar_key, avatar_letter, avatar_color FROM users WHERE username = ?').get(username);
     if (!user || !user.active) {
       // Generic error to avoid user enumeration
       return res.status(401).json({ error: { code: 'AUTH_INVALID', message: 'Invalid credentials' } });
@@ -115,6 +115,9 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
         id: user.id,
         username: user.username,
         role: user.role,
+        avatar_key: user.avatar_key ?? null,
+        avatar_letter: user.avatar_letter ?? null,
+        avatar_color: user.avatar_color ?? null,
         branch_ids: userBranchIds,
         criteria_ids: userCriteriaIds
       }
@@ -137,7 +140,7 @@ app.post('/api/auth/logout', (req, res) => {
 app.get('/api/auth/me', requireAuth, (req, res) => {
   const userBranchIds = db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?').all(req.user.id).map((r) => r.branch_id);
   const userCriteriaIds = criteriaIdsForUser(req.user.id, req.user.role);
-  res.json({ user: { id: req.user.id, username: req.user.username, role: req.user.role, branch_ids: userBranchIds, criteria_ids: userCriteriaIds } });
+  res.json({ user: { id: req.user.id, username: req.user.username, role: req.user.role, avatar_key: req.user.avatar_key ?? null, avatar_letter: req.user.avatar_letter ?? null, avatar_color: req.user.avatar_color ?? null, branch_ids: userBranchIds, criteria_ids: userCriteriaIds } });
 });
 
 // Dev-only quick login (404 in production, handled inside the router)

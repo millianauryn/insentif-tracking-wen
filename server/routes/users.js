@@ -4,6 +4,21 @@ const { requireAuth, requireRole } = require('../middleware.js');
 
 const VALID_ROLES = ['superadmin', 'officer', 'observer'];
 
+// Avatar pilihan superadmin: emoji (maks 4 kodepoin) + warna heks.
+function cleanAvatarKey(value) {
+  if (typeof value !== 'string') return null;
+  const key = Array.from(value.trim()).slice(0, 4).join('');
+  return key || null;
+}
+function cleanAvatarColor(value) {
+  return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.trim()) ? value.trim() : null;
+}
+function cleanAvatarLetter(value) {
+  if (typeof value !== 'string') return null;
+  const letter = value.trim().toUpperCase();
+  return /^[A-Z]$/.test(letter) ? letter : null;
+}
+
 function createUsersRouter(db, options = {}) {
   const router = express.Router();
   const auth = options.requireAuth || requireAuth;
@@ -11,7 +26,7 @@ function createUsersRouter(db, options = {}) {
 
   router.get('/', auth, role('superadmin'), (req, res) => {
     try {
-      const users = db.prepare('SELECT id, username, role, parent_id, active, sales_code, position_id FROM users').all();
+      const users = db.prepare('SELECT id, username, role, parent_id, active, sales_code, position_id, avatar_key, avatar_letter, avatar_color FROM users').all();
       // Attach branch_ids for each user
       const branchStmt = db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?');
       const result = users.map((u) => ({
@@ -27,7 +42,7 @@ function createUsersRouter(db, options = {}) {
 
   router.post('/', auth, role('superadmin'), async (req, res) => {
     try {
-      const { username, password, role: userRole, branch_ids, sales_code, position_id } = req.body;
+      const { username, password, role: userRole, branch_ids, sales_code, position_id, avatar_key, avatar_letter, avatar_color } = req.body;
       if (!validateUsername(username) || !validatePassword(password) || !userRole || !VALID_ROLES.includes(userRole)) {
         return res.status(400).json({ error: { code: 'VALIDATION_ERROR', message: 'Username must be lowercase and password must contain at least 6 characters' } });
       }
@@ -57,9 +72,9 @@ function createUsersRouter(db, options = {}) {
       const passwordHash = await hashPassword(password);
       const create = db.transaction(() => {
         const info = db.prepare(`
-          INSERT INTO users (username, password_hash, role, created_by, sales_code, position_id, active)
-          VALUES (?, ?, ?, ?, ?, ?, 1)
-        `).run(username, passwordHash, userRole, req.user.id, sales_code || null, position_id || null);
+          INSERT INTO users (username, password_hash, role, created_by, sales_code, position_id, avatar_key, avatar_letter, avatar_color, active)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+        `).run(username, passwordHash, userRole, req.user.id, sales_code || null, position_id || null, cleanAvatarKey(avatar_key), cleanAvatarLetter(avatar_letter), cleanAvatarColor(avatar_color));
         const userId = info.lastInsertRowid;
         if (Array.isArray(branch_ids) && branch_ids.length > 0) {
           const insBranch = db.prepare('INSERT OR IGNORE INTO user_branches (user_id, branch_id) VALUES (?, ?)');
@@ -69,7 +84,7 @@ function createUsersRouter(db, options = {}) {
       });
 
       const userId = create();
-      res.status(201).json({ message: 'User created', user: { id: userId, username, role: userRole, branch_ids: branch_ids || [], sales_code, position_id } });
+      res.status(201).json({ message: 'User created', user: { id: userId, username, role: userRole, branch_ids: branch_ids || [], sales_code, position_id, avatar_key: cleanAvatarKey(avatar_key), avatar_letter: cleanAvatarLetter(avatar_letter), avatar_color: cleanAvatarColor(avatar_color) } });
     } catch (err) {
       console.error('POST /api/users error:', err);
       res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Internal server error' } });
@@ -79,7 +94,7 @@ function createUsersRouter(db, options = {}) {
   router.patch('/:id', auth, role('superadmin'), async (req, res) => {
     try {
       const { id } = req.params;
-      const { username, password, role: userRole, active, parent_id, branch_ids, sales_code, position_id } = req.body;
+      const { username, password, role: userRole, active, parent_id, branch_ids, sales_code, position_id, avatar_key, avatar_letter, avatar_color } = req.body;
       const user = db.prepare('SELECT id, role FROM users WHERE id = ?').get(id);
       if (!user) {
         return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'User not found' } });
@@ -150,6 +165,18 @@ function createUsersRouter(db, options = {}) {
           updates.push('position_id = ?');
           values.push(position_id);
         }
+      }
+      if (avatar_key !== undefined) {
+        updates.push('avatar_key = ?');
+        values.push(cleanAvatarKey(avatar_key));
+      }
+      if (avatar_letter !== undefined) {
+        updates.push('avatar_letter = ?');
+        values.push(cleanAvatarLetter(avatar_letter));
+      }
+      if (avatar_color !== undefined) {
+        updates.push('avatar_color = ?');
+        values.push(cleanAvatarColor(avatar_color));
       }
       // Satu transaksi: field user + branch sync gagal/bersama — tidak ada update setengah jadi.
       db.transaction(() => {

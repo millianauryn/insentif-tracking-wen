@@ -68,6 +68,15 @@ function migrateDatabase(db) {
   if (!userCols.includes('position_id')) {
     db.exec('ALTER TABLE users ADD COLUMN position_id INTEGER REFERENCES positions(id) ON DELETE SET NULL');
   }
+  if (!userCols.includes('avatar_key')) {
+    db.exec('ALTER TABLE users ADD COLUMN avatar_key TEXT');
+  }
+  if (!userCols.includes('avatar_letter')) {
+    db.exec('ALTER TABLE users ADD COLUMN avatar_letter TEXT');
+  }
+  if (!userCols.includes('avatar_color')) {
+    db.exec('ALTER TABLE users ADD COLUMN avatar_color TEXT');
+  }
 
   // Migrate incentive_documents: kwitansi JSON (per-document receipt fields) + wilayah (kota)
   const docCols = db.prepare('PRAGMA table_info(incentive_documents)').all().map((c) => c.name);

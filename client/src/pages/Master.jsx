@@ -13,9 +13,15 @@ import {
   listPositions, createPosition, updatePosition, deletePosition, listCriteria,
 } from '../api';
 import Icon from '../components/Icon';
+import Avatar from '../components/Avatar';
 import PickerChips from '../components/PickerChips';
 
 const EMPTY_MASTER = { divisions: [], principals: [], brands: [], regions: [], branches: [] };
+
+// Pilihan icon akun (superadmin pilih saat buat/edit akun): emoji + huruf
+const AVATAR_EMOJIS = ['😀', '😎', '🤠', '🥳', '😇', '🐱', '🐰', '🦊', '🐻', '🐼', '🐸', '🦁', '🐯', '🐮', '🐵', '🐶', '🦉', '🦄', '🐙', '🦋', '🌸', '⭐', '🔥', '💚'];
+const AVATAR_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const AVATAR_COLORS = ['#5C786C', '#0C5848', '#7EA796', '#E11D48', '#F59E0B', '#3B82F6', '#8B5CF6', '#111827'];
 
 function InlinePrincipalForm({ division, draft, busy, existing, onChange, onSubmit }) {
   const pick = existing.find((p) => p.name === draft.name);
@@ -57,7 +63,7 @@ export default function Master({ data, onRefresh, user }) {
   const [inlinePrincipal, setInlinePrincipal] = useState({}); // divisionId -> {name, code, busy}
 
   // Akun tab state
-  const [form, setForm] = useState({ username: '', password: '', role: 'officer', branch_ids: [], position_id: '', sales_code: '' });
+  const [form, setForm] = useState({ username: '', password: '', role: 'officer', branch_ids: [], position_id: '', sales_code: '', avatar_key: '', avatar_letter: '', avatar_color: AVATAR_COLORS[0] });
   const [editingUser, setEditingUser] = useState(null);
 const [createUserOpen, setCreateUserOpen] = useState(false);
   const [userError, setUserError] = useState('');
@@ -198,7 +204,7 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
   };
 
   // ---------- Akun tab ----------
-  const resetUserForm = () => setForm({ username: '', password: '', role: 'officer', branch_ids: [], position_id: '', sales_code: '' });
+  const resetUserForm = () => setForm({ username: '', password: '', role: 'officer', branch_ids: [], position_id: '', sales_code: '', avatar_key: '', avatar_letter: '', avatar_color: AVATAR_COLORS[0] });
 
   const cancelEdit = () => {
     setEditingUser(null);
@@ -223,7 +229,10 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
         role: form.role,
         branch_ids: form.branch_ids.map(Number),
         position_id: form.position_id ? Number(form.position_id) : undefined,
-        sales_code: form.sales_code.trim() || undefined
+        sales_code: form.sales_code.trim() || undefined,
+        avatar_key: form.avatar_key || null,
+        avatar_letter: form.avatar_letter || null,
+        avatar_color: form.avatar_color || AVATAR_COLORS[0]
       };
       if (editingUser) {
         await updateUser(editingUser.id, { ...payload, password: form.password || undefined });
@@ -248,7 +257,10 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
       role: target.role,
       branch_ids: (target.branch_ids || []).map(Number),
       position_id: target.position_id || '',
-      sales_code: target.sales_code || ''
+      sales_code: target.sales_code || '',
+      avatar_key: target.avatar_key || '',
+      avatar_letter: target.avatar_letter || '',
+      avatar_color: target.avatar_color || AVATAR_COLORS[0]
     });
     setUserError('');
     usernameRef.current?.focus();
@@ -767,6 +779,51 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
                   <p className="text-[12px] text-ink-400 mt-1">Opsional. Ditampilkan di dashboard sebagai (kode nama).</p>
                 </div>
 
+                {/* Icon akun: superadmin pilih huruf atau emoji + warna */}
+                <div className="col-span-2">
+                  <span className="text-[13px] font-semibold">Icon Akun</span>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5" role="group" aria-label="Pilih huruf">
+                    {AVATAR_LETTERS.map((letter) => (
+                      <button
+                        key={letter}
+                        type="button"
+                        aria-label={`Huruf ${letter}`}
+                        aria-pressed={form.avatar_letter === letter}
+                        onClick={() => setForm({ ...form, avatar_letter: form.avatar_letter === letter ? '' : letter, avatar_key: '' })}
+                        className={`h-8 w-8 rounded-full text-[13px] font-bold leading-none border transition ${form.avatar_letter === letter ? 'border-ink-900 ring-2 ring-ink-900/30' : 'border-black/10 hover:border-ink-400'}`}
+                        style={{ background: form.avatar_color || AVATAR_COLORS[0], color: '#fff' }}
+                      >{letter}</button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2" role="group" aria-label="Pilih emoji">
+                    {AVATAR_EMOJIS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        aria-label={`Icon ${emoji}`}
+                        aria-pressed={form.avatar_key === emoji}
+                        onClick={() => setForm({ ...form, avatar_key: form.avatar_key === emoji ? '' : emoji, avatar_letter: '' })}
+                        className={`h-8 w-8 rounded-full text-[15px] leading-none border transition ${form.avatar_key === emoji ? 'border-ink-900 ring-2 ring-ink-900/30' : 'border-black/10 hover:border-ink-400'}`}
+                        style={{ background: form.avatar_color || AVATAR_COLORS[0] }}
+                      >{emoji}</button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                    {AVATAR_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        aria-label={`Warna ${color}`}
+                        aria-pressed={(form.avatar_color || AVATAR_COLORS[0]) === color}
+                        onClick={() => setForm({ ...form, avatar_color: color })}
+                        className={`h-6 w-6 rounded-full border-2 ${(form.avatar_color || AVATAR_COLORS[0]) === color ? 'border-ink-900' : 'border-white'}`}
+                        style={{ background: color, boxShadow: '0 0 0 1px var(--line, #e5e7eb)' }}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-[12px] text-ink-400 mt-1">Tanpa pilihan → tampil inisial nama otomatis.</p>
+                </div>
+
                 {userError && <p className="form-error" role="alert">{userError}</p>}
                 <div className="flex justify-end gap-2 pt-2">
                   <button className="text-button" type="button" onClick={cancelEdit}>Batal</button>
@@ -788,6 +845,7 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
         <div className="admin-list">
           {data.users.map((row) => (
             <div className="admin-row" key={row.id}>
+              <Avatar name={row.username} color={row.avatar_color} emoji={row.avatar_key} avatar_letter={row.avatar_letter} size="sm" />
               <strong>{row.username}</strong>
               <span>{row.role}</span>
               <span className="text-[11px] text-ink-400">{(row.branch_ids || []).length} cabang</span>

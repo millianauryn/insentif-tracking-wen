@@ -30,7 +30,7 @@ function createDevAuthRouter(db) {
     }
 
     try {
-      let user = db.prepare('SELECT id, username, role, active FROM users WHERE username = ?').get(name);
+      let user = db.prepare('SELECT id, username, role, active, avatar_key, avatar_letter, avatar_color FROM users WHERE username = ?').get(name);
       if (!user) {
         const passwordHash = crypto.randomBytes(16).toString('hex') + ':dev';
         const info = db.prepare('INSERT INTO users (username, password_hash, role, active) VALUES (?, ?, ?, 1)').run(name, passwordHash, role);
@@ -69,6 +69,9 @@ function createDevAuthRouter(db) {
           id: user.id,
           username: user.username,
           role,
+          avatar_key: user.avatar_key ?? null,
+          avatar_letter: user.avatar_letter ?? null,
+          avatar_color: user.avatar_color ?? null,
           branch_ids: userBranchIds,
           criteria_ids: userCriteriaIds
         }
