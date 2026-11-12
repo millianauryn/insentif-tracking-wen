@@ -4,7 +4,7 @@ const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
-const rateLimit = require('express-rate-limit');
+const { authLimiter } = require('./rate-limit.js');
 const { openDatabase, migrateDatabase, seedDatabase } = require('./db.js');
 const { hashPassword, verifyPassword, createSession, deleteSession, validateUsername, validatePassword } = require('./auth.js');
 const { configureAuthDatabase, requireAuth, requireRole } = require('./middleware.js');
@@ -43,15 +43,6 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '100kb' }));
 app.use(cookieParser());
-
-// Rate limiting for auth endpoints
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // limit each IP to 10 requests per windowMs
-  message: { error: { code: 'AUTH_RATE_LIMITED', message: 'Too many login attempts, try later' } },
-  standardHeaders: true,
-  legacyHeaders: false
-});
 
 // Auth routes
 // Jabatan → kriteria bridge: officer's criteria = union of criteria from positions at their branches.

@@ -63,7 +63,7 @@ export function errMsg(error) {
     return 'Tidak dapat terhubung ke server. Pastikan API berjalan di port 3002.';
   }
   if (error.response.status === 429) {
-    return 'Terlalu banyak percobaan masuk, coba lagi 15 menit lagi.';
+    return 'Terlalu banyak percobaan masuk, coba lagi 1 menit lagi.';
   }
   return (
     error?.response?.data?.error?.message ||
