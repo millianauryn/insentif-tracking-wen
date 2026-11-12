@@ -9,6 +9,12 @@ function branchesOfPosition(db, positionId) {
   return ids;
 }
 
+// Cabang yang di-assign ke akun officer (sumber kebenaran: tabel user_branches).
+function userBranchIds(db, userId) {
+  if (!userId) return [];
+  return db.prepare('SELECT branch_id FROM user_branches WHERE user_id = ?').all(userId).map((r) => r.branch_id);
+}
+
 // Cakupan: SPV harus ada, bertipe SPV, dan punya cabang yang sama dengan officer.
 // Superadmin bebas (perilaku isSuper yang sudah dipakai di halaman sales).
 function spvScopeError(db, user, positionId) {
@@ -18,7 +24,7 @@ function spvScopeError(db, user, positionId) {
   if (!position) return 'SPV tidak ditemukan.';
   if (position.position_type !== 'SPV') return 'Posisi yang dipilih bukan SPV.';
   if (user && user.role === 'superadmin') return null;
-  const own = (user && user.branch_ids) || [];
+  const own = userBranchIds(db, user && user.id);
   const scopes = branchesOfPosition(db, id);
   if (!scopes.some((b) => own.includes(b))) return 'SPV di luar cabang yang di-assign ke akun Anda.';
   return null;

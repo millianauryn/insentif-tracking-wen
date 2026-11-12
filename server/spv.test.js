@@ -66,7 +66,14 @@ describe('Cakupan SPV', () => {
   });
 
   it('officer tanpa cabang tidak bisa memilih SPV mana pun', () => {
-    expect(spvScopeError(db, { id: 1, role: 'officer', branch_ids: [] }, 2)).toMatch(/cabang/i);
+    // User 3 tidak punya baris user_branches sama sekali.
+    expect(spvScopeError(db, { id: 3, role: 'officer', branch_ids: [] }, 2)).toMatch(/cabang/i);
+  });
+
+  it('memakai cabang dari database, bukan dari req.user', () => {
+    // User 1 punya cabang 1 di DB; branch_ids yang disuntik tidak boleh menentukan.
+    expect(spvScopeError(db, { id: 1, role: 'officer', branch_ids: [] }, 2)).toBeNull();
+    expect(spvScopeError(db, { id: 1, role: 'officer', branch_ids: [2] }, 3)).toMatch(/cabang/i);
   });
 
   it('superadmin bebas memilih SPV mana pun', () => {

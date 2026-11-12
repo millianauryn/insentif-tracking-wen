@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { computeTotalFor, computeGrandTotal, principalValueFor } from './golongan';
+import { computeTotalFor, computeGrandTotal, principalValueFor, buildGolonganRowsPayload } from './golongan';
+
+const masterData = {
+  brands: [
+    { id: 7, name: 'Brand X', principal_id: 3 },
+    { id: 8, name: 'Brand Y', principal_id: 4 },
+  ],
+  principals: [{ id: 3, name: 'PT A' }, { id: 4, name: 'PT B' }],
+};
 
 // B0 before P1 → linked (absorbed into P1's auto sum)
 // P1 manual empty → auto from B0 above; P2 manual 999 → overrides (no brand above after TD separator)
@@ -102,5 +110,48 @@ describe('computeGrandTotal', () => {
     ];
     // B absorbed into P (100/50), not counted twice
     expect(computeGrandTotal(simple)).toEqual({ target: 100, achievement: 50 });
+  });
+});
+
+describe('buildGolonganRowsPayload', () => {
+  it('menyimpan id brand dan principal untuk baris brand yang ada di master', () => {
+    const out = buildGolonganRowsPayload(
+      [{ type: 'brand', label: 'Brand X', target: '10', achievement: '12', isGroup: false }],
+      masterData,
+    );
+    expect(out).toEqual([
+      { label: 'Brand X', is_group: false, target: 10, achievement: 12, sort_order: 0, brand_id: 7, principal_id: 3 },
+    ]);
+  });
+
+  it('menyimpan principal_id untuk baris principal', () => {
+    const out = buildGolonganRowsPayload(
+      [{ type: 'principal', label: 'PT A', target: '', achievement: '', isGroup: true }],
+      masterData,
+    );
+    expect(out[0].principal_id).toBe(3);
+  });
+
+  it('brand bebas (tidak di master) tetap dapat parent_index tanpa id', () => {
+    const out = buildGolonganRowsPayload(
+      [
+        { type: 'principal', label: 'PT A', target: '', achievement: '', isGroup: true },
+        { type: 'brand', label: 'Merek Sendiri', target: '5', achievement: '6', isGroup: false },
+      ],
+      masterData,
+    );
+    expect(out[1].brand_id).toBeUndefined();
+    expect(out[1].parent_index).toBe(0);
+  });
+
+  it('dua brand sama di principal berbeda tidak tercampur', () => {
+    const out = buildGolonganRowsPayload(
+      [
+        { type: 'brand', label: 'Brand X', target: '1', achievement: '1', isGroup: false },
+        { type: 'brand', label: 'Brand Y', target: '2', achievement: '2', isGroup: false },
+      ],
+      masterData,
+    );
+    expect(out.map((r) => r.principal_id)).toEqual([3, 4]);
   });
 });

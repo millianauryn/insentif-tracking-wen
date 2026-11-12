@@ -5,7 +5,8 @@ const crypto = require('crypto');
 const { validateUsername, validatePassword } = require('./auth.js');
 
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
-const DEFAULT_DATABASE_PATH = path.join(__dirname, 'data', 'incentive.sqlite');
+// File DB default. Set INCENTIVE_DB untuk mengarahkan server dev ke file terpisah.
+const DEFAULT_DATABASE_PATH = process.env.INCENTIVE_DB || path.join(__dirname, 'data', 'incentive.sqlite');
 
 function openDatabase(filename = DEFAULT_DATABASE_PATH) {
   fs.mkdirSync(path.dirname(filename), { recursive: true });
@@ -111,6 +112,25 @@ function migrateDatabase(db) {
   // Migrate positions: add sales_code column
   const posCols = db.prepare('PRAGMA table_info(positions)').all().map((c) => c.name);
   if (!posCols.includes('sales_code')) db.exec('ALTER TABLE positions ADD COLUMN sales_code TEXT');
+
+  // Backfill baris golongan lama (hanya label) -> brand_id + principal_id dari master brands.
+  // Agregasi SPV mengelompokkan per brand, jadi baris lama juga butuh id.
+  const legacyBrandRows = db.prepare(`
+    SELECT id, label FROM golongan_rows
+    WHERE brand_id IS NULL AND is_group = 0 AND label IS NOT NULL AND trim(label) <> ''
+  `).all();
+  if (legacyBrandRows.length) {
+    const brandByName = new Map();
+    for (const b of db.prepare('SELECT id, principal_id, name FROM brands').all()) {
+      const key = (b.name || '').trim().toLowerCase();
+      if (key && !brandByName.has(key)) brandByName.set(key, b); // nama sama di 2 principal: ambil yang pertama
+    }
+    const updateBrand = db.prepare('UPDATE golongan_rows SET brand_id = ?, principal_id = ? WHERE id = ?');
+    for (const row of legacyBrandRows) {
+      const b = brandByName.get((row.label || '').trim().toLowerCase());
+      if (b) updateBrand.run(b.id, b.principal_id, row.id);
+    }
+  }
 
   // Unik sales: satu sales satu insentif per periode — hanya dokumen kind='sales'.
   if (!db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_doc_sales_period_kind'").get()) {

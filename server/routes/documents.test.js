@@ -128,6 +128,9 @@ describe('Documents API', () => {
     await officer.patch(`/api/documents/${id}`).send({ criteria_rows: [{ criteria_id: 1, target_value: 5 }] }).expect(422);
     await officer.patch(`/api/documents/${id}`).send({ insentif_total: 5000 }).expect(200);
     await officer.patch(`/api/documents/${id}`).send({ period: '2026-11', period_end: '2026-11' }).expect(200);
+    // Nama SPV berasal dari posisi, tidak boleh diganti dari payload client.
+    await officer.patch(`/api/documents/${id}`).send({ salesman: 'NAMA PALSU' }).expect(200);
+    expect(db.prepare('SELECT salesman FROM incentive_documents WHERE id = ?').get(id).salesman).toBe('BUDO');
 
     await admin.post(`/api/documents/${id}/finalize`).expect(200);
     await admin.patch(`/api/documents/${id}`).send({ period: '2026-12', audit_reason: 'koreksi rentang' }).expect(409);

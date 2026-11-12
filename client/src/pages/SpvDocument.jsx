@@ -21,8 +21,10 @@ const API_PERIOD = /^\d{4}-(0[1-9]|1[0-2])$/;
 // Baris server (golongan_rows) -> baris tabel client: brand di bawah principal,
 // lalu satu baris principal berisi jumlah brand-nya, lalu satu baris TOTAL.
 // Urutan ini yang dipakai client untuk menghitung total otomatis (computeGrandTotal).
+// Baris tanpa principal (merek bebas) diletakkan SETELAH grup principal: kalau di depan,
+// computeGrandTotal membuangnya (baris principal menggandakan/menimpa jumlahnya).
 // Nama principal dicari dari masterData saat baris beku (dokumen Final) tidak menyimpannya.
-function toGolonganRows(rows, masterData) {
+export function toGolonganRows(rows, masterData) {
   const out = [];
   const principals = new Map();
   const withoutPrincipal = [];
@@ -47,7 +49,6 @@ function toGolonganRows(rows, masterData) {
     group.target += Number(row.target) || 0;
     group.achievement += Number(row.achievement) || 0;
   });
-  withoutPrincipal.forEach((b) => out.push(b));
   for (const group of principals.values()) {
     group.brands.forEach((b) => out.push(b));
     out.push({
@@ -59,6 +60,7 @@ function toGolonganRows(rows, masterData) {
       achievement: group.achievement,
     });
   }
+  withoutPrincipal.forEach((b) => out.push(b));
   if (out.length) out.push({ id: 'spv-total', label: 'TOTAL', type: 'total', isGroup: true, target: '', achievement: '' });
   return out;
 }

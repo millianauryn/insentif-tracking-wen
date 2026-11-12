@@ -20,6 +20,22 @@ describe('SQLite foundation', () => {
     ]));
   });
 
+  it('backfill brand_id dan principal_id untuk baris golongan lama', () => {
+    db.prepare("INSERT INTO users (username, password_hash, role) VALUES ('admin', 'hash', 'superadmin')").run();
+    const ownerId = db.prepare("SELECT id FROM users WHERE username = 'admin'").get().id;
+    db.prepare("INSERT INTO principals (name) VALUES ('PT A')").run();
+    db.prepare("INSERT INTO brands (principal_id, name) VALUES (1, 'Brand X')").run();
+    db.prepare("INSERT INTO incentive_documents (owner_id, period) VALUES (?, '2026-10')").run(ownerId);
+    const docId = db.prepare('SELECT id FROM incentive_documents LIMIT 1').get().id;
+    db.prepare("INSERT INTO golongan_rows (document_id, label, target, achievement) VALUES (?, 'Brand X', 10, 12)").run(docId);
+
+    migrateDatabase(db); // backfill dijalankan di migrasi
+
+    const row = db.prepare('SELECT brand_id, principal_id FROM golongan_rows').get();
+    expect(row.brand_id).toBe(1);
+    expect(row.principal_id).toBe(1);
+  });
+
   it('migration is idempotent', () => {
     expect(() => migrateDatabase(db)).not.toThrow();
   });

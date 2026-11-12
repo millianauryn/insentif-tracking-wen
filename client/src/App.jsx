@@ -5,6 +5,7 @@ import { canManageAdmin } from './access';
 import { useAuth } from './context/AuthContext';
 import { useToast } from './components/Toast';
 import { reorder } from './lib/reorder';
+import { buildGolonganRowsPayload } from './lib/golongan';
 import { toApiPeriod, fromApiPeriod, currentPeriodLabel } from './lib/period';
 import { parseMoney } from './lib/money';
 import Layout from './components/Layout';
@@ -145,28 +146,8 @@ function App() {
     setSaved(false);
   };
 
-  const buildGolonganRows = () => {
-    // shortcut: Divisi stored as label prefix "DIVISI:<nama>", Total Divisi as "TOTALDIVISI:<nama>" — edit DB directly to change format
-    const filtered = golonganRows.filter((row) => row.label || row.target || row.achievement || row.divisi);
-    let lastPrincipalIndex;
-    return filtered.map((row, index) => {
-      const result = {
-        label: row.type === 'divisi' ? `DIVISI:${row.divisi || ''}` : row.type === 'total-divisi' ? (row.divisi ? `TOTALDIVISI:${row.divisi}` : row.label || 'TOTAL DIVISI') : row.label || null,
-        is_group: row.isGroup || false,
-        target: row.target !== undefined && row.target !== '' ? Number(row.target) : null,
-        achievement: row.achievement !== undefined && row.achievement !== '' ? Number(row.achievement) : null,
-        sort_order: index,
-      };
-      // Divisi/total rows start a new section and never take a parent
-      if (row.type === 'divisi' || row.type === 'total-divisi' || row.type === 'total') {
-        lastPrincipalIndex = undefined;
-        return result;
-      }
-      if (row.type === 'principal') lastPrincipalIndex = index;
-      else if (lastPrincipalIndex !== undefined) result.parent_index = lastPrincipalIndex;
-      return result;
-    });
-  };
+  const buildGolonganRows = () =>
+    buildGolonganRowsPayload(golonganRows, adminData.masterData);
 
   const buildCriteriaRows = () =>
     criteriaRows
@@ -269,8 +250,9 @@ function App() {
   };
 
   const loadDocument = async (doc) => {
-    // Dokumen SPV punya halamannya sendiri (/documents/spv).
+    // Satu pemilik navigasi: dokumen SPV ke halamannya sendiri, dokumen sales ke editor sales.
     if (doc.doc_kind === 'spv') { setSpvTargetId(doc.id); navigate('/documents/spv'); return; }
+    navigate('/documents');
     try {
       const { document: full } = await getDocument(doc.id);
       setDocumentId(full.id);
@@ -408,7 +390,7 @@ function App() {
                 period={period}
                 setPeriod={setPeriod}
                 onNewDoc={() => { cancelEdit(); navigate('/documents'); }}
-                onLoadDoc={(doc) => { loadDocument(doc); navigate('/documents'); }}
+                onLoadDoc={(doc) => loadDocument(doc)}
               />
               </Suspense>
             </Layout>
@@ -428,7 +410,7 @@ function App() {
                 setDocuments={setDocuments}
                 onRefresh={listDocuments}
                 positions={positions}
-                onLoad={(doc) => { loadDocument(doc); navigate('/documents'); }}
+                onLoad={(doc) => loadDocument(doc)}
                 onDelete={removeDocument}
                 onNewDoc={() => { cancelEdit(); navigate('/documents'); }}
               />

@@ -94,3 +94,46 @@ export function computeTotalFor(rows, rowIndex) {
 export function computeGrandTotal(rows) {
   return sumScope(rows);
 }
+
+// Payload baris golongan untuk API: label + angka + id brand/principal dari master.
+// Id dipakai agregasi SPV (kelompokkan per principal/brand), jadi wajib tersimpan.
+// shortcut: Divisi disimpan sebagai prefix label "DIVISI:<nama>", Total Divisi "TOTALDIVISI:<nama>".
+export function buildGolonganRowsPayload(rows, masterData = {}) {
+  const brands = masterData.brands || [];
+  const principals = masterData.principals || [];
+  const byName = (list, label) =>
+    list.find((x) => (x.name || '').trim().toLowerCase() === (label || '').trim().toLowerCase());
+  const filtered = (rows || []).filter((row) => row.label || row.target || row.achievement || row.divisi);
+  let lastPrincipalIndex;
+  return filtered.map((row, index) => {
+    const result = {
+      label: row.type === 'divisi'
+        ? `DIVISI:${row.divisi || ''}`
+        : row.type === 'total-divisi'
+          ? (row.divisi ? `TOTALDIVISI:${row.divisi}` : row.label || 'TOTAL DIVISI')
+          : row.label || null,
+      is_group: row.isGroup || false,
+      target: row.target !== undefined && row.target !== '' ? Number(row.target) : null,
+      achievement: row.achievement !== undefined && row.achievement !== '' ? Number(row.achievement) : null,
+      sort_order: index,
+    };
+    // Divisi/total rows start a new section and never take a parent
+    if (row.type === 'divisi' || row.type === 'total-divisi' || row.type === 'total') {
+      lastPrincipalIndex = undefined;
+      return result;
+    }
+    if (row.type === 'principal') {
+      lastPrincipalIndex = index;
+      const principal = byName(principals, row.label);
+      if (principal) result.principal_id = principal.id;
+      return result;
+    }
+    const brand = byName(brands, row.label);
+    if (brand) {
+      result.brand_id = brand.id;
+      result.principal_id = brand.principal_id ?? null;
+    }
+    if (lastPrincipalIndex !== undefined) result.parent_index = lastPrincipalIndex;
+    return result;
+  });
+}

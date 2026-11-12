@@ -182,13 +182,17 @@ app.use((req, res, next) => {
   res.sendFile(path.join(clientDist, 'index.html'));
 });
 
+// Jaga referensi server: tanpa ini objek http.Server bisa di-GC, event loop jadi kosong,
+// dan proses keluar sendiri (PM2: crash-loop).
+let server;
+
 async function start() {
   // Buang sesi kedaluwarsa saat start + sekali sehari (proses tunggal, SQLite sinkron).
   const sweep = () => db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')").run();
   sweep();
   setInterval(sweep, 24 * 60 * 60 * 1000).unref();
   await seedDatabase(db);
-  const server = app.listen(port, () => {
+  server = app.listen(port, () => {
     console.log(`Incentive API listening on http://localhost:${port}`);
   });
   server.on('error', (err) => {

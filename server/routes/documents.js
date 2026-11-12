@@ -132,6 +132,8 @@ function createDocumentsRouter(db, options = {}) {
         if (findDuplicateSpvDoc(db, nextPosition, nextPeriod, nextEnd, document.id)) {
           return res.status(409).json({ error: { code: 'DUPLICATE_SPV_PERIOD', message: 'SPV ini sudah punya dokumen untuk rentang tersebut' } });
         }
+        // Nama SPV berasal dari posisi, bukan dari payload client.
+        input.salesman = document.salesman;
         // Ganti SPV -> nama pejabat ikut berubah.
         if (input.position_id !== undefined && Number(input.position_id) !== document.position_id) {
           const spvRow = db.prepare('SELECT name FROM positions WHERE id = ?').get(Number(input.position_id));
