@@ -187,7 +187,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
   );
 }
 
-function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit, salesDivisi, setSalesDivisi, divisions, brands, principals }) {
+export function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit, salesDivisi, setSalesDivisi, divisions, brands, principals }) {
   const [dragIndex, setDragIndex] = useState(null);
   const [overIndex, setOverIndex] = useState(null);
 
@@ -331,7 +331,7 @@ function KriteriaRow({ row, onUpdate, canEdit }) {
   );
 }
 
-function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalChange }) {
+export function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalChange, totalEditable = false }) {
   // Total = auto-sum kolom insentif (angka valid saja; Gugur 50% minus ikut kurangi), overridable by typing
   const autoSum = rows.reduce((s, r) => s + (parseMoney(r.incentive_amount) ?? 0), 0);
   const totalValue = totalOverride ?? autoSum;
@@ -364,7 +364,7 @@ function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalChange }
                 type="number"
                 value={totalValue === '' || totalValue === null || Number.isNaN(totalValue) ? '' : totalValue}
                 onChange={(e) => onTotalChange(e.target.value === '' ? null : Number(e.target.value))}
-                disabled={!canEdit}
+                disabled={!canEdit && !totalEditable}
                 aria-label="Total insentif"
               />
             </td>
@@ -517,27 +517,7 @@ export default function Documents({
     );
   }
 
-  if (docType === 'spv') {
-    const name = docType.toUpperCase();
-    return (
-      <>
-        <div className="page-head doc-page-head">
-          <div className="page-head-copy">
-            <h1>Rekap Insentif {name}</h1>
-            <p>Rekapitulasi perhitungan insentif tingkat {name}.</p>
-          </div>
-        </div>
-        <section className="content-card info-card print-section">
-          <div className="empty-state">
-            <strong>Belum ada data rekap {name}</strong>
-            <p>Data rekap insentif tingkat {name} akan ditampilkan dalam tabel berikut setelah tersedia.</p>
-          </div>
-        </section>
-      </>
-    );
-  }
-
-  // docType === 'sales' — current editor
+  // docType === 'sales' — current editor (halaman SPV punya komponen sendiri: SpvDocument.jsx)
   return (
     <>
       <div className="page-head doc-page-head">

@@ -13,6 +13,7 @@ import Login from './pages/Login';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Insetif = lazy(() => import('./pages/Insetif'));
 const Documents = lazy(() => import('./pages/Documents'));
+const SpvDocument = lazy(() => import('./pages/SpvDocument'));
 const Master = lazy(() => import('./pages/Master'));
 import './App.css';
 import './auth.css';
@@ -41,6 +42,7 @@ function App() {
   const [documentId, setDocumentId] = useState(null);
   const [documentFormatId, setDocumentFormatId] = useState(null);
   const [documents, setDocuments] = useState([]);
+  const [spvTargetId, setSpvTargetId] = useState(null);
   const [documentStatus, setDocumentStatus] = useState('Draft');
   const [adminData, setAdminData] = useState({ users: [], criteria: [], masterData: { divisions: [], principals: [], brands: [], regions: [], branches: [] } });
   const [positions, setPositions] = useState([]);
@@ -267,6 +269,8 @@ function App() {
   };
 
   const loadDocument = async (doc) => {
+    // Dokumen SPV punya halamannya sendiri (/documents/spv).
+    if (doc.doc_kind === 'spv') { setSpvTargetId(doc.id); navigate('/documents/spv'); return; }
     try {
       const { document: full } = await getDocument(doc.id);
       setDocumentId(full.id);
@@ -445,7 +449,21 @@ function App() {
       />
       <Route
         path="/documents/spv"
-        element={user ? renderDocuments('spv') : <Navigate to="/login" replace />}
+        element={user ? (
+          <Layout breadcrumb={['Dokumen', 'SPV']}>
+            <Suspense fallback={<div className="auth-shell" role="status">Memuat…</div>}>
+              <SpvDocument
+                user={user}
+                positions={positions}
+                masterData={adminData.masterData}
+                setDocuments={setDocuments}
+                documentFormatId={documentFormatId}
+                loadTargetId={spvTargetId}
+                onLoadDone={() => setSpvTargetId(null)}
+              />
+            </Suspense>
+          </Layout>
+        ) : <Navigate to="/login" replace />}
       />
       <Route
         path="/documents/bm"

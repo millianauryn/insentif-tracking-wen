@@ -43,11 +43,9 @@ describe('Documents render smoke', () => {
     expect(html).toContain('Wilayah (Kota)');
   });
 
-  it('spv rekap page renders', () => {
+  it('halaman SPV tidak lagi placeholder', () => {
     const html = renderToString(<Documents {...baseProps} docType="spv" />);
-    expect(html).toContain('Rekap Insentif');
-    expect(html).toContain('SPV');
-    expect(html).toContain('Belum ada data rekap');
+    expect(html).not.toContain('Belum ada data rekap');
   });
 
   it('bm placeholder page renders', () => {
