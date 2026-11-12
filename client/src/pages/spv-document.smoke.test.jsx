@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import SpvDocument, { toGolonganRows } from './SpvDocument';
+import { KriteriaTable } from './Documents';
 import { computeGrandTotal } from '../lib/golongan';
 
 const noop = () => {};
@@ -75,5 +76,27 @@ describe('toGolonganRows', () => {
 
   it('tanpa baris tidak membuat baris TOTAL', () => {
     expect(toGolonganRows([], masterData)).toEqual([]);
+  });
+});
+
+describe('KriteriaTable insentif manual', () => {
+  const rows = [{ criteria_id: 1, label: 'Target', target_value: 10, achievement_value: 12, incentive_amount: '' }];
+  const render = (incentiveEditable) => renderToString(
+    <KriteriaTable
+      rows={rows}
+      onUpdate={noop}
+      canEdit={false}
+      incentiveEditable={incentiveEditable}
+      totalOverride={null}
+      onTotalChange={noop}
+    />,
+  );
+
+  it('kolom insentif terkunci kalau tidak diizinkan', () => {
+    expect(render(false)).toMatch(/disabled=""[^>]*aria-label="Insentive Target"/);
+  });
+
+  it('kolom insentif tetap bisa diisi walau target/tercapai read-only', () => {
+    expect(render(true)).not.toMatch(/disabled=""[^>]*aria-label="Insentive Target"/);
   });
 });

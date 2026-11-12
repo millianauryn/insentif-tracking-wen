@@ -52,6 +52,43 @@ describe('Documents API', () => {
     expect(db.prepare('SELECT label FROM golongan_rows WHERE is_group = 1').get().label).toBe('GROUP PASEO');
   });
 
+  it('insentif per kriteria SPV bisa diisi officer dan tetap tersimpan', async () => {
+    db.prepare("INSERT INTO incentive_documents (owner_id, format_id, salesman, period, status, doc_kind) VALUES (1, 1, 'SARI', '2026-10', 'Final', 'sales')").run();
+    const salesId = db.prepare('SELECT id FROM incentive_documents ORDER BY id DESC LIMIT 1').get().id;
+    db.prepare("INSERT INTO document_criteria_rows (document_id, criteria_id, label, target_unit, target_value, achievement_value) VALUES (?, 1, 'Target', 'pcs', 10, 12)").run(salesId);
+
+    const created = await officer.post('/api/documents').send({
+      doc_kind: 'spv', position_id: 1, format_id: 1, period: '2026-10', period_end: '2026-10',
+      criteria_rows: [{ criteria_id: 1, incentive_amount: '250000' }],
+    }).expect(201);
+    const id = created.body.document.id;
+
+    // Target/tercapai tetap dari server; insentif dari officer.
+    const rows = db.prepare('SELECT target_value, achievement_value, incentive_amount FROM document_criteria_rows WHERE document_id = ?').all(id);
+    expect(rows[0].target_value).toBe(10);
+    expect(rows[0].achievement_value).toBe(12);
+    expect(rows[0].incentive_amount).toBe(250000);
+
+    // Nilai insentif bertahan saat dokumen dimuat ulang.
+    const loaded = await officer.get(`/api/documents/${id}`).expect(200);
+    expect(loaded.body.document.criteria_rows.find((r) => r.criteria_id === 1).incentive_amount).toBe(250000);
+
+    // Update insentif lain.
+    await officer.patch(`/api/documents/${id}`).send({
+      criteria_rows: [{ criteria_id: 1, incentive_amount: '300000' }],
+    }).expect(200);
+    const after = await officer.get(`/api/documents/${id}`).expect(200);
+    expect(after.body.document.criteria_rows.find((r) => r.criteria_id === 1).incentive_amount).toBe(300000);
+
+    // Golongan tetap tidak boleh diisi manual.
+    await officer.patch(`/api/documents/${id}`).send({ golongan_rows: [{ label: 'Palsu' }] }).expect(422);
+
+    // Snapshot final menyimpan insentif.
+    await admin.post(`/api/documents/${id}/finalize`).expect(200);
+    const snap = db.prepare('SELECT incentive_amount FROM document_criteria_rows WHERE document_id = ?').get(id);
+    expect(snap.incentive_amount).toBe(300000);
+  });
+
   it('preview SPV mengembalikan baris tanpa membuat dokumen', async () => {
     db.prepare("INSERT INTO incentive_documents (owner_id, format_id, salesman, period, status, doc_kind) VALUES (1, 1, 'SARI', '2026-10', 'Final', 'sales')").run();
     const salesId = db.prepare('SELECT id FROM incentive_documents ORDER BY id DESC LIMIT 1').get().id;
@@ -65,6 +102,17 @@ describe('Documents API', () => {
 
     await officer.get('/api/documents/spv/preview?position_id=2&period=2026-10&period_end=2026-10').expect(403);
     await officer.get('/api/documents/spv/preview?position_id=1&period=bukan-periode').expect(422);
+  });
+
+  it('preview SPV memakai insentif dari draft SPV yang sama', async () => {
+    const created = await officer.post('/api/documents').send({
+      doc_kind: 'spv', position_id: 1, format_id: 1, period: '2026-10', period_end: '2026-10',
+      criteria_rows: [{ criteria_id: 1, incentive_amount: '125000' }],
+    }).expect(201);
+
+    const preview = await officer.get('/api/documents/spv/preview?position_id=1&period=2026-10&period_end=2026-10').expect(200);
+    expect(preview.body.criteria_rows.find((r) => r.criteria_id === 1).incentive_amount).toBe(125000);
+    expect(created.body.document.id).toBeGreaterThan(0);
   });
 
   it('membuat dokumen SPV dengan rentang periode dan menolak SPV di luar cabang', async () => {
@@ -140,7 +188,11 @@ describe('Documents API', () => {
     const id = created.body.document.id;
 
     await officer.patch(`/api/documents/${id}`).send({ golongan_rows: [{ label: 'Palsu', target: 1 }] }).expect(422);
-    await officer.patch(`/api/documents/${id}`).send({ criteria_rows: [{ criteria_id: 1, target_value: 5 }] }).expect(422);
+    // Target dari client diabaikan (server yang menentukan); insentif per kriteria boleh diisi.
+    await officer.patch(`/api/documents/${id}`).send({ criteria_rows: [{ criteria_id: 1, target_value: 5, incentive_amount: '7500' }] }).expect(200);
+    const stored = db.prepare('SELECT target_value, incentive_amount FROM document_criteria_rows WHERE document_id = ?').get(id);
+    expect(stored.target_value).not.toBe(5);
+    expect(stored.incentive_amount).toBe(7500);
     await officer.patch(`/api/documents/${id}`).send({ insentif_total: 5000 }).expect(200);
     await officer.patch(`/api/documents/${id}`).send({ period: '2026-11', period_end: '2026-11' }).expect(200);
     // Nama SPV berasal dari posisi, tidak boleh diganti dari payload client.

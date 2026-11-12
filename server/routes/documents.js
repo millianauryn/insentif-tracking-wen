@@ -1,6 +1,6 @@
 const express = require('express');
 const { requireAuth } = require('../middleware.js');
-const { spvScopeError, computeSpvRows } = require('../spv.js');
+const { spvScopeError, computeSpvRows, spvCriteriaRows, storeSpvCriteriaRows } = require('../spv.js');
 
 function createDocumentsRouter(db, options = {}) {
   const router = express.Router();
@@ -80,6 +80,14 @@ function createDocumentsRouter(db, options = {}) {
         criteria.forEach(row => insertCriteria.run(documentId, row.id, row.label, row.target_unit, row.formula, row.sort_order));
         insertGolonganRows(db, documentId, input.golongan_rows || []);
         upsertCriteriaRows(db, documentId, input.criteria_rows || []);
+      } else {
+        // SPV: baris kriteria dihitung server, insentif boleh diisi officer.
+        const rows = spvCriteriaRows(
+          db,
+          { id: documentId, position_id: Number(input.position_id), period: input.period, period_end: spvPeriodEnd },
+          Array.isArray(input.criteria_rows) ? input.criteria_rows : null
+        );
+        storeSpvCriteriaRows(db, documentId, rows);
       }
       return db.prepare('SELECT * FROM incentive_documents WHERE id = ?').get(documentId);
     });
@@ -97,7 +105,19 @@ function createDocumentsRouter(db, options = {}) {
     if (!isValidPeriod(start) || !isValidPeriod(end)) {
       return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Periode harus valid (YYYY-MM)' } });
     }
-    res.json(computeSpvRows(db, req.query.position_id, start, end));
+    const positionId = Number(req.query.position_id);
+    const computed = computeSpvRows(db, positionId, start, end);
+    // Kalau sudah ada draft SPV untuk SPV + rentang yang sama, insentif yang sudah
+    // diketik ikut ditampilkan supaya pratinjau sama dengan dokumennya.
+    const existing = db.prepare(`
+      SELECT id FROM incentive_documents
+      WHERE doc_kind = 'spv' AND status = 'Draft' AND position_id = ? AND period = ? AND ifnull(period_end, period) = ?
+      LIMIT 1
+    `).get(positionId, start, end);
+    const criteria = existing
+      ? spvCriteriaRows(db, getDocument(db, existing.id))
+      : computed.criteria_rows;
+    res.json({ ...computed, criteria_rows: criteria });
   });
 
   router.get('/:id', auth, (req, res) => {
@@ -122,7 +142,7 @@ function createDocumentsRouter(db, options = {}) {
     }
     // Dokumen SPV: baris selalu dihitung server; kunci rentang/SPV dibekukan saat Final.
     if (document.doc_kind === 'spv') {
-      if (Array.isArray(input.golongan_rows) || Array.isArray(input.criteria_rows)) {
+      if (Array.isArray(input.golongan_rows)) {
         return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Baris SPV dihitung dari dokumen sales, tidak bisa diisi manual' } });
       }
       if (document.status === 'Final') {
@@ -164,6 +184,12 @@ function createDocumentsRouter(db, options = {}) {
         }
       }
       updateDocument(db, document, input);
+      if (document.doc_kind === 'spv') {
+        // Insentif per kriteria dari officer; target/tercapai tetap dihitung server.
+        const refreshed = getDocument(db, document.id);
+        const rows = spvCriteriaRows(db, refreshed, Array.isArray(input.criteria_rows) ? input.criteria_rows : null);
+        storeSpvCriteriaRows(db, document.id, rows);
+      }
     } catch (error) {
       if (error.message === 'Invalid period' || error.message === 'Invalid Golongan rows') {
         return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: error.message } });
@@ -234,12 +260,13 @@ function getDocument(db, id) {  const document = db.prepare('SELECT * FROM incen
 function withLiveRows(db, document) {
   if (document.doc_kind !== 'spv' || document.status !== 'Draft') return document;
   const computed = computeSpvRows(db, document.position_id, document.period, document.period_end || document.period);
-  return { ...document, golongan_rows: computed.golongan_rows, criteria_rows: computed.criteria_rows };
+  return { ...document, golongan_rows: computed.golongan_rows, criteria_rows: spvCriteriaRows(db, document) };
 }
 
 // Finalisasi SPV: beku angka saat ini sebagai snapshot baris dokumen.
 function snapshotSpvRows(db, document) {
   const computed = computeSpvRows(db, document.position_id, document.period, document.period_end || document.period);
+  const criteria = spvCriteriaRows(db, document);
   const write = db.transaction(() => {
     db.prepare('DELETE FROM golongan_rows WHERE document_id = ?').run(document.id);
     db.prepare('DELETE FROM document_criteria_rows WHERE document_id = ?').run(document.id);
@@ -249,14 +276,14 @@ function snapshotSpvRows(db, document) {
         VALUES (?, ?, ?, ?, ?, ?, ?, 0)
       `).run(document.id, row.label ?? row.brand_name ?? null, row.principal_id, row.brand_id, row.target, row.achievement, index);
     });
-    computed.criteria_rows.forEach((row) => {
+    criteria.forEach((row) => {
       const target = Number(row.target_value) || 0;
       const achievement = Number(row.achievement_value) || 0;
       const percentage = target > 0 ? (achievement / target) * 100 : 0;
       db.prepare(`
         INSERT INTO document_criteria_rows (document_id, criteria_id, label, target_unit, formula, target_value, achievement_value, percentage, status, incentive_amount, sort_order)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(document.id, row.criteria_id, row.label, row.target_unit, row.formula, target, achievement, percentage, target > 0 && percentage >= 100 ? 'Tercapai' : 'Gugur', null, row.sort_order);
+      `).run(document.id, row.criteria_id, row.label, row.target_unit, row.formula, target, achievement, percentage, target > 0 && percentage >= 100 ? 'Tercapai' : 'Gugur', row.incentive_amount, row.sort_order);
     });
   });
   write();

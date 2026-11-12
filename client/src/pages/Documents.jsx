@@ -301,7 +301,7 @@ export function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, 
   );
 }
 
-function KriteriaRow({ row, onUpdate, canEdit }) {
+function KriteriaRow({ row, onUpdate, canEdit, incentiveEditable }) {
   const target = parseMoney(row.target_value) ?? 0;
   const achievement = parseMoney(row.achievement_value) ?? 0;
   const percentage = target > 0 ? (achievement / target) * 100 : 0;
@@ -326,12 +326,12 @@ function KriteriaRow({ row, onUpdate, canEdit }) {
       ) : (
         <td><span className={`result-badge ${status === 'Tercapai' ? 'success' : 'warning'}`}>{target > 0 ? status : ''}</span></td>
       )}
-      <td><input type="number" value={row.incentive_amount ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'incentive_amount', e.target.value)} disabled={!canEdit} aria-label={`Insentive ${row.label}`} /></td>
+      <td><input type="number" value={row.incentive_amount ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'incentive_amount', e.target.value)} disabled={!canEdit && !incentiveEditable} aria-label={`Insentive ${row.label}`} /></td>
     </tr>
   );
 }
 
-export function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalChange, totalEditable = false }) {
+export function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalChange, totalEditable = false, incentiveEditable = false }) {
   // Total = auto-sum kolom insentif (angka valid saja; Gugur 50% minus ikut kurangi), overridable by typing
   const autoSum = rows.reduce((s, r) => s + (parseMoney(r.incentive_amount) ?? 0), 0);
   const totalValue = totalOverride ?? autoSum;
@@ -351,7 +351,7 @@ export function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalC
         </thead>
         <tbody>
           {rows.map((row) => (
-            <KriteriaRow key={row.criteria_id} row={row} onUpdate={onUpdate} canEdit={canEdit} />
+            <KriteriaRow key={row.criteria_id} row={row} onUpdate={onUpdate} canEdit={canEdit} incentiveEditable={incentiveEditable} />
           ))}
           <tr className="font-semibold bg-slate-50">
             <td>TOTAL INSENTIVE</td>

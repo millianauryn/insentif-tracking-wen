@@ -121,4 +121,51 @@ function computeSpvRows(db, positionId, periodStart, periodEnd) {
   return { golongan_rows, criteria_rows };
 }
 
-module.exports = { spvScopeError, computeSpvRows };
+// Insentif per kriteria milik officer: dari payload client kalau dikirim, selain itu dari
+// nilai yang sudah tersimpan di dokumen. Target/tercapai selalu dari server.
+function mergeIncentives(rows, clientRows, storedRows) {
+  const stored = new Map((storedRows || []).map((r) => [Number(r.criteria_id), r.incentive_amount]));
+  const fromClient = new Map((clientRows || []).map((r) => [Number(r.criteria_id), r.incentive_amount]));
+  return rows.map((row) => {
+    const id = Number(row.criteria_id);
+    const incentive = fromClient.has(id) ? fromClient.get(id) : (stored.has(id) ? stored.get(id) : null);
+    return { ...row, incentive_amount: incentive === undefined ? null : incentive };
+  });
+}
+
+// Baris kriteria SPV untuk satu dokumen: hitung ulang dari sales, insentif dari dokumen/payload.
+function spvCriteriaRows(db, document, clientRows = null) {
+  const computed = computeSpvRows(db, document.position_id, document.period, document.period_end || document.period).criteria_rows;
+  const stored = db.prepare('SELECT criteria_id, incentive_amount FROM document_criteria_rows WHERE document_id = ?').all(document.id);
+  return mergeIncentives(computed, clientRows, stored);
+}
+
+function parseMoney(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const s = String(value).trim();
+  if (!/^-?\d+(\.\d+)?$/.test(s)) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+// Simpan baris kriteria SPV (target/tercapai dari server, insentif dari officer).
+function storeSpvCriteriaRows(db, documentId, rows) {
+  db.prepare('DELETE FROM document_criteria_rows WHERE document_id = ?').run(documentId);
+  const insert = db.prepare(`
+    INSERT INTO document_criteria_rows (document_id, criteria_id, label, target_unit, formula, target_value, achievement_value, percentage, status, incentive_amount, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  rows.forEach((row) => {
+    const target = Number(row.target_value) || 0;
+    const achievement = Number(row.achievement_value) || 0;
+    const percentage = target > 0 ? (achievement / target) * 100 : 0;
+    insert.run(
+      documentId, row.criteria_id, row.label, row.target_unit, row.formula,
+      target, achievement, percentage,
+      target > 0 && percentage >= 100 ? 'Tercapai' : 'Gugur',
+      parseMoney(row.incentive_amount), row.sort_order
+    );
+  });
+}
+
+module.exports = { spvScopeError, computeSpvRows, spvCriteriaRows, storeSpvCriteriaRows, mergeIncentives };

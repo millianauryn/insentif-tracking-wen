@@ -6,11 +6,13 @@ const { validateUsername, validatePassword } = require('./auth.js');
 
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 // File DB default. Set INCENTIVE_DB untuk mengarahkan server dev ke file terpisah.
-const DEFAULT_DATABASE_PATH = process.env.INCENTIVE_DB || path.join(__dirname, 'data', 'incentive.sqlite');
+// Dibaca saat call (bukan saat modul dimuat) supaya env yang di-set belakangan tetap berlaku.
+const defaultDatabasePath = () => process.env.INCENTIVE_DB || path.join(__dirname, 'data', 'incentive.sqlite');
 
-function openDatabase(filename = DEFAULT_DATABASE_PATH) {
-  fs.mkdirSync(path.dirname(filename), { recursive: true });
-  const db = new Database(filename);
+function openDatabase(filename = null) {
+  const file = filename || defaultDatabasePath();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const db = new Database(file);
   // Enable foreign keys for this connection
   db.pragma('foreign_keys = ON');
   // WAL + busy timeout agar officer bersamaan tidak SQLITE_BUSY.

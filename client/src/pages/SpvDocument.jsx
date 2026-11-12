@@ -7,6 +7,7 @@ import { GolonganTable, KriteriaTable } from './Documents';
 import { createDocument, updateDocument, finalizeDocument, getDocument, previewSpvRows, errMsg } from '../api';
 import { terbilang } from '../lib/terbilang';
 import { toApiPeriod, fromApiPeriod, monthNames, currentPeriodLabel, periodRangeLabel } from '../lib/period';
+import { parseMoney } from '../lib/money';
 
 const EMPTY_KWITANSI = {
   penerima: 'PT. BINTANG SINAR JAYA',
@@ -71,7 +72,7 @@ function toCriteriaRows(rows) {
     label: row.label,
     target_value: row.target_value ?? 0,
     achievement_value: row.achievement_value ?? 0,
-    incentive_amount: '',
+    incentive_amount: row.incentive_amount ?? '',
   }));
 }
 
@@ -100,6 +101,11 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
 
   const canEditDoc = ['officer', 'superadmin'].includes(user.role) && documentStatus === 'Draft';
   const canFinalize = ['observer', 'superadmin'].includes(user.role) && documentStatus === 'Draft' && !!documentId;
+  // Total insentif: jumlah insentif per kriteria, boleh dioverride manual di baris TOTAL.
+  const totalInsenitif = insentifTotal ?? criteriaRows.reduce((sum, r) => sum + (parseMoney(r.incentive_amount) ?? 0), 0);
+  const updateCriteriaRow = (criteriaId, field, value) => {
+    setCriteriaRows((rows) => rows.map((r) => (r.criteria_id === criteriaId ? { ...r, [field]: value } : r)));
+  };
 
   const spvOptions = useMemo(() => positions.filter((p) => p.position_type === 'SPV' && p.active !== 0
     && (isSuper || (p.branch_ids || []).some((id) => (user.branch_ids || []).includes(id)))),
@@ -151,7 +157,11 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
         .then((data) => {
           if (cancelled) return;
           setGolonganRows(toGolonganRows(data.golongan_rows || [], masterData));
-          setCriteriaRows(toCriteriaRows(data.criteria_rows || []));
+          // Insentif yang sudah diketik officer tidak hilang saat pratinjau dimuat ulang.
+          setCriteriaRows((prev) => toCriteriaRows((data.criteria_rows || []).map((r) => ({
+            ...r,
+            incentive_amount: prev.find((p) => p.criteria_id === r.criteria_id)?.incentive_amount ?? r.incentive_amount ?? '',
+          }))));
         })
         .catch(() => { /* pratinjau gagal: tabel tetap kosong, simpan tetap bisa dipakai */ });
     }, 250);
@@ -166,7 +176,9 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
     period_end: toApiPeriod(periodEnd),
     salesman: spvName,
     wilayah: wilayah || null,
-    insentif_total: insentifTotal,
+    insentif_total: totalInsenitif,
+    // Target & pencapaian tetap server; client hanya mengirim insentif per kriteria.
+    criteria_rows: criteriaRows.map((r) => ({ criteria_id: r.criteria_id, incentive_amount: r.incentive_amount })),
     kwitansi,
   });
 
@@ -325,8 +337,9 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
 
         <KriteriaTable
           rows={criteriaRows}
-          onUpdate={() => {}}
+          onUpdate={updateCriteriaRow}
           canEdit={false}
+          incentiveEditable={canEditDoc}
           totalEditable={canEditDoc}
           totalOverride={insentifTotal}
           onTotalChange={setInsentifTotal}
@@ -346,7 +359,7 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
           </div>
           <div className="kw-total">
             <span>Total Keseluruhan</span>
-            <strong>Rp {Number(insentifTotal || 0).toLocaleString('id-ID')}</strong>
+            <strong>Rp {Number(totalInsenitif || 0).toLocaleString('id-ID')}</strong>
           </div>
         </div>
       </section>
