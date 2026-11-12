@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+﻿import { useEffect, useMemo, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -12,7 +12,8 @@ import {
 import { Badge } from '../components/ui/badge';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
-import { fromApiPeriod } from '../lib/period';
+import { fromApiPeriod, apiMonthsInRange } from '../lib/period';
+import { docPeriodLabel, docMatchesPeriode, docMatchesSpv } from '../lib/docFilters';
 import { errMsg, finalizeDocument, getDocument } from '../api';
 import ListPager from '../components/ListPager';
 import { Search, ChevronLeft, ChevronRight, Plus, Loader2, FolderOpen, RotateCcw } from 'lucide-react';
@@ -39,7 +40,7 @@ function FullDocPreview({ doc }) {
   const sumInsentif = kriteria.reduce((s, r) => s + (Number(r.incentive_amount) || 0), 0);
   const totalInsentif = doc.insentif_total ?? sumInsentif;
   const kw = doc.kwitansi || {};
-  const tujuan = kw.keterangan || kw.jumlahUang || (doc.period ? `Incentive penjualan bulan ${fromApiPeriod(doc.period)}` : '');
+  const tujuan = kw.keterangan || kw.jumlahUang || (doc.period ? `Incentive penjualan bulan ${docPeriodLabel(doc)}` : '');
   return (
     <div className="space-y-5 text-[13px]">
       <div className="text-center border border-[var(--line)] rounded-lg px-3 py-3 bg-[#fbfdfc]">
@@ -47,7 +48,7 @@ function FullDocPreview({ doc }) {
         <p className="mt-1">WILAYAH : {doc.wilayah || '-'}</p>
         <p>SALESMAN : {doc.salesman || '-'}</p>
         <p>PRODUK : {doc.product || '-'}</p>
-        <p>BULAN : {fromApiPeriod(doc.period)}</p>
+        <p>BULAN : {docPeriodLabel(doc)}</p>
       </div>
 
       <div className="border border-[var(--line)] rounded-lg overflow-hidden">
@@ -257,10 +258,16 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
       : positions;
   const salesOptions = salesScope.filter((p) => p.position_type === 'SALES');
 
-  const periodeOptions = useMemo(
-    () => [...new Set(documents.map((d) => d.period).filter(Boolean))].sort().reverse(),
-    [documents],
-  );
+  const periodeOptions = useMemo(() => {
+    // Dokumen SPV bringing seluruh bulan dalam rentangnya, supaya bisa difilter per bulan.
+    const months = new Set();
+    for (const d of documents) {
+      if (!d.period) continue;
+      if (d.doc_kind === 'spv') apiMonthsInRange(d.period, d.period_end).forEach((m) => months.add(m));
+      else months.add(d.period);
+    }
+    return [...months].sort().reverse();
+  }, [documents]);
 
   const visibleDocs = useMemo(() => {
     let rows = documents;
@@ -269,16 +276,16 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
       if (s) rows = rows.filter((d) => d.salesman === s.name);
     } else if (spvId) {
       const names = childrenOf(positions, Number(spvId)).map((p) => p.name);
-      rows = rows.filter((d) => names.includes(d.salesman));
+      rows = rows.filter((d) => docMatchesSpv(d, spvId, names));
     } else if (bmId) {
       const names = descendantsOf(positions, Number(bmId)).map((p) => p.name);
       rows = rows.filter((d) => names.includes(d.salesman));
     }
-    if (periode) rows = rows.filter((d) => d.period === periode);
+    if (periode) rows = rows.filter((d) => docMatchesPeriode(d, periode));
     const q = search.trim().toLowerCase();
     if (q) {
       rows = rows.filter((d) =>
-        `${d.salesman || ''} ${d.product || ''} ${fromApiPeriod(d.period)}`.toLowerCase().includes(q),
+        `${d.salesman || ''} ${d.product || ''} ${docPeriodLabel(d)}`.toLowerCase().includes(q),
       );
     }
     return rows;
@@ -414,6 +421,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                 {paginatedDocs.map((doc) => {
                   const isSelected = doc.id === activeDocId;
                   const pos = positionByName.get(doc.salesman);
+                  const posType = doc.doc_kind === 'spv' ? 'SPV' : (pos?.position_type || '');
                   return (
                     <div
                       key={doc.id}
@@ -427,18 +435,18 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId((cur) => (cur === doc.id ? null : doc.id)); }}}
                       tabIndex={0}
                       aria-current={isSelected ? 'true' : undefined}
-                      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${fromApiPeriod(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
+                      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${docPeriodLabel(doc)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
                     >
                       <div className="flex-1 min-w-0 flex flex-col gap-1.5">
                         <div className="flex items-baseline justify-between gap-2">
                           <p className="flex-1 min-w-0 font-medium text-[13px] leading-[1.3] text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
                             {doc.salesman || 'Tanpa nama sales'}
                           </p>
-                          <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{fromApiPeriod(doc.period)}</p>
+                          <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{docPeriodLabel(doc)}</p>
                         </div>
                         <div className="flex items-center justify-between gap-2">
-                          {pos ? (
-                            <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
+                          {posType ? (
+                            <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${posType === 'BM' ? 'bg-blue-100 text-blue-700' : posType === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{posType}</span>
                           ) : <span />}
                           <div className="shrink-0">{makeBadge(doc.status)}</div>
                         </div>
@@ -499,13 +507,21 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                     <FolderOpen className="size-5.5" />
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">Dokumen penjualan</p>
+                    <p className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">{activeDoc.doc_kind === 'spv' ? 'Rekap Insentif SPV' : 'Dokumen penjualan'}</p>
                     <h2 id="detailHeading" className="mt-1 text-[clamp(20px,2.4vw,24px)] font-bold tracking-[-0.02em] leading-[1.25] overflow-wrap-anywhere">
                       {activeDoc.salesman || 'Tanpa nama sales'}
                     </h2>
-                    <p className="mt-1 text-[13px] text-[var(--ink-2)]">{fromApiPeriod(activeDoc.period)}</p>
+                    <p className="mt-1 text-[13px] text-[var(--ink-2)]">{docPeriodLabel(activeDoc)}</p>
                   </div>
-                  <div className="flex-shrink-0 mt-1">{makeBadge(activeDoc.status)}</div>
+                  <div className="flex-shrink-0 mt-1 flex flex-col items-end gap-1.5">
+                    {activeDoc.doc_kind === 'spv' && (
+                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1.5 px-2 py-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-700" aria-hidden="true" />
+                        SPV
+                      </Badge>
+                    )}
+                    {makeBadge(activeDoc.status)}
+                  </div>
                 </header>
 
                 <section className="border-t border-[var(--line)] pt-5 mt-6" aria-labelledby="detailInfoTitle">
@@ -524,7 +540,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                       </div>
                       <div>
                         <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">Periode</dt>
-                        <dd className="mt-1 text-[14px] font-medium text-[var(--ink)]">{fromApiPeriod(activeDoc.period)}</dd>
+                        <dd className="mt-1 text-[14px] font-medium text-[var(--ink)]">{docPeriodLabel(activeDoc)}</dd>
                       </div>
                     </dl>
                   )}
@@ -547,7 +563,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                         type="button"
                         className="bg-white text-red-600 border-red-200 hover:bg-red-50" style={{ borderColor: '#fecdd3' }}
                         onClick={() => {
-                          if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${fromApiPeriod(activeDoc.period)}?`)) return;
+                          if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${docPeriodLabel(activeDoc)}?`)) return;
                           onDelete?.(activeDocId);
                           window.dispatchEvent(new Event('insetif-expand'));
                         }}
@@ -730,6 +746,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                 {paginatedDocs.map((doc) => {
                   const isSelected = doc.id === activeDocId;
                   const pos = positionByName.get(doc.salesman);
+                  const posType = doc.doc_kind === 'spv' ? 'SPV' : (pos?.position_type || '');
                   return (
                     <article
                       key={doc.id}
@@ -743,17 +760,17 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId((cur) => (cur === doc.id ? null : doc.id)); }}}
                       tabIndex={0}
                       aria-current={isSelected ? 'true' : undefined}
-                      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${fromApiPeriod(doc.period)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
+                      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${docPeriodLabel(doc)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
                     >
                       <div className="flex items-baseline justify-between gap-3 mb-2">
                         <p className="flex-1 min-w-0 font-semibold text-[14px] text-[var(--ink)] truncate hover:text-[var(--primary)] transition-colors">
                           {doc.salesman || 'Tanpa nama sales'}
                         </p>
-                        <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{fromApiPeriod(doc.period)}</p>
+                        <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{docPeriodLabel(doc)}</p>
                       </div>
                       <div className="flex items-center justify-between gap-2">
-                        {pos ? (
-                          <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${pos.position_type === 'BM' ? 'bg-blue-100 text-blue-700' : pos.position_type === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{pos.position_type}</span>
+                        {posType ? (
+                          <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${posType === 'BM' ? 'bg-blue-100 text-blue-700' : posType === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{posType}</span>
                         ) : <span />}
                         <div className="flex-shrink-0">{makeBadge(doc.status)}</div>
                       </div>
@@ -824,13 +841,21 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                     <FolderOpen className="size-5.5" />
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">Dokumen penjualan</p>
+                    <p className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">{activeDoc.doc_kind === 'spv' ? 'Rekap Insentif SPV' : 'Dokumen penjualan'}</p>
                     <h2 id="mobile-detail-heading" className="mt-1 text-[clamp(20px,2.4vw,24px)] font-bold tracking-[-0.02em] leading-[1.25] overflow-wrap-anywhere">
                       {activeDoc.salesman || 'Tanpa nama sales'}
                     </h2>
-                    <p className="mt-1 text-[13px] text-[var(--ink-2)]">{fromApiPeriod(activeDoc.period)}</p>
+                    <p className="mt-1 text-[13px] text-[var(--ink-2)]">{docPeriodLabel(activeDoc)}</p>
                   </div>
-                  <div className="flex-shrink-0 mt-1">{makeBadge(activeDoc.status)}</div>
+                  <div className="flex-shrink-0 mt-1 flex flex-col items-end gap-1.5">
+                    {activeDoc.doc_kind === 'spv' && (
+                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1.5 px-2 py-0.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-700" aria-hidden="true" />
+                        SPV
+                      </Badge>
+                    )}
+                    {makeBadge(activeDoc.status)}
+                  </div>
                 </header>
 
                 <section className="border-t border-[var(--line)] pt-4 mt-5" aria-labelledby="detailInfoTitleMobile">
@@ -862,7 +887,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                         type="button"
                         className="min-h-[44px] bg-white text-red-600 border-red-200 hover:bg-red-50" style={{ borderColor: '#fecdd3' }}
                         onClick={() => {
-                          if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${fromApiPeriod(activeDoc.period)}?`)) return;
+                          if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${docPeriodLabel(activeDoc)}?`)) return;
                           onDelete?.(activeDocId);
                           window.dispatchEvent(new Event('insetif-expand'));
                         }}
