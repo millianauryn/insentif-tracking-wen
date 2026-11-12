@@ -87,6 +87,19 @@ function createDocumentsRouter(db, options = {}) {
     res.status(201).json({ document: create() });
   });
 
+  // Preview SPV: baris hasil hitung tanpa menyimpan dokumen, supaya tabel di halaman
+  // SPV terisi sebelum officer menekan Simpan Draft.
+  router.get('/spv/preview', auth, (req, res) => {
+    const scopeMsg = spvScopeError(db, req.user, req.query.position_id);
+    if (scopeMsg) return res.status(403).json({ error: { code: 'AUTH_FORBIDDEN', message: scopeMsg } });
+    const start = String(req.query.period || '');
+    const end = String(req.query.period_end || start);
+    if (!isValidPeriod(start) || !isValidPeriod(end)) {
+      return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Periode harus valid (YYYY-MM)' } });
+    }
+    res.json(computeSpvRows(db, req.query.position_id, start, end));
+  });
+
   router.get('/:id', auth, (req, res) => {
     const document = getReadableDocument(db, req.user, req.params.id);
     if (!document) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Document not found' } });

@@ -108,6 +108,11 @@ export function listDocumentFormats() {
   return apiRequest('/api/document-formats')
 }
 
+// Pratinjau baris SPV (golongan + kriteria) untuk SPV + rentang tertentu, tanpa menyimpan dokumen.
+export function previewSpvRows(params) {
+  return apiRequest('/api/documents/spv/preview', { params })
+}
+
 export function listUsers() {
   return apiRequest('/api/users')
 }

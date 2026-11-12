@@ -4,7 +4,7 @@ import Icon from '../components/Icon';
 import ComboSelect from '../components/ComboSelect';
 import { useToast } from '../components/Toast';
 import { GolonganTable, KriteriaTable } from './Documents';
-import { createDocument, updateDocument, finalizeDocument, getDocument, errMsg } from '../api';
+import { createDocument, updateDocument, finalizeDocument, getDocument, previewSpvRows, errMsg } from '../api';
 import { terbilang } from '../lib/terbilang';
 import { toApiPeriod, fromApiPeriod, monthNames, currentPeriodLabel, periodRangeLabel } from '../lib/period';
 
@@ -137,6 +137,26 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
       .finally(() => { if (!cancelled) onLoadDone?.(); });
     return () => { cancelled = true; };
   }, [loadTargetId]);
+
+  // Pratinjau: baris ikut berubah begitu SPV + rentang diisi — tanpa harus Simpan Draft.
+  // Dokumen Final memakai snapshot beku, jadi pratinjau dimatikan saat status Final.
+  useEffect(() => {
+    if (!positionId || documentStatus === 'Final') return;
+    const start = toApiPeriod(periodStart);
+    const end = toApiPeriod(periodEnd);
+    if (!API_PERIOD.test(start) || !API_PERIOD.test(end)) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      previewSpvRows({ position_id: Number(positionId), period: start, period_end: end })
+        .then((data) => {
+          if (cancelled) return;
+          setGolonganRows(toGolonganRows(data.golongan_rows || [], masterData));
+          setCriteriaRows(toCriteriaRows(data.criteria_rows || []));
+        })
+        .catch(() => { /* pratinjau gagal: tabel tetap kosong, simpan tetap bisa dipakai */ });
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [positionId, periodStart, periodEnd, documentStatus, masterData]);
 
   const payload = () => ({
     doc_kind: 'spv',
@@ -296,8 +316,10 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
           />
         ) : (
           <div className="empty-state">
-            <strong>Belum ada data sales Final</strong>
-            <p>Baris golongan dan kriteria muncul setelah dokumen sales di bawah SPV berstatus Final.</p>
+            <strong>{positionId ? 'Belum ada dokumen sales Final di rentang ini' : 'Pilih SPV dan rentang bulan'}</strong>
+            <p>{positionId
+              ? 'Tidak ada dokumen sales Final di bawah SPV ini pada rentang terpilih.'
+              : 'Baris golongan dan kriteria muncul otomatis begitu SPV dan rentang bulan dipilih.'}</p>
           </div>
         )}
 

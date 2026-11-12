@@ -52,6 +52,21 @@ describe('Documents API', () => {
     expect(db.prepare('SELECT label FROM golongan_rows WHERE is_group = 1').get().label).toBe('GROUP PASEO');
   });
 
+  it('preview SPV mengembalikan baris tanpa membuat dokumen', async () => {
+    db.prepare("INSERT INTO incentive_documents (owner_id, format_id, salesman, period, status, doc_kind) VALUES (1, 1, 'SARI', '2026-10', 'Final', 'sales')").run();
+    const salesId = db.prepare('SELECT id FROM incentive_documents ORDER BY id DESC LIMIT 1').get().id;
+    db.prepare("INSERT INTO golongan_rows (document_id, label, target, achievement, is_group) VALUES (?, 'Brand X', 10, 12, 0)").run(salesId);
+
+    const res = await officer.get('/api/documents/spv/preview?position_id=1&period=2026-10&period_end=2026-10').expect(200);
+    expect(res.body.golongan_rows).toHaveLength(1);
+    expect(res.body.golongan_rows[0].target).toBe(10);
+    // Preview tidak boleh membuat dokumen SPV.
+    expect(db.prepare("SELECT COUNT(*) AS count FROM incentive_documents WHERE doc_kind = 'spv'").get().count).toBe(0);
+
+    await officer.get('/api/documents/spv/preview?position_id=2&period=2026-10&period_end=2026-10').expect(403);
+    await officer.get('/api/documents/spv/preview?position_id=1&period=bukan-periode').expect(422);
+  });
+
   it('membuat dokumen SPV dengan rentang periode dan menolak SPV di luar cabang', async () => {
     const created = await officer.post('/api/documents').send({
       doc_kind: 'spv', position_id: 1, format_id: 1, period: '2026-10', period_end: '2026-11',
