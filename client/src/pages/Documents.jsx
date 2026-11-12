@@ -488,10 +488,12 @@ export default function Documents({
     if (type === 'brand' || type === 'principal' || type === 'total') updateGolonganRow(row.id, 'divisi', '');
   };
 
-  // Picking a month keeps the typed year (or the current year) — year stays manual
-  const pickMonth = (monthName) => {
+  // Picking a month keeps the typed year (or the current year) — year stays manual.
+  // Free typing writes raw text: appending the year on every keystroke duplicated it.
+  const pickMonth = (value, picked) => {
+    if (!picked) { setPeriod(value); return; }
     const year = /(\d{4})$/.exec(period || '')?.[1] || String(new Date().getFullYear());
-    setPeriod(`${monthName} ${year}`);
+    setPeriod(`${value} ${year}`);
   };
 
   // SPV page: rekap format (Excel-table style), read-only. BM stays a placeholder.

@@ -22,8 +22,9 @@ export default function ComboSelect({
     return v.includes(q) || (qBase !== q && v.includes(qBase));
   });
 
+  // picked=true only when chosen from the list — lets callers tell "pick" from "free typing"
   const pick = (v) => {
-    onChange(v);
+    onChange(v, true);
     setOpen(false);
     setQuery('');
   };

@@ -143,8 +143,7 @@ export default function Dashboard({ documents = [], user, positions = [], users 
           <article className="card">
             <div className="card-head">
               <div>
-                <h2 className="card-title">Struktur Tim</h2>
-                <p className="card-sub">BM, SPV, dan sales beserta lama kerja</p>
+                <h2 className="card-title">Struktur Jabatan</h2>
               </div>
               <span className="card-note">{totalSales} sales</span>
             </div>

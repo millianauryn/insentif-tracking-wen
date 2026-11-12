@@ -15,6 +15,7 @@ import {
 import Icon from '../components/Icon';
 import Avatar from '../components/Avatar';
 import PickerChips from '../components/PickerChips';
+import { useConfirm } from '../components/Confirm';
 
 const EMPTY_MASTER = { divisions: [], principals: [], brands: [], regions: [], branches: [] };
 
@@ -51,6 +52,7 @@ function InlinePrincipalForm({ division, draft, busy, existing, onChange, onSubm
 }
 
 export default function Master({ data, onRefresh, user }) {
+  const confirm = useConfirm();
   const [tab, setTab] = useState('division');
   const [masterForm, setMasterForm] = useState(null);
   const [masterBusy, setMasterBusy] = useState(false);
@@ -267,7 +269,14 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
       return;
     }
     const target = data.users.find((u) => u.id === id);
-    if (!window.confirm(`Hapus akun ${target?.username}?`)) return;
+    const ok = await confirm({
+      title: 'Hapus akun',
+      message: `Hapus akun ${target?.username}? Akun yang dihapus tidak bisa dikembalikan.`,
+      confirmLabel: 'Hapus',
+      cancelLabel: 'Batal',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await deleteUser(id);
       await onRefresh();
@@ -807,7 +816,7 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
         </div>
 
         {!posForm && (
-          <div className="admin-list">
+          <div className="pos-branches">
             {positions.length ? (
               <>
                 {(() => {
@@ -825,22 +834,22 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
                     byBranchName.get(name).push({ p, branch });
                   });
                   return Array.from(byBranchName.entries()).map(([branchName, branchPositions]) => {
-                    const open = !expandedBranches.has(branchName);
+                    const collapsed = !expandedBranches.has(branchName);
+                    const toggleBranch = () => {
+                      const next = new Set(expandedBranches);
+                      if (next.has(branchName)) next.delete(branchName);
+                      else next.add(branchName);
+                      setExpandedBranches(next);
+                    };
                     return (
-                      <div key={branchName} className="mb-4">
-                        <div className="flex items-center justify-between cursor-pointer group" onClick={() => {
-                          const next = new Set(expandedBranches);
-                          if (next.has(branchName)) next.delete(branchName);
-                          else next.add(branchName);
-                          setExpandedBranches(next);
-                        }}>
-                          <span className={`text-[12px] font-bold text-ink-700 ${open ? 'text-blue-600' : ''}`}>
-                            {open ? '▸' : '▾'} {branchName}
-                          </span>
-                          <span className="text-[11px] text-ink-400">{branchPositions.length} jabatan</span>
-                        </div>
-                        {!open && (
-                          <div className="ml-4 mt-2 space-y-2">
+                      <div key={branchName} className={`pos-branch${collapsed ? '' : ' open'}`}>
+                        <button type="button" className="pos-branch-head" onClick={toggleBranch} aria-expanded={!collapsed}>
+                          <span className="pos-branch-chevron"><Icon size={16}><path d="M9 18l6-6-6-6" /></Icon></span>
+                          <span className="pos-branch-name">{branchName}</span>
+                          <span className="pos-branch-count">{branchPositions.length} jabatan</span>
+                        </button>
+                        {!collapsed && (
+                          <div className="pos-branch-body">
                             {branchPositions.map(({ p, branch }) => {
                               const parent = positions.find((x) => x.id === p.parent_position_id);
                               return (
@@ -1031,8 +1040,8 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
                   <option value={25}>25 per halaman</option>
                   <option value={50}>50 per halaman</option>
                 </select>
-                <Button className="button" disabled={masterPage <= 1} onClick={() => setMasterPage((p) => Math.max(1, p - 1))}>Sebelumnya</Button>
-                <Button className="button" disabled={masterPage >= totalPages} onClick={() => setMasterPage((p) => Math.min(totalPages, p + 1))}>Selanjutnya</Button>
+                <Button className="button pager-btn" disabled={masterPage <= 1} onClick={() => setMasterPage((p) => Math.max(1, p - 1))}>Sebelumnya</Button>
+                <Button className="button pager-btn" disabled={masterPage >= totalPages} onClick={() => setMasterPage((p) => Math.min(totalPages, p + 1))}>Selanjutnya</Button>
               </div>
             </div>
 

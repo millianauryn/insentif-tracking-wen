@@ -52,11 +52,27 @@
 .admin-tabs button:hover { color: var(--text); background: #f0eff5; }
 .admin-tabs button.active { color: var(--blue); background: var(--blue-soft); font-weight: 600; }
 
-/* Master data tabs */
-.master-tabs { display: flex; gap: 6px; margin-bottom: 16px; border-bottom: 1px solid var(--line); padding-bottom: 4px; overflow-x: auto; max-width: 100%; }
-.master-tabs button { padding: 6px 12px; border: 0; background: transparent; color: var(--grey); font-size: 13px; font-weight: 500; border-radius: 5px; cursor: pointer; transition: background .2s, color .2s; white-space: nowrap; }
-.master-tabs button:hover { color: var(--text); background: #f0eff5; }
-.master-tabs button.active { color: var(--blue); background: var(--blue-soft); font-weight: 600; }
+/* Master data tabs — no strip: container transparent so gaps show the card background, height auto overrides the base h-8 ([data-slot] raises specificity so bg-muted/border/p-[3px] can't win) */
+.master-tabs[data-slot="tabs-list"] { display: flex; gap: 6px; margin-bottom: 16px; background: transparent; border-bottom: 0; padding: 0; overflow-x: auto; overflow-y: hidden; max-width: 100%; height: auto; }
+.master-tabs button { padding: 6px 12px; border: 1px solid transparent; border-bottom: 2px solid var(--blue); background: rgba(157, 187, 174, .18); color: var(--text); font-size: 13px; font-weight: 600; border-radius: 5px; cursor: pointer; transition: background .2s, color .2s, border-color .2s; white-space: nowrap; }
+/* idle = sage box + teal underline; hover/active = white box + grey border */
+.master-tabs button:hover { background: #fff; border-color: var(--line); }
+.master-tabs button.active { background: #fff; border-color: var(--line); }
+
+/* Pager stays solid when disabled — at 45% opacity it read as a different (pale) color, not as "disabled" */
+.button.pager-btn:disabled { opacity: 1; }
+
+/* Positions branch accordion (Jabatan User) */
+.pos-branches { display: flex; flex-direction: column; gap: 10px; }
+.pos-branch { border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; }
+.pos-branch-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; border: 0; background: #fff; cursor: pointer; text-align: left; transition: background .15s; }
+.pos-branch-head:hover { background: #f7faf8; }
+.pos-branch-head:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.pos-branch-chevron { display: grid; place-items: center; color: var(--grey); transition: transform .2s, color .2s; }
+.pos-branch.open .pos-branch-chevron { transform: rotate(90deg); color: var(--blue); }
+.pos-branch-name { flex: 1; min-width: 0; color: var(--text); font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pos-branch-count { flex: none; padding: 3px 10px; border-radius: 999px; color: var(--blue); background: var(--blue-soft); font-size: 11px; font-weight: 600; }
+.pos-branch-body { border-top: 1px solid var(--line); }
 
 /* Master form */
 .master-form { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
@@ -208,10 +224,10 @@
   .admin-row strong { font-size: 13px; font-weight: 600; }
   .admin-row > span { color: var(--grey); }
 
-  .master-tabs { gap: 2px; border-bottom: 1px solid var(--line); margin-bottom: 18px; padding: 0; }
-  .master-tabs button { padding: 10px 12px; border-radius: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; color: var(--grey); font-size: 12.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px; }
-  .master-tabs button:hover { color: var(--text); background: #f7faf8; }
-  .master-tabs button.active { color: var(--blue); border-bottom-color: var(--blue); background: transparent; font-weight: 700; }
+  .master-tabs { gap: 6px; border-bottom: 1px solid var(--line); margin-bottom: 18px; padding: 0; }
+  .master-tabs button { padding: 10px 12px; border: 1px solid transparent; border-bottom: 2px solid var(--blue); border-radius: 6px; margin-bottom: -1px; color: var(--text); font-size: 12.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 7px; background: rgba(157, 187, 174, .18); }
+  .master-tabs button:hover { background: #fff; border-color: var(--line); }
+  .master-tabs button.active { background: #fff; border-color: var(--line); }
   .master-tabs button svg { width: 15px; height: 15px; }
 
   .master-table { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }

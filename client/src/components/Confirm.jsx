@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import Modal from './Modal';
+import { Button } from './ui/button';
 
 const ConfirmCtx = createContext(null);
 
@@ -44,12 +45,12 @@ export function ConfirmProvider({ children }) {
               <p className="whitespace-pre-line leading-relaxed">{req.message}</p>
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
-              <button className="btn-ghost" onClick={() => answer(false)}>
+              <Button className="button secondary" onClick={() => answer(false)}>
                 {req.cancelLabel}
-              </button>
-              <button className={req.tone === 'brand' ? 'btn-brand' : 'btn-danger'} onClick={() => answer(true)}>
+              </Button>
+              <Button className="button primary" onClick={() => answer(true)}>
                 {req.confirmLabel}
-              </button>
+              </Button>
             </div>
           </div>
         )}
