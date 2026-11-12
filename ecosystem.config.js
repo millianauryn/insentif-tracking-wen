@@ -3,13 +3,14 @@ module.exports = {
     {
       name: 'insetive-api',
       script: 'index.js',
-      cwd: '/opt/insetive-tracking/server',
+      cwd: 'server', // relative: resolves to <project-root>/server wherever the config is started (Windows repo or /opt deploy)
       instances: 1,
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 3002,
-        CLIENT_ORIGIN: 'https://your-domain.com'
+        CLIENT_ORIGIN: 'https://your-domain.com',
+        COOKIE_SECURE: 'false' // plain-HTTP deployment: browser refuses Secure cookies over http
       },
       env_development: {
         NODE_ENV: 'development',

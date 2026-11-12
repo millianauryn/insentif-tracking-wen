@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
@@ -105,7 +106,8 @@ app.post('/api/auth/login', authLimiter, async (req, res) => {
     const userCriteriaIds = criteriaIdsForUser(user.id, user.role);
     res.cookie('session_token', session.token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      // COOKIE_SECURE=false allows production over plain HTTP (login breaks otherwise)
+      secure: process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'false',
       sameSite: 'lax',
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
@@ -169,6 +171,15 @@ app.use('/api/documents', createDocumentsRouter(db));
 // Health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'incentive-tracking-api' });
+});
+
+// Built client — one port (:3002) serves UI + API so the app can go online without Vite.
+const clientDist = path.join(__dirname, '..', 'client', 'dist');
+app.use(express.static(clientDist));
+// SPA fallback for React Router (Express 5 has no '*' wildcard — use plain middleware)
+app.use((req, res, next) => {
+  if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(clientDist, 'index.html'));
 });
 
 async function start() {
