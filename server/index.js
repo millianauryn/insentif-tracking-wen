@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -175,7 +176,42 @@ app.get('/api/health', (_req, res) => {
 
 // Built client — one port (:3002) serves UI + API so the app can go online without Vite.
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
-app.use(express.static(clientDist));
+const MIME = {
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.html': 'text/html; charset=utf-8',
+  '.txt': 'text/plain; charset=utf-8',
+  '.ico': 'image/x-icon',
+  '.png': 'image/png',
+  '.woff2': 'font/woff2',
+};
+const IMMUTABLE = 'public, max-age=31536000, immutable';
+
+// Aset ber-hash: kirim berkas .gz kalau browser menerima gzip (dikompresi saat build),
+// dan tandai immutable supaya tidak diunduh ulang.
+app.use('/assets', (req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  if (req.path.includes('..')) return next();
+  if (!/\bgzip\b/.test(req.headers['accept-encoding'] || '')) return next();
+  const gzPath = path.join(clientDist, 'assets', `${req.path}.gz`);
+  if (!fs.existsSync(gzPath)) return next();
+  res.setHeader('Content-Encoding', 'gzip');
+  res.setHeader('Vary', 'Accept-Encoding');
+  res.setHeader('Content-Type', MIME[path.extname(req.path)] || 'application/octet-stream');
+  res.setHeader('Cache-Control', IMMUTABLE);
+  res.setHeader('Content-Length', fs.statSync(gzPath).size);
+  if (req.method === 'HEAD') return res.end();
+  return fs.createReadStream(gzPath).pipe(res);
+});
+app.use('/assets', express.static(path.join(clientDist, 'assets'), { maxAge: '1y', immutable: true }));
+app.use(express.static(clientDist, {
+  maxAge: '1h',
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('index.html')) res.setHeader('Cache-Control', 'no-cache');
+  },
+}));
 // SPA fallback for React Router (Express 5 has no '*' wildcard — use plain middleware)
 app.use((req, res, next) => {
   if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
