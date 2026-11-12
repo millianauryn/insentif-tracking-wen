@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toApiPeriod, fromApiPeriod, PERIOD_OPTIONS, monthNames } from './period'
+import { toApiPeriod, fromApiPeriod, PERIOD_OPTIONS, monthNames, periodRangeLabel, apiMonthsInRange } from './period'
 
 describe('period helpers', () => {
   it('converts Indonesian month labels to YYYY-MM', () => {
@@ -33,5 +33,27 @@ describe('period helpers', () => {
     expect(names).toHaveLength(12)
     expect(names[0]).toBe('Januari')
     expect(names[11]).toBe('Desember')
+  })
+})
+
+describe('periode rentang', () => {
+  it('rentang satu bulan tampil sebagai satu bulan', () => {
+    expect(periodRangeLabel('2026-10', '2026-10')).toBe('Oktober 2026')
+  })
+
+  it('rentang multi bulan tampil sebagai rentang', () => {
+    expect(periodRangeLabel('2026-09', '2026-11')).toBe('September 2026 – November 2026')
+  })
+
+  it('period_end kosong diperlakukan sama dengan period', () => {
+    expect(periodRangeLabel('2026-10')).toBe('Oktober 2026')
+  })
+
+  it('menghasilkan daftar bulan dalam rentang', () => {
+    expect(apiMonthsInRange('2026-09', '2026-11')).toEqual(['2026-09', '2026-10', '2026-11'])
+  })
+
+  it('rentang lintas tahun', () => {
+    expect(apiMonthsInRange('2026-11', '2027-02')).toEqual(['2026-11', '2026-12', '2027-01', '2027-02'])
   })
 })

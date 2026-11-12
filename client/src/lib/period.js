@@ -28,3 +28,30 @@ export function fromApiPeriod(value) {
   const month = Object.keys(MONTHS).find((name) => MONTHS[name] === match[2]);
   return month ? `${month} ${match[1]}` : value;
 }
+
+// Label rentang: 1 bulan -> "Oktober 2026"; multi bulan -> "September 2026 – November 2026".
+export function periodRangeLabel(startApi, endApi) {
+  if (!startApi) return '';
+  const start = fromApiPeriod(startApi);
+  const end = fromApiPeriod(endApi || startApi);
+  return start === end ? start : `${start} – ${end}`;
+}
+
+// Daftar bulan API dalam rentang (inklusive), untuk pilihan filter periode.
+export function apiMonthsInRange(startApi, endApi) {
+  if (!startApi) return [];
+  const start = /^(\d{4})-(\d{2})$/.exec(startApi);
+  if (!start) return [startApi];
+  const end = /^(\d{4})-(\d{2})$/.exec(endApi || startApi);
+  let year = Number(start[1]);
+  let month = Number(start[2]);
+  const endYear = end ? Number(end[1]) : year;
+  const endMonth = end ? Number(end[2]) : month;
+  const out = [];
+  while ((year < endYear || (year === endYear && month <= endMonth)) && out.length < 36) {
+    out.push(`${year}-${String(month).padStart(2, '0')}`);
+    month += 1;
+    if (month > 12) { month = 1; year += 1; }
+  }
+  return out;
+}

@@ -90,6 +90,18 @@ function migrateDatabase(db) {
     db.exec('ALTER TABLE incentive_documents ADD COLUMN divisi TEXT');
   }
 
+  // Migrasi incentive_documents (SPV): rentang periode + jenis dokumen + relasi ke posisi SPV.
+  const spvCols = db.prepare('PRAGMA table_info(incentive_documents)').all().map((c) => c.name);
+  if (!spvCols.includes('period_end')) {
+    db.exec('ALTER TABLE incentive_documents ADD COLUMN period_end TEXT');
+  }
+  if (!spvCols.includes('doc_kind')) {
+    db.exec("ALTER TABLE incentive_documents ADD COLUMN doc_kind TEXT NOT NULL DEFAULT 'sales'");
+  }
+  if (!spvCols.includes('position_id')) {
+    db.exec('ALTER TABLE incentive_documents ADD COLUMN position_id INTEGER REFERENCES positions(id) ON DELETE SET NULL');
+  }
+
   // Migrate branches: city (kota) for wilayah derivation
   const branchCols = db.prepare('PRAGMA table_info(branches)').all().map((c) => c.name);
   if (!branchCols.includes('city')) {
@@ -100,17 +112,22 @@ function migrateDatabase(db) {
   const posCols = db.prepare('PRAGMA table_info(positions)').all().map((c) => c.name);
   if (!posCols.includes('sales_code')) db.exec('ALTER TABLE positions ADD COLUMN sales_code TEXT');
 
-  if (!db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_doc_sales_period'").get()) {
+  // Unik sales: satu sales satu insentif per periode — hanya dokumen kind='sales'.
+  if (!db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_doc_sales_period_kind'").get()) {
     // Unique parsial hanya bila tidak ada duplikat historis (data lama mungkin dobel).
     const dups = db.prepare(`
       SELECT lower(trim(salesman)) AS n, period FROM incentive_documents
-      WHERE salesman IS NOT NULL AND trim(salesman) <> '' AND period IS NOT NULL
+      WHERE doc_kind = 'sales' AND salesman IS NOT NULL AND trim(salesman) <> '' AND period IS NOT NULL
       GROUP BY lower(trim(salesman)), period HAVING COUNT(*) > 1 LIMIT 1
     `).get();
     if (!dups) {
-      db.exec(`CREATE UNIQUE INDEX idx_doc_sales_period ON incentive_documents(lower(trim(salesman)), period) WHERE salesman IS NOT NULL AND trim(salesman) <> ''`);
+      db.exec(`CREATE UNIQUE INDEX idx_doc_sales_period_kind ON incentive_documents(lower(trim(salesman)), period) WHERE doc_kind = 'sales' AND salesman IS NOT NULL AND trim(salesman) <> ''`);
     }
   }
+  db.exec('DROP INDEX IF EXISTS idx_doc_sales_period');
+
+  // Unik SPV: satu SPV satu rentang periode.
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_doc_spv_period ON incentive_documents(position_id, period, period_end) WHERE doc_kind = 'spv' AND position_id IS NOT NULL`);
 
   // Ensure position_criteria table exists (each position has own kriteria set)
   if (!db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='position_criteria'").get()) {
