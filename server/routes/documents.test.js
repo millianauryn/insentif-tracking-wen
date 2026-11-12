@@ -24,8 +24,13 @@ describe('Documents API', () => {
     db.prepare("INSERT INTO users (username, password_hash, role) VALUES ('admin', 'hash', 'superadmin')").run();
     db.prepare("INSERT INTO document_formats (name, version) VALUES ('Default', '1')").run();
     db.prepare("INSERT INTO criteria_definitions (label, target_unit, sort_order) VALUES ('Target', 'pcs', 1)").run();
-    officer = appFor(db, { id: 1, username: 'officer', role: 'officer' });
-    admin = appFor(db, { id: 2, username: 'admin', role: 'superadmin' });
+    db.prepare("INSERT INTO branches (name, city) VALUES ('Cabang A', 'Banjarmasin')").run();
+    db.prepare("INSERT INTO positions (name, position_type, branch_id) VALUES ('BUDO', 'SPV', 1)").run();
+    db.prepare("INSERT INTO positions (name, position_type, parent_position_id, branch_id) VALUES ('SARI', 'SALES', 1, 1)").run();
+    db.prepare("INSERT INTO user_branches (user_id, branch_id) VALUES (1, 1)").run();
+    db.prepare("INSERT INTO position_branches (position_id, branch_id) VALUES (1, 1)").run();
+    officer = appFor(db, { id: 1, username: 'officer', role: 'officer', branch_ids: [1] });
+    admin = appFor(db, { id: 2, username: 'admin', role: 'superadmin', branch_ids: [] });
   });
 
   it('creates Draft and snapshots active criteria and flexible Golongan rows', async () => {
@@ -45,6 +50,91 @@ describe('Documents API', () => {
     expect(db.prepare('SELECT COUNT(*) AS count FROM document_criteria_rows').get().count).toBe(1);
     expect(db.prepare('SELECT COUNT(*) AS count FROM golongan_rows').get().count).toBe(2);
     expect(db.prepare('SELECT label FROM golongan_rows WHERE is_group = 1').get().label).toBe('GROUP PASEO');
+  });
+
+  it('membuat dokumen SPV dengan rentang periode dan menolak SPV di luar cabang', async () => {
+    const created = await officer.post('/api/documents').send({
+      doc_kind: 'spv', position_id: 1, format_id: 1, period: '2026-10', period_end: '2026-11',
+    }).expect(201);
+    expect(created.body.document.doc_kind).toBe('spv');
+    expect(created.body.document.period_end).toBe('2026-11');
+    expect(created.body.document.position_id).toBe(1);
+    expect(created.body.document.salesman).toBe('BUDO');
+
+    await officer.post('/api/documents').send({
+      doc_kind: 'spv', position_id: 999, format_id: 1, period: '2026-10', period_end: '2026-11',
+    }).expect(403);
+  });
+
+  it('menolak rentang yang terbalik dan duplikat rentang per SPV', async () => {
+    await officer.post('/api/documents').send({
+      doc_kind: 'spv', position_id: 1, format_id: 1, period: '2026-11', period_end: '2026-10',
+    }).expect(422);
+
+    await officer.post('/api/documents').send({
+      doc_kind: 'spv', position_id: 1, format_id: 1, period: '2026-10', period_end: '2026-11',
+    }).expect(201);
+    await officer.post('/api/documents').send({
+      doc_kind: 'spv', position_id: 1, format_id: 1, period: '2026-10', period_end: '2026-11',
+    }).expect(409);
+  });
+
+  it('dokumen sales tetap boleh dibuat untuk nama yang sama dengan SPV', async () => {
+    await officer.post('/api/documents').send({
+      doc_kind: 'spv', position_id: 1, format_id: 1, period: '2026-10', period_end: '2026-11',
+    }).expect(201);
+    await officer.post('/api/documents').send({
+      format_id: 1, salesman: 'BUDO', period: '2026-10', golongan_rows: [],
+    }).expect(201);
+  });
+
+  it('SPV Draft menampilkan baris hasil hitung dan Final membekukan snapshot', async () => {
+    db.prepare("INSERT INTO incentive_documents (owner_id, format_id, salesman, period, status, doc_kind) VALUES (1, 1, 'SARI', '2026-10', 'Final', 'sales')").run();
+    const salesId = db.prepare('SELECT id FROM incentive_documents ORDER BY id DESC LIMIT 1').get().id;
+    db.prepare("INSERT INTO golongan_rows (document_id, label, target, achievement, is_group) VALUES (?, 'Brand X', 10, 12, 0)").run(salesId);
+    db.prepare("INSERT INTO document_criteria_rows (document_id, criteria_id, label, target_unit, target_value, achievement_value) VALUES (?, 1, 'Target', 'pcs', 10, 12)").run(salesId);
+
+    const created = await officer.post('/api/documents').send({
+      doc_kind: 'spv', position_id: 1, format_id: 1, period: '2026-10', period_end: '2026-10',
+    }).expect(201);
+    const id = created.body.document.id;
+
+    const draft = await officer.get(`/api/documents/${id}`).expect(200);
+    expect(draft.body.document.golongan_rows).toHaveLength(1);
+    expect(draft.body.document.golongan_rows[0].target).toBe(10);
+    expect(draft.body.document.criteria_rows.find((c) => c.criteria_id === 1).target_value).toBe(10);
+
+    await admin.post(`/api/documents/${id}/finalize`).expect(200);
+    expect(db.prepare('SELECT COUNT(*) AS count FROM golongan_rows WHERE document_id = ?').get(id).count).toBe(1);
+    expect(db.prepare('SELECT COUNT(*) AS count FROM document_criteria_rows WHERE document_id = ?').get(id).count).toBe(1);
+
+    // Setelah Final, baris beku: dokumen sales baru tidak mengubahnya.
+    db.prepare("INSERT INTO incentive_documents (owner_id, format_id, salesman, period, status, doc_kind) VALUES (1, 1, 'SARI', '2026-12', 'Final', 'sales')").run();
+    const other = db.prepare('SELECT id FROM incentive_documents ORDER BY id DESC LIMIT 1').get().id;
+    db.prepare("INSERT INTO golongan_rows (document_id, label, target, achievement, is_group) VALUES (?, 'Brand Y', 99, 99, 0)").run(other);
+
+    const final = await officer.get(`/api/documents/${id}`).expect(200);
+    expect(final.body.document.golongan_rows).toHaveLength(1);
+    expect(final.body.document.golongan_rows[0].target).toBe(10);
+  });
+
+  it('SPV menolak golongan_rows dari client dan mengunci periode saat Final', async () => {
+    const created = await officer.post('/api/documents').send({
+      doc_kind: 'spv', position_id: 1, format_id: 1, period: '2026-10', period_end: '2026-10',
+    }).expect(201);
+    const id = created.body.document.id;
+
+    await officer.patch(`/api/documents/${id}`).send({ golongan_rows: [{ label: 'Palsu', target: 1 }] }).expect(422);
+    await officer.patch(`/api/documents/${id}`).send({ criteria_rows: [{ criteria_id: 1, target_value: 5 }] }).expect(422);
+    await officer.patch(`/api/documents/${id}`).send({ insentif_total: 5000 }).expect(200);
+    await officer.patch(`/api/documents/${id}`).send({ period: '2026-11', period_end: '2026-11' }).expect(200);
+
+    await admin.post(`/api/documents/${id}/finalize`).expect(200);
+    await admin.patch(`/api/documents/${id}`).send({ period: '2026-12', audit_reason: 'koreksi rentang' }).expect(409);
+    await admin.patch(`/api/documents/${id}`).send({ period_end: '2026-12', audit_reason: 'koreksi rentang' }).expect(409);
+    await admin.patch(`/api/documents/${id}`).send({ position_id: 2, audit_reason: 'koreksi spv' }).expect(409);
+    // Koreksi yang tidak mengubah kunci dokumen tetap boleh.
+    await admin.patch(`/api/documents/${id}`).send({ insentif_total: 7000, audit_reason: 'koreksi nominal' }).expect(200);
   });
 
   it('allows owner to edit Draft, blocks officer finalize, lets observer approve, and allows Super Admin correction', async () => {

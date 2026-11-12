@@ -1,5 +1,6 @@
 const express = require('express');
 const { requireAuth } = require('../middleware.js');
+const { spvScopeError, computeSpvRows } = require('../spv.js');
 
 function createDocumentsRouter(db, options = {}) {
   const router = express.Router();
@@ -30,32 +31,56 @@ function createDocumentsRouter(db, options = {}) {
     }
     const format = db.prepare('SELECT id FROM document_formats WHERE id = ? AND active = 1').get(input.format_id);
     if (!format) return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid document format' } });
+
+    // Dokumen SPV:Akumulasi dari dokumen sales Final di bawah SPV, untuk rentang bulan.
+    const isSpv = input.doc_kind === 'spv';
+    let spvPeriodEnd = null;
+    if (isSpv) {
+      const scopeMsg = spvScopeError(db, req.user, input.position_id);
+      if (scopeMsg) return res.status(403).json({ error: { code: 'AUTH_FORBIDDEN', message: scopeMsg } });
+      spvPeriodEnd = input.period_end || input.period;
+      if (!isValidPeriod(spvPeriodEnd)) {
+        return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'period_end harus valid (YYYY-MM)' } });
+      }
+      if (spvPeriodEnd < input.period) {
+        return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Bulan akhir tidak boleh sebelum bulan mulai' } });
+      }
+      if (findDuplicateSpvDoc(db, input.position_id, input.period, spvPeriodEnd)) {
+        return res.status(409).json({ error: { code: 'DUPLICATE_SPV_PERIOD', message: 'SPV ini sudah punya dokumen untuk rentang tersebut' } });
+      }
+    }
     if (!validateGolonganRows(input.golongan_rows || [])) {
       return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Invalid Golongan rows' } });
     }
-    const dup = findDuplicateDoc(db, input.salesman, input.period);
-    if (dup) {
-      return res.status(409).json({ error: { code: 'DUPLICATE_SALES_PERIOD', message: `Sales ${dup.salesman} sudah menerima insentif pada periode ${dup.period}` } });
+    if (!isSpv) {
+      const dup = findDuplicateDoc(db, input.salesman, input.period);
+      if (dup) {
+        return res.status(409).json({ error: { code: 'DUPLICATE_SALES_PERIOD', message: `Sales ${dup.salesman} sudah menerima insentif pada periode ${dup.period}` } });
+      }
     }
 
     const create = db.transaction(() => {
       const ownerId = req.user.id;
+      // Nama SPV disimpan di salesman agar tetap tampil di daftar "Dokumen Tersimpan".
+      const spvRow = isSpv ? db.prepare('SELECT name FROM positions WHERE id = ?').get(Number(input.position_id)) : null;
       const result = db.prepare(`
-        INSERT INTO incentive_documents (owner_id, format_id, division_id, salesman, product, period, status, wilayah, insentif_total, kwitansi, divisi)
-        VALUES (?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?, ?)
-      `).run(ownerId, input.format_id, input.division_id || null, input.salesman || null, input.product || null, input.period, input.wilayah || null, encodeNumber(input.insentif_total), encodeKwitansi(input.kwitansi), input.divisi || null);
+        INSERT INTO incentive_documents (owner_id, format_id, division_id, salesman, product, period, period_end, doc_kind, position_id, status, wilayah, insentif_total, kwitansi, divisi)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?, ?)
+      `).run(ownerId, input.format_id, input.division_id || null, isSpv ? (spvRow?.name ?? null) : (input.salesman || null), input.product || null, input.period, spvPeriodEnd, isSpv ? 'spv' : 'sales', isSpv ? Number(input.position_id) : null, input.wilayah || null, encodeNumber(input.insentif_total), encodeKwitansi(input.kwitansi), input.divisi || null);
       const documentId = result.lastInsertRowid;
-      const criteria = db.prepare(`
-        SELECT id, label, target_unit, formula, sort_order
-        FROM criteria_definitions WHERE active = 1 ORDER BY sort_order, id
-      `).all();
-      const insertCriteria = db.prepare(`
-        INSERT INTO document_criteria_rows (document_id, criteria_id, label, target_unit, formula, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `);
-      criteria.forEach(row => insertCriteria.run(documentId, row.id, row.label, row.target_unit, row.formula, row.sort_order));
-      insertGolonganRows(db, documentId, input.golongan_rows || []);
-      upsertCriteriaRows(db, documentId, input.criteria_rows || []);
+      if (!isSpv) {
+        const criteria = db.prepare(`
+          SELECT id, label, target_unit, formula, sort_order
+          FROM criteria_definitions WHERE active = 1 ORDER BY sort_order, id
+        `).all();
+        const insertCriteria = db.prepare(`
+          INSERT INTO document_criteria_rows (document_id, criteria_id, label, target_unit, formula, sort_order)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        criteria.forEach(row => insertCriteria.run(documentId, row.id, row.label, row.target_unit, row.formula, row.sort_order));
+        insertGolonganRows(db, documentId, input.golongan_rows || []);
+        upsertCriteriaRows(db, documentId, input.criteria_rows || []);
+      }
       return db.prepare('SELECT * FROM incentive_documents WHERE id = ?').get(documentId);
     });
 
@@ -65,7 +90,7 @@ function createDocumentsRouter(db, options = {}) {
   router.get('/:id', auth, (req, res) => {
     const document = getReadableDocument(db, req.user, req.params.id);
     if (!document) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
-    res.json({ document });
+    res.json({ document: withLiveRows(db, document) });
   });
 
   router.patch('/:id', auth, (req, res) => {
@@ -82,12 +107,46 @@ function createDocumentsRouter(db, options = {}) {
         return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'audit_reason wajib diisi (min 3 huruf) untuk koreksi Final' } });
       }
     }
+    // Dokumen SPV: baris selalu dihitung server; kunci rentang/SPV dibekukan saat Final.
+    if (document.doc_kind === 'spv') {
+      if (Array.isArray(input.golongan_rows) || Array.isArray(input.criteria_rows)) {
+        return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Baris SPV dihitung dari dokumen sales, tidak bisa diisi manual' } });
+      }
+      if (document.status === 'Final') {
+        const locked = ['period', 'period_end', 'position_id'].filter((field) => input[field] !== undefined);
+        if (locked.length) {
+          return res.status(409).json({ error: { code: 'DOCUMENT_LOCKED', message: `Rentang periode dan SPV terkunci pada dokumen Final (${locked.join(', ')})` } });
+        }
+      } else {
+        const nextPosition = input.position_id !== undefined ? Number(input.position_id) : document.position_id;
+        const scopeMsg = spvScopeError(db, req.user, nextPosition);
+        if (scopeMsg) return res.status(403).json({ error: { code: 'AUTH_FORBIDDEN', message: scopeMsg } });
+        const nextPeriod = input.period !== undefined ? input.period : document.period;
+        const nextEnd = input.period_end !== undefined ? input.period_end : (document.period_end || document.period);
+        if (!isValidPeriod(nextPeriod) || !isValidPeriod(nextEnd)) {
+          return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Periode harus valid (YYYY-MM)' } });
+        }
+        if (nextEnd < nextPeriod) {
+          return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'Bulan akhir tidak boleh sebelum bulan mulai' } });
+        }
+        if (findDuplicateSpvDoc(db, nextPosition, nextPeriod, nextEnd, document.id)) {
+          return res.status(409).json({ error: { code: 'DUPLICATE_SPV_PERIOD', message: 'SPV ini sudah punya dokumen untuk rentang tersebut' } });
+        }
+        // Ganti SPV -> nama pejabat ikut berubah.
+        if (input.position_id !== undefined && Number(input.position_id) !== document.position_id) {
+          const spvRow = db.prepare('SELECT name FROM positions WHERE id = ?').get(Number(input.position_id));
+          if (spvRow) input.salesman = spvRow.name;
+        }
+      }
+    }
     try {
       const nextSalesman = input.salesman !== undefined ? input.salesman : document.salesman;
       const nextPeriod = input.period !== undefined ? input.period : document.period;
-      const dup = findDuplicateDoc(db, nextSalesman, nextPeriod, document.id);
-      if (dup) {
-        return res.status(409).json({ error: { code: 'DUPLICATE_SALES_PERIOD', message: `Sales ${dup.salesman} sudah menerima insentif pada periode ${dup.period}` } });
+      if (document.doc_kind !== 'spv') {
+        const dup = findDuplicateDoc(db, nextSalesman, nextPeriod, document.id);
+        if (dup) {
+          return res.status(409).json({ error: { code: 'DUPLICATE_SALES_PERIOD', message: `Sales ${dup.salesman} sudah menerima insentif pada periode ${dup.period}` } });
+        }
       }
       updateDocument(db, document, input);
     } catch (error) {
@@ -105,7 +164,7 @@ function createDocumentsRouter(db, options = {}) {
       });
       writeAudit(db, req.user.id, 'UPDATE', 'incentive_document', document.id, { ...scalars(document), audit_reason: String(input.audit_reason || '').trim() }, scalars(getDocument(db, document.id)));
     }
-    res.json({ document: getDocument(db, document.id) });
+    res.json({ document: withLiveRows(db, getDocument(db, document.id)) });
   });
 
   router.delete('/:id', auth, (req, res) => {
@@ -132,6 +191,7 @@ function createDocumentsRouter(db, options = {}) {
       return res.status(403).json({ error: { code: 'AUTH_FORBIDDEN', message: 'Cannot finalize this document' } });
     }
     if (document.status !== 'Draft') return res.status(409).json({ error: { code: 'DOCUMENT_LOCKED', message: 'Document is already Final' } });
+    if (document.doc_kind === 'spv') snapshotSpvRows(db, document);
     db.prepare("UPDATE incentive_documents SET status = 'Final', updated_at = datetime('now') WHERE id = ?").run(document.id);
     res.json({ document: getDocument(db, document.id) });
   });
@@ -145,8 +205,7 @@ function getReadableDocument(db, user, id) {
   return document;
 }
 
-function getDocument(db, id) {
-  const document = db.prepare('SELECT * FROM incentive_documents WHERE id = ?').get(id);
+function getDocument(db, id) {  const document = db.prepare('SELECT * FROM incentive_documents WHERE id = ?').get(id);
   if (!document) return null;
   return {
     ...document,
@@ -156,12 +215,44 @@ function getDocument(db, id) {
   };
 }
 
+// Dokumen SPV Draft: baris dihitung ulang dari dokumen sales Final terbaru.
+function withLiveRows(db, document) {
+  if (document.doc_kind !== 'spv' || document.status !== 'Draft') return document;
+  const computed = computeSpvRows(db, document.position_id, document.period, document.period_end || document.period);
+  return { ...document, golongan_rows: computed.golongan_rows, criteria_rows: computed.criteria_rows };
+}
+
+// Finalisasi SPV: beku angka saat ini sebagai snapshot baris dokumen.
+function snapshotSpvRows(db, document) {
+  const computed = computeSpvRows(db, document.position_id, document.period, document.period_end || document.period);
+  const write = db.transaction(() => {
+    db.prepare('DELETE FROM golongan_rows WHERE document_id = ?').run(document.id);
+    db.prepare('DELETE FROM document_criteria_rows WHERE document_id = ?').run(document.id);
+    computed.golongan_rows.forEach((row, index) => {
+      db.prepare(`
+        INSERT INTO golongan_rows (document_id, label, principal_id, brand_id, target, achievement, sort_order, is_group)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+      `).run(document.id, row.label ?? row.brand_name ?? null, row.principal_id, row.brand_id, row.target, row.achievement, index);
+    });
+    computed.criteria_rows.forEach((row) => {
+      const target = Number(row.target_value) || 0;
+      const achievement = Number(row.achievement_value) || 0;
+      const percentage = target > 0 ? (achievement / target) * 100 : 0;
+      db.prepare(`
+        INSERT INTO document_criteria_rows (document_id, criteria_id, label, target_unit, formula, target_value, achievement_value, percentage, status, incentive_amount, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(document.id, row.criteria_id, row.label, row.target_unit, row.formula, target, achievement, percentage, target > 0 && percentage >= 100 ? 'Tercapai' : 'Gugur', null, row.sort_order);
+    });
+  });
+  write();
+}
+
 function updateDocument(db, document, input) {
   const fields = [];
   const values = [];
-  for (const field of ['division_id', 'salesman', 'product', 'period', 'format_id', 'wilayah', 'divisi']) {
+  for (const field of ['division_id', 'salesman', 'product', 'period', 'period_end', 'position_id', 'format_id', 'wilayah', 'divisi']) {
     if (input[field] !== undefined) {
-      if (field === 'period' && !isValidPeriod(input[field])) throw new Error('Invalid period');
+      if ((field === 'period' || field === 'period_end') && !isValidPeriod(input[field])) throw new Error('Invalid period');
       fields.push(`${field} = ?`);
       values.push(input[field]);
     }
@@ -257,9 +348,21 @@ function findDuplicateDoc(db, salesman, period, excludeId = null) {
   if (!name || !period) return null;
   return db.prepare(`
     SELECT id, salesman, period FROM incentive_documents
-    WHERE lower(trim(salesman)) = ? AND period = ? AND (? IS NULL OR id != ?)
+    WHERE doc_kind = 'sales' AND lower(trim(salesman)) = ? AND period = ? AND (? IS NULL OR id != ?)
     LIMIT 1
   `).get(name, period, excludeId, excludeId) || null;
+}
+
+// Batasan: satu SPV satu dokumen untuk satu rentang periode.
+function findDuplicateSpvDoc(db, positionId, period, periodEnd, excludeId = null) {
+  const id = Number(positionId);
+  if (!Number.isInteger(id) || !period) return null;
+  return db.prepare(`
+    SELECT id FROM incentive_documents
+    WHERE doc_kind = 'spv' AND position_id = ? AND period = ? AND ifnull(period_end, period) = ?
+      AND (? IS NULL OR id != ?)
+    LIMIT 1
+  `).get(id, period, periodEnd, excludeId, excludeId) || null;
 }
 
 // Insentif total stored as REAL; null/invalid → NULL (null = use auto-sum on the client)
