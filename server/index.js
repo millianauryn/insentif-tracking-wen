@@ -188,8 +188,16 @@ async function start() {
   sweep();
   setInterval(sweep, 24 * 60 * 60 * 1000).unref();
   await seedDatabase(db);
-  app.listen(port, () => {
+  const server = app.listen(port, () => {
     console.log(`Incentive API listening on http://localhost:${port}`);
+  });
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${port} sudah dipakai proses lain. Hentikan proses itu (mis. "npm run dev" di server/) lalu jalankan ulang.`);
+    } else {
+      console.error('Server error:', err.message);
+    }
+    process.exit(1);
   });
 }
 

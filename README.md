@@ -7,7 +7,7 @@ Canonical spec: [docs/architecture.md](docs/architecture.md) — fungsi saat ini
 ## Stack
 
 - Frontend: React 19 + Vite 8 + Tailwind 4 (`client/`)
-- Backend: Express 5 + better-sqlite3 (`server/`, :3002)
+- Backend: Express 5 + better-sqlite3 (`server/`, production `:3002`, dev `:3003`)
 - DB: `server/data/incentive.sqlite`
 
 ## Jalankan

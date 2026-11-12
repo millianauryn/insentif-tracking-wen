@@ -1,7 +1,7 @@
 # Dokumen Insentif SPV — Design Doc
 
 Tanggal: 2026-11-12
-Status: menunggu approval
+Status: sudah diimplementasikan (2026-11-12)
 
 ## Intent
 

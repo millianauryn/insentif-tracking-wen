@@ -9,7 +9,7 @@ function authSeed() {
   const middleware = async (req, res, next) => {
     if (!req.url || !req.url.includes('__seed')) return next()
     try {
-      const r = await fetch('http://localhost:3002/api/auth/dev-login?user=super', { method: 'POST' })
+      const r = await fetch('http://localhost:3003/api/auth/dev-login?user=super', { method: 'POST' })
       const cookies = typeof r.headers.getSetCookie === 'function' ? r.headers.getSetCookie() : []
       if (cookies.length) res.setHeader('Set-Cookie', cookies)
     } catch {
@@ -33,7 +33,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), authSeed()],
   server: {
     proxy: {
-      '/api': 'http://localhost:3002',
+      // Dev API ada di port 3003 (server/dev.js) supaya tidak bentrok dengan production di 3002.
+      '/api': 'http://localhost:3003',
     },
   },
   preview: {

@@ -5,7 +5,7 @@
 - **Client** (`client/`): React 19 + Vite 8 + Tailwind 4 + shadcn/base-ui, `lucide-react` icons. Routes lazy-loaded, vendor split in `vite.config.js` (`vendor-react/vendor-router/vendor-base-ui/vendor-icons`). HTTP layer = satu file `client/src/api.js` (fetch core: CSRF, timeout 20dtk, redirect 401, `apiRequest` + `api` + `errMsg`).
 - **Server** (`server/`): Express 5 + `better-sqlite3`, Helmet, CORS, `express-rate-limit`. Cookie sessions (`session_token`, httpOnly, 24h), `crypto.scrypt` passwords, `sha256(token)` in `sessions`.
 - **DB**: SQLite file `server/data/incentive.sqlite` (WAL + `busy_timeout 5000`). `schema.sql` + idempotent `PRAGMA` migrations in `db.js`.
-- **Ports**: API `3002`, dev front `5173`, prod preview `4173` (config proxies `/api` → `3002`). Server defaults `NODE_ENV=development` bila kosong (dev-login aktif hanya di development/test).
+- **Ports**: production API `3002` (PM2), dev API `3003` (`server/dev.js`), dev front `5173` (proxy `/api` → `3003`), prod preview `4173` (proxy `/api` → `3002`). Server defaults `NODE_ENV=development` bila kosong (dev-login aktif hanya di development/test). Dev API dipisah dari production supaya `npm run dev` tidak merebut port PM2 (server keluar sendiri kalau port sudah dipakai).
 
 > `docs/*.md` + `docs/superpowers/*` are historical. This file is the canonical functional record — no behavior changes here without an ADR.
 
