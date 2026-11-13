@@ -46,8 +46,18 @@ function FullDocPreview({ doc }) {
       <div className="text-center border border-[var(--line)] rounded-lg px-3 py-3 bg-[#fbfdfc]">
         <p className="font-bold tracking-wide text-[14px]">PERHITUNGAN INSENTIF</p>
         <p className="mt-1">WILAYAH : {doc.wilayah || '-'}</p>
-        <p>SALESMAN : {doc.salesman || '-'}</p>
-        <p>PRODUK : {doc.product || '-'}</p>
+        {doc.doc_kind === 'spv' ? (
+          <>
+            {/* SPV tidak punya produk/brand sendiri — tampilkan identitas pejabatnya. */}
+            <p>SUPERVISOR : SPV</p>
+            <p>NAMA PEJABAT : {doc.salesman || '-'}</p>
+          </>
+        ) : (
+          <>
+            <p>SALESMAN : {doc.salesman || '-'}</p>
+            <p>PRODUK : {doc.product || '-'}</p>
+          </>
+        )}
         <p>BULAN : {docPeriodLabel(doc)}</p>
       </div>
 
