@@ -203,6 +203,15 @@ app.use(express.static(clientDist, {
     if (filePath.endsWith('index.html')) res.setHeader('Cache-Control', 'no-cache');
   },
 }));
+// robots.txt asli: aplikasi private (Tailscale), jangan diindeks crawler.
+// Tanpa ini path /robots.txt jatuh ke SPA fallback dan crawler menerima HTML.
+app.get('/robots.txt', (_req, res) => {
+  res.type('text/plain').set('Cache-Control', 'public, max-age=86400').send('User-agent: *\nDisallow: /\n');
+});
+// Tidak ada sitemap untuk app private — balas 404, bukan HTML SPA.
+app.get('/sitemap.xml', (_req, res) => {
+  res.status(404).type('text/plain').send('Not found');
+});
 // SPA fallback for React Router (Express 5 has no '*' wildcard — use plain middleware)
 app.use((req, res, next) => {
   if (req.method !== 'GET' || req.path.startsWith('/api')) return next();
