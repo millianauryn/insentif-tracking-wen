@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+﻿name: CI/CD Pipeline
 
 on:
   push:
@@ -98,31 +98,31 @@ jobs:
       # Tidak pakai actions/checkout: deploy bekerja langsung di folder aplikasi
       # (C:\software\insetive tracking), bukan di checkout _work milik runner.
       - name: Pull latest code
-        shell: pwsh
+        shell: powershell
         run: |
           cd "C:\software\insetive tracking"
           git pull --ff-only origin $env:GITHUB_REF_NAME
 
       - name: Install server dependencies
-        shell: pwsh
+        shell: powershell
         # shortcut: npm install (inkremental, cepat) bukan npm ci (reproducible tapi
         # wipe node_modules + rebuild better-sqlite3 tiap deploy). Ganti ke npm ci
         # kalau perlu determinisme penuh.
         run: cd "C:\software\insetive tracking\server"; npm install --no-audit --no-fund
 
       - name: Build client
-        shell: pwsh
+        shell: powershell
         run: |
           cd "C:\software\insetive tracking\client"
           npm install --no-audit --no-fund
           npm run build
 
       - name: Restart API (PM2)
-        shell: pwsh
+        shell: powershell
         run: pm2 restart insetive-api --update-env
 
       - name: Verify health
-        shell: pwsh
+        shell: powershell
         run: |
           Start-Sleep -Seconds 5
           $r = Invoke-WebRequest -Uri http://localhost:3002/api/health -UseBasicParsing
