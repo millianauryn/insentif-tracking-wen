@@ -470,8 +470,8 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
       ),
     },
     branch: {
-      title: 'Cabang / Distribusi',
-      desc: 'Daftar Cabang / Distribusi per Area.',
+      title: 'Cabang / Distributor',
+      desc: 'Daftar Cabang / Distributor per Area.',
       createLabel: 'Tambah Cabang',
       fields: (form) => (
         <>

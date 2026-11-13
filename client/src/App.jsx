@@ -387,6 +387,7 @@ function App() {
                 user={user}
                 positions={positions}
                 users={adminData.users}
+                masterData={adminData.masterData}
                 period={period}
                 setPeriod={setPeriod}
                 onNewDoc={() => { cancelEdit(); navigate('/documents'); }}
