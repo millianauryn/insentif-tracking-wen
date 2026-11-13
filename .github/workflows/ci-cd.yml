@@ -119,7 +119,12 @@ jobs:
 
       - name: Restart API (PM2)
         shell: powershell
-        run: pm2 restart insetive-api --update-env
+        # Jangan pakai `pm2 restart`: app menerima SIGINT dan crash-loop
+        # (exit 134, "too many unstable restarts"). delete + start segar terbukti stabil.
+        run: |
+          cd "C:\software\insetive tracking"
+          pm2 delete insetive-api
+          pm2 start ecosystem.config.js
 
       - name: Verify health
         shell: powershell
