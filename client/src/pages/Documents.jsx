@@ -44,9 +44,11 @@ export function buildBrandOptions(brands, principals, allRows, currentId, active
     .filter((b) => b.is_active !== 0 && b.active !== 0)
     .filter((b) => !used.has((b.name || '').trim().toLowerCase()))
     .filter(inDivision)
-    .filter((b) => selected.includes(keyOf(b)));
+    // Ikut tampil selama ada produk terpilih: principal terpilih ATAU brand tanpa principal.
+    .filter((b) => !keyOf(b) || selected.includes(keyOf(b)));
 
-  const groups = new Map(selected.map((key) => [key, []]));
+  // '' = kumpulan brand tanpa principal, selalu terakhir.
+  const groups = new Map([...selected, ''].map((key) => [key, []]));
   for (const b of picked) groups.get(keyOf(b)).push(b);
 
   const out = [];

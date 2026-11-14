@@ -109,4 +109,16 @@ describe('buildBrandOptions (mengikuti produk yang dipilih)', () => {
     const out = build(['ENESIS'], [{ type: 'brand', label: 'AMUNIZER' }]);
     expect(out.map((o) => o.value)).toEqual(['ANTIS', 'VEGETA']);
   });
+
+  it('brand tanpa principal tetap muncul selama ada produk dipilih (di akhir, tanpa hint)', () => {
+    const withOrphan = [...brands, { id: 7, name: 'ZOLEO', principal_id: null, is_active: 1, active: 1 }];
+    const out = buildBrandOptions(withOrphan, principals, [], 0, null, [], ['ENESIS']);
+    expect(out.map((o) => o.value)).toEqual(['AMUNIZER', 'ANTIS', 'VEGETA', 'ZOLEO']);
+    expect(out[out.length - 1].hint).toBe('');
+  });
+
+  it('tanpa produk, brand tanpa principal juga ikut kosong', () => {
+    const withOrphan = [...brands, { id: 7, name: 'ZOLEO', principal_id: null, is_active: 1, active: 1 }];
+    expect(buildBrandOptions(withOrphan, principals, [], 0, null, [], [])).toEqual([]);
+  });
 });
