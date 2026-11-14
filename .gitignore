@@ -18,3 +18,16 @@ npm-debug.log*
 .vscode/
 .idea/
 .DS_Store
+
+# Local SQLite databases (berisi password hash — jangan pernah di-commit)
+*.sqlite
+*.sqlite-*
+server/data/
+data/ # bind mount docker compose (sqlite produksi)
+
+# Agent/tool caches — output lokal, bukan bagian produk
+.taste-skill/
+.superpowers/
+graphify-out/
+opencode.jsonc
+skills-lock.json

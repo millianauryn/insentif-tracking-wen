@@ -1,0 +1,15 @@
+# Domain diisi lewat env DOMAIN (lihat docker-compose.yml + .env).
+# Caddy ambil sertifikat Let's Encrypt otomatis selama port 80/443 terbuka.
+{$DOMAIN} {
+	encode gzip
+
+	handle /api/* {
+		reverse_proxy api:3002
+	}
+
+	handle {
+		root * /srv/caddy
+		try_files {path} /index.html
+		file_server
+	}
+}
