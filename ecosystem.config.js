@@ -25,7 +25,11 @@ module.exports = {
       watch: false,
       ignore_watch: ['node_modules', 'data', '*.log'],
       restart_delay: 3000,
-      max_restarts: 10,
+      // 100, bukan 10: selama job deploy berjalan app bisa kena badai kill
+      // ~0,5 detik per start. Dengan 10, PM2 menyerah ("errored") tepat saat
+      // badai selesai -> situs 502 permanen. Dengan 100 app hidup lagi sendiri
+      // setelah job selesai (~40 detik badai jauh di bawah batas ini).
+      max_restarts: 100,
       min_uptime: '10s'
     }
   ]
