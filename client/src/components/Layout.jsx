@@ -79,23 +79,39 @@ function SideNav({ onNavigate, collapsed = false, onToggle }) {
         </div>
         )}
       </div>
-      {onToggle && (
-        <div className={`mt-2 flex ${collapsed ? 'justify-center' : 'justify-end'} px-2`}>
+      {onToggle && collapsed && (
+        <div className="mt-2 flex justify-center px-2">
           <Button
-            aria-label={collapsed ? 'Perbesar menu' : 'Ciutkan menu'}
-            title={collapsed ? 'Perbesar menu' : 'Ciutkan menu'}
+            aria-label="Perbesar menu"
+            title="Perbesar menu"
             size="icon"
             variant="ghost"
             onClick={onToggle}
             className="h-7 w-7 text-ink-500 hover:bg-black/5 shrink-0"
           >
-            <ChevronDown size={16} style={{ transform: collapsed ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform 0.2s' }} />
+            <ChevronDown size={16} style={{ transform: 'rotate(-90deg)', transition: 'transform 0.2s' }} />
           </Button>
         </div>
       )}
 
       <nav className="mt-7 flex flex-col gap-1">
-        {!collapsed && <p className="px-3 pb-2 text-[11px] font-bold text-ink-400">Menu utama</p>}
+        {!collapsed && (
+          <div className="flex items-center justify-between gap-2 px-3 pb-2">
+            <p className="text-[11px] font-bold text-ink-400">Menu utama</p>
+            {onToggle && (
+              <Button
+                aria-label="Ciutkan menu"
+                title="Ciutkan menu"
+                size="icon"
+                variant="ghost"
+                onClick={onToggle}
+                className="h-7 w-7 text-ink-500 hover:bg-black/5 shrink-0"
+              >
+                <ChevronDown size={16} style={{ transform: 'rotate(90deg)', transition: 'transform 0.2s' }} />
+              </Button>
+            )}
+          </div>
+        )}
         {NAV.filter((item) => !item.roles || item.roles.includes(user?.role)).map((item) => {
           const Icon = item.icon;
           const active = item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);

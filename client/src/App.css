@@ -443,6 +443,10 @@
 }
 
 /* Org tree (Dashboard): area > wilayah > cabang > jabatan, dengan tenure */
+/* Satu kotak search: aturan global `input { border: ... }` tidak berlaku di sini
+   (kelas Tailwind ber-layer, aturan global unlayered → menang). */
+.dash-search input { border: 0; background: transparent; min-height: 0; padding: 0; box-shadow: none; font-size: 13px; }
+.dash-search input:hover, .dash-search input:focus { border: 0; box-shadow: none; outline: none; }
 .org-tree { font-size: 13px; max-height: 62vh; overflow-y: auto; padding: 4px 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 .org-row { position: relative; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 7px 0; }
 /* Klik baris mana pun untuk buka/tutup — tidak perlu bidik ikon kecilnya. */

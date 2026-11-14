@@ -2,7 +2,6 @@
 import { Link } from 'react-router-dom';
 import { Plus, Minus, Search } from 'lucide-react';
 import { Button, buttonVariants } from '../components/ui/button';
-import { Input } from '../components/ui/input';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../components/ui/select';
 import { cn } from 'cn';
 import Icon from '../components/Icon';
@@ -195,13 +194,14 @@ export default function Dashboard({ documents = [], user, positions = [], users 
 
             {/* Filter berjenjang + pencarian */}
             <div className="flex flex-col gap-3 mb-4">
-              <div className="relative">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-3)]" aria-hidden="true" />
-                <Input
+              {/* Ikon jadi sibling flex, bukan absolute — teks placeholder tidak pernah tertimpa. */}
+              <div className="dash-search flex h-8 items-center gap-2 rounded-lg border border-input px-2.5 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
+                <Search size={15} className="shrink-0 text-[var(--ink-3)]" aria-hidden="true" />
+                <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Cari area, wilayah, cabang, atau nama jabatan..."
-                  className="pl-9"
+                  className="w-full min-w-0 bg-transparent text-base outline-none placeholder:text-muted-foreground md:text-sm"
                   aria-label="Cari struktur jabatan"
                 />
               </div>
