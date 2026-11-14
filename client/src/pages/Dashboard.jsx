@@ -1,13 +1,11 @@
 ﻿import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Plus, Minus, Search } from 'lucide-react';
 import { Button, buttonVariants } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
 import { Input } from '../components/ui/input';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../components/ui/select';
 import { cn } from 'cn';
 import Icon from '../components/Icon';
-import { fromApiPeriod } from '../lib/period';
 import { branchRegionIds, cityOf, filterBranches, buildOrgTree, pruneTree, countPositions } from '../lib/orgTree';
 
 function EmptyState({ title, copy }) {
@@ -44,20 +42,36 @@ function tenureLabel(joinDate) {
 }
 
 // Satu simpul tree: area / wilayah / cabang / position.
-// kind menentukan tampilan; position hanya untuk simpul jabatan.
-function TreeNode({ node, depth, collapsed, onToggle, documentsFinal }) {
+// Barisnya bisa diklik untuk buka/tutup (tanpa harus klik ikon kecil).
+function TreeNode({ node, depth, expanded, onToggle, documentsFinal }) {
   const kids = node.children || [];
-  const open = !collapsed.has(node.key);
+  const open = expanded.has(node.key);
   const isPosition = node.kind === 'position';
   const p = node.position;
   const docFinal = isPosition ? (documentsFinal[p.name] || 0) : 0;
   const displayName = isPosition && p.position_type === 'SALES' && p.sales_code
     ? `${p.sales_code} ${p.name}`
     : node.label;
+  const toggleable = kids.length > 0;
+
+  const rowProps = toggleable
+    ? {
+        role: 'button',
+        tabIndex: 0,
+        'aria-expanded': open,
+        onClick: () => onToggle(node.key),
+        onKeyDown: (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggle(node.key);
+          }
+        },
+      }
+    : {};
 
   return (
     <div className="org-node">
-      <div className="org-row">
+      <div className={`org-row${toggleable ? ' is-toggle' : ''}`} {...rowProps}>
         <span className="org-role">{isPosition ? p.position_type : node.badge}</span>
         {isPosition ? (
           <Link className="org-name" to={`/insetif?name=${encodeURIComponent(p.name)}`}>{displayName}</Link>
@@ -65,16 +79,10 @@ function TreeNode({ node, depth, collapsed, onToggle, documentsFinal }) {
           <span className="org-name">{displayName}</span>
         )}
         {isPosition && <span className="org-tenure">{tenureLabel(p.join_date)}</span>}
-        {kids.length > 0 && (
-          <button
-            type="button"
-            className={`org-toggle${open ? ' open' : ''}`}
-            onClick={() => onToggle(node.key)}
-            aria-expanded={open}
-            aria-label={open ? `Tutup ${node.label}` : `Buka ${node.label}`}
-          >
+        {toggleable && (
+          <span className={`org-toggle${open ? ' open' : ''}`} aria-hidden="true">
             {open ? <Minus size={13} /> : <Plus size={13} />}
-          </button>
+          </span>
         )}
       </div>
       {isPosition && (
@@ -82,14 +90,14 @@ function TreeNode({ node, depth, collapsed, onToggle, documentsFinal }) {
           <span className="org-summary-item">Insentif yang diterima: <span className="org-summary-value">{docFinal}</span></span>
         </div>
       )}
-      {kids.length > 0 && open && (
+      {toggleable && open && (
         <div className="org-children">
           {kids.map((child) => (
             <TreeNode
               key={child.key}
               node={child}
               depth={depth + 1}
-              collapsed={collapsed}
+              expanded={expanded}
               onToggle={onToggle}
               documentsFinal={documentsFinal}
             />
@@ -100,15 +108,15 @@ function TreeNode({ node, depth, collapsed, onToggle, documentsFinal }) {
   );
 }
 
-export default function Dashboard({ documents = [], user, positions = [], users = [], masterData = {}, onNewDoc, onLoadDoc }) {
-  const [collapsed, setCollapsed] = useState(() => new Set());
+export default function Dashboard({ documents = [], user, positions = [], users = [], masterData = {}, onNewDoc }) {
+  // expanded kosong = semua tertutup secara default (lihat gambar referensi).
+  const [expanded, setExpanded] = useState(() => new Set());
   const [query, setQuery] = useState('');
   const [areaId, setAreaId] = useState('');
   const [city, setCity] = useState('');
   const [branchId, setBranchId] = useState('');
-  const navigate = useNavigate();
 
-  const toggleNode = (key) => setCollapsed((prev) => {
+  const toggleNode = (key) => setExpanded((prev) => {
     const next = new Set(prev);
     if (next.has(key)) next.delete(key);
     else next.add(key);
@@ -146,8 +154,6 @@ export default function Dashboard({ documents = [], user, positions = [], users 
   const prunedTree = useMemo(() => pruneTree(fullTree, query), [fullTree, query]);
   const totalSales = countPositions(prunedTree, "SALES");
 
-  const recentDocs = [...documents].sort((a, b) => b.id - a.id).slice(0, 5);
-
   const documentsFinal = useMemo(() => {
     const counts = {};
     documents.forEach((d) => {
@@ -157,6 +163,10 @@ export default function Dashboard({ documents = [], user, positions = [], users 
   }, [documents]);
 
   const hasFilter = Boolean(query.trim() || areaId || city || branchId);
+
+  // Base UI Select.Value menampilkan nilai mentah (id) kecuali `items` diberikan.
+  const areaItems = useMemo(() => Object.fromEntries(regions.map((r) => [String(r.id), r.name])), [regions]);
+  const branchItems = useMemo(() => Object.fromEntries(branchOptions.map((b) => [String(b.id), b.name])), [branchOptions]);
 
   return (
     <>
@@ -198,7 +208,7 @@ export default function Dashboard({ documents = [], user, positions = [], users 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label htmlFor="dash-area" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Area</label>
-                  <Select value={areaId} onValueChange={(v) => { setAreaId(v); setCity(''); setBranchId(''); }}>
+                  <Select value={areaId} items={areaItems} onValueChange={(v) => { setAreaId(v); setCity(''); setBranchId(''); }}>
                     <SelectTrigger id="dash-area" className="h-10 w-full"><SelectValue placeholder="Semua area" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Semua area</SelectItem>
@@ -218,7 +228,7 @@ export default function Dashboard({ documents = [], user, positions = [], users 
                 </div>
                 <div>
                   <label htmlFor="dash-cabang" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Cabang / Distributor</label>
-                  <Select value={branchId} onValueChange={setBranchId}>
+                  <Select value={branchId} items={branchItems} onValueChange={setBranchId}>
                     <SelectTrigger id="dash-cabang" className="h-10 w-full"><SelectValue placeholder="Semua cabang" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Semua cabang</SelectItem>
@@ -236,7 +246,7 @@ export default function Dashboard({ documents = [], user, positions = [], users 
                     key={node.key}
                     node={node}
                     depth={0}
-                    collapsed={collapsed}
+                    expanded={expanded}
                     onToggle={toggleNode}
                     documentsFinal={documentsFinal}
                   />
@@ -250,41 +260,6 @@ export default function Dashboard({ documents = [], user, positions = [], users 
             )}
           </article>
         </div>
-
-        <aside className="dash-rail">
-          <div className="card rail-card">
-            <div className="rail-head">
-              <h2 className="rail-title">Dokumen terbaru</h2>
-              <Link className="rail-link" to="/documents/sales">Lihat semua</Link>
-            </div>
-            {recentDocs.length ? (
-              <div className="recent-list">
-                {recentDocs.map((doc) => (
-                  <button
-                    key={doc.id}
-                    type="button"
-                    className="recent-row"
-                    onClick={() => {
-                      onLoadDoc?.(doc);
-                      navigate(`/insetif?openDoc=${doc.id}`);
-                    }}
-                  >
-                    <span className="recent-main">
-                      <span className="recent-name">{doc.salesman || 'Tanpa nama'}</span>
-                      <span className="recent-meta">{fromApiPeriod(doc.period)} · {doc.product || '–'}</span>
-                    </span>
-                    <Badge className={`status-pill ${doc.status === 'Final' ? 'final' : 'draft'}`}>{doc.status}</Badge>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <EmptyState title="Belum ada dokumen" copy="Dokumen terbaru akan muncul di sini." />
-            )}
-            {recentDocs.length > 0 && (
-              <Link className={cn(buttonVariants({ variant: 'outline' }), 'h-8 w-full')} to="/insetif">Lihat semua</Link>
-            )}
-          </div>
-        </aside>
       </div>
     </>
   );
