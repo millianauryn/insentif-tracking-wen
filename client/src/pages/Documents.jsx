@@ -24,7 +24,12 @@ const joinBrands = (arr) => (arr.length <= 1 ? (arr[0] || '') : `${arr.slice(0, 
 
 // Brand yang sudah dipilih di baris lain disembunyikan dari dropdown (duplikat hanya lewat ketik manual).
 // Filter seksi Divisi: Brand hanya yang link ke divisi aktif (via principal.division_id); general (tanpa divisi) -> semua.
-function buildBrandOptions(brands, principals, allRows, currentId, activeDivisi, divisions) {
+// Filter produk: hanya brand milik principal yang dipilih — tanpa produk dipilih, kosong.
+// Urutan: dikelompokkan per principal (urut pilihan produk), brand A→Z di dalam kelompoknya.
+export function buildBrandOptions(brands, principals, allRows, currentId, activeDivisi, divisions, selectedPrincipalNames = []) {
+  const selected = (selectedPrincipalNames || []).map((n) => (n || '').trim().toLowerCase()).filter(Boolean);
+  if (!selected.length) return []; // belum pilih produk → brand & principal tidak terisi
+
   const used = new Set((allRows || []).filter((r) => r.type === 'brand' && r.id !== currentId).map((r) => (r.label || '').trim().toLowerCase()).filter(Boolean));
   const divisionId = activeDivisi ? (divisions || []).find((d) => d.name === activeDivisi)?.id : null;
   const inDivision = (b) => {
@@ -32,17 +37,28 @@ function buildBrandOptions(brands, principals, allRows, currentId, activeDivisi,
     const principal = (principals || []).find((p) => p.id === b.principal_id);
     return principal?.division_id === divisionId;
   };
-  return (brands || [])
+  const principalOf = (b) => (b.principal_id ? (principals || []).find((p) => p.id === b.principal_id) : null);
+  const keyOf = (b) => (principalOf(b)?.name || '').trim().toLowerCase();
+
+  const picked = (brands || [])
     .filter((b) => b.is_active !== 0 && b.active !== 0)
     .filter((b) => !used.has((b.name || '').trim().toLowerCase()))
     .filter(inDivision)
-    .map((b) => ({
-      value: b.name,
-      hint: b.principal_id ? (principals || []).find((p) => p.id === b.principal_id)?.name : '',
-    }));
+    .filter((b) => selected.includes(keyOf(b)));
+
+  const groups = new Map(selected.map((key) => [key, []]));
+  for (const b of picked) groups.get(keyOf(b)).push(b);
+
+  const out = [];
+  for (const key of groups.keys()) {
+    groups.get(key)
+      .sort((a, b2) => (a.name || '').localeCompare(b2.name || ''))
+      .forEach((b) => out.push({ value: b.name, hint: principalOf(b)?.name || '' }));
+  }
+  return out;
 }
 
-function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit, dnd, divisions, brands, principals, activeDivisi }) {
+function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, canEdit, dnd, divisions, brands, principals, activeDivisi, selectedPrincipalNames }) {
   const target = Number(row.target) || 0;
   const achievement = Number(row.achievement) || 0;
   const pct = target > 0 ? (achievement / target) * 100 : 0;
@@ -113,11 +129,16 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
     );
   }
 
-  const brandOptions = buildBrandOptions(brands, principals, allRows, row.id, activeDivisi, divisions);
+  const brandOptions = buildBrandOptions(brands, principals, allRows, row.id, activeDivisi, divisions, selectedPrincipalNames);
   const activeDivisionId = activeDivisi ? (divisions || []).find((d) => d.name === activeDivisi)?.id : null;
+  // Principal juga mengikuti produk yang dipilih — urut sesuai urutan pilihan.
+  const selectedKeys = (selectedPrincipalNames || []).map((n) => (n || '').trim().toLowerCase()).filter(Boolean);
+  const principalOrder = new Map(selectedKeys.map((k, i) => [k, i]));
   const principalOptions = (principals || [])
     .filter((p) => p.is_active !== 0 && p.active !== 0)
     .filter((p) => !activeDivisi || activeDivisionId == null || p.division_id === activeDivisionId)
+    .filter((p) => principalOrder.has((p.name || '').trim().toLowerCase()))
+    .sort((a, b2) => principalOrder.get((a.name || '').trim().toLowerCase()) - principalOrder.get((b2.name || '').trim().toLowerCase()))
     .map((p) => ({ value: p.name }));
   const activeDivisions = (divisions || []).filter((d) => d.is_active !== 0 && d.active !== 0);
   const nameFieldFor = (type) => {
@@ -187,7 +208,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
   );
 }
 
-export function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit, salesDivisi, setSalesDivisi, divisions, brands, principals }) {
+export function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, onReorder, canEdit, salesDivisi, setSalesDivisi, divisions, brands, principals, selectedPrincipalNames = [] }) {
   const [dragIndex, setDragIndex] = useState(null);
   const [overIndex, setOverIndex] = useState(null);
 
@@ -282,6 +303,7 @@ export function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, 
               divisions={divisions}
               brands={brands}
               principals={principals}
+              selectedPrincipalNames={selectedPrincipalNames}
               activeDivisi={sectionDivisi[index] || null}
             />
           ))}
@@ -447,6 +469,8 @@ export default function Documents({
 
   // Produk selection derived from sales.product (source of truth)
   const selectedBrands = parseBrands(sales.product);
+  // Nama principal terpilih (urut pilihan) — jadi filter dropdown brand & principal di tabel golongan.
+  const selectedPrincipalNames = selectedBrands.map((n) => n.trim()).filter(Boolean);
 
   // Jabatan-specific kriteria: superadmin / unconfigured jabatan → all criteria visible
   const myCriteriaIds = user.criteria_ids;
@@ -636,6 +660,7 @@ export default function Documents({
           divisions={masterData.divisions}
           brands={masterData.brands}
           principals={masterData.principals}
+          selectedPrincipalNames={selectedPrincipalNames}
         />
 
         <KriteriaTable

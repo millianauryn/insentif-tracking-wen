@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderToString } from 'react-dom/server';
-import Documents from './Documents';
+import Documents, { buildBrandOptions } from './Documents';
 
 // Render smoke test: executes the component body without effects (no fetch in node).
 // A render-time ReferenceError/TypeError here fails this test with its stack —
@@ -68,5 +68,45 @@ describe('Documents render smoke', () => {
     );
     expect(html).toContain('Dokumen');
     expect(html).toContain('Sales');
+  });
+});
+
+describe('buildBrandOptions (mengikuti produk yang dipilih)', () => {
+  const principals = [{ id: 5, name: 'ENESIS' }, { id: 4, name: 'GROUP PASEO' }];
+  const brands = [
+    { id: 1, name: 'ANTIS', principal_id: 5, is_active: 1, active: 1 },
+    { id: 2, name: 'AMUNIZER', principal_id: 5, is_active: 1, active: 1 },
+    { id: 3, name: 'VEGETA', principal_id: 5, is_active: 1, active: 1 },
+    { id: 4, name: 'NICE', principal_id: 4, is_active: 1, active: 1 },
+    { id: 5, name: 'JOLLY', principal_id: 4, is_active: 1, active: 1 },
+    { id: 6, name: 'PASEO', principal_id: 4, is_active: 1, active: 1 },
+  ];
+  const build = (selected, rows = []) => buildBrandOptions(brands, principals, rows, 0, null, [], selected);
+
+  it('tanpa produk dipilih → brand dan principal tidak terisi', () => {
+    expect(build([])).toEqual([]);
+  });
+
+  it('satu produk → hanya barang produk itu, urut A→Z', () => {
+    const out = build(['ENESIS']);
+    expect(out.map((o) => o.value)).toEqual(['AMUNIZER', 'ANTIS', 'VEGETA']);
+    expect(out.every((o) => o.hint === 'ENESIS')).toBe(true);
+  });
+
+  it('dua produk → dikelompokkan per principal sesuai urutan pilihan, A→Z di dalamnya', () => {
+    const out = build(['ENESIS', 'GROUP PASEO']);
+    expect(out.map((o) => `${o.hint}:${o.value}`)).toEqual([
+      'ENESIS:AMUNIZER',
+      'ENESIS:ANTIS',
+      'ENESIS:VEGETA',
+      'GROUP PASEO:JOLLY',
+      'GROUP PASEO:NICE',
+      'GROUP PASEO:PASEO',
+    ]);
+  });
+
+  it('brand yang sudah terpakai di baris lain disembunyikan', () => {
+    const out = build(['ENESIS'], [{ type: 'brand', label: 'AMUNIZER' }]);
+    expect(out.map((o) => o.value)).toEqual(['ANTIS', 'VEGETA']);
   });
 });
