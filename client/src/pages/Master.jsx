@@ -16,6 +16,7 @@ import Icon from '../components/Icon';
 import Avatar from '../components/Avatar';
 import PickerChips from '../components/PickerChips';
 import { useConfirm } from '../components/Confirm';
+import { parentOptionsFor, keepValidParent } from '../lib/positionFilters';
 
 const EMPTY_MASTER = { divisions: [], principals: [], brands: [], regions: [], branches: [] };
 
@@ -346,12 +347,8 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
     }
   };
 
-  // Get filtered parent options based on position_type
-  const getParentOptions = (type) => {
-    if (type === 'SPV') return positions.filter((p) => p.position_type === 'BM' && p.active);
-    if (type === 'SALES') return positions.filter((p) => p.position_type === 'SPV' && p.active);
-    return [];
-  };
+  // Atasan difilter juga menurut cabang yang dipilih — pilih cabang dulu, baru atasan.
+  const getParentOptions = (type) => parentOptionsFor(positions, type, posForm?.branch_ids || []);
 
   // ---------- Master list rendering ----------
   const activeItems = {
@@ -902,28 +899,33 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
                   <label className="text-[13px] font-semibold">Kode Sales</label>
                   <input className="input w-full mt-1" value={posForm.sales_code || ''} onChange={(e) => setPosForm({ ...posForm, sales_code: e.target.value })} placeholder="Contoh: 11111" />
                 </div>
+                {/* Cabang dipilih dulu — pilihan atasan di bawah hanya yang link ke cabang ini. */}
+                <div>
+                  <PickerChips
+                    label="Cabang / Distributor"
+                    hint="(pilih dulu)"
+                    variant="inline"
+                    searchPlaceholder="Cari cabang... (mis. Banjarmasin, Kapuas)"
+                    items={branchItems}
+                    selected={posForm.branch_ids}
+                    onChange={(ids) => setPosForm({ ...posForm, branch_ids: ids, parent_position_id: keepValidParent(positions, ids, posForm.parent_position_id) })}
+                  />
+                </div>
                 {posForm.position_type !== 'BM' && (
                   <div>
                     <label className="text-[13px] font-semibold">{posForm.position_type === 'SPV' ? 'Atasan BM' : 'Atasan SPV'} *</label>
                     <select className="input w-full mt-1" value={posForm.parent_position_id} onChange={(e) => setPosForm({ ...posForm, parent_position_id: e.target.value })} required>
-                      <option value="">Pilih {posForm.position_type === 'SPV' ? 'BM' : 'SPV'}</option>
+                      <option value="">
+                        {!posForm.branch_ids.length
+                          ? 'Pilih cabang dulu'
+                          : `Tidak ada ${posForm.position_type === 'SPV' ? 'BM' : 'SPV'} di cabang ini`}
+                      </option>
                       {getParentOptions(posForm.position_type).map((p) => (
                         <option key={p.id} value={p.id}>{p.name} ({p.position_type})</option>
                       ))}
                     </select>
                   </div>
                 )}
-                {/* Branch multi-select for position (searchable) */}
-                <div>
-                  <PickerChips
-                    label="Cabang / Distributor"
-                    variant="inline"
-                    searchPlaceholder="Cari cabang... (mis. Banjarmasin, Kapuas)"
-                    items={branchItems}
-                    selected={posForm.branch_ids}
-                    onChange={(ids) => setPosForm({ ...posForm, branch_ids: ids })}
-                  />
-                </div>
                 {/* Kriteria multi-select for position */}
                 <div>
                   <label className="text-[13px] font-semibold">Kriteria Dokumen *</label>
