@@ -117,19 +117,21 @@ jobs:
           npm install --no-audit --no-fund
           npm run build
 
-      - name: Restart API (PM2)
+      - name: Restart API (NSSM service)
         shell: powershell
-        # Jangan pakai `pm2 restart`: app menerima SIGINT dan crash-loop
-        # (exit 134, "too many unstable restarts"). delete + start segar terbukti stabil.
+        # Service Windows `insetive-api` (NSSM) — jangan pakai PM2 lagi.
+        # Restart-Service dipilih karena nssm restart/start sering exit=1
+        # (race START_PENDING) walau service jalan; Restart-Service menunggu
+        # status betul dan exit bersih. Hak start/stop user runner sudah
+        # di-grant via sc sdset (lihat catatan deploy NSSM).
         run: |
-          cd "C:\software\insetive tracking"
-          pm2 delete insetive-api
-          pm2 start ecosystem.config.js
+          Restart-Service -Name insetive-api -Force -ErrorAction Stop
+          Write-Output "status: $((Get-Service insetive-api).Status)"
 
       - name: Verify health
         shell: powershell
-        # Poll, bukan sleep tetap: PM2 restart_delay 3000ms + startup ≈ 5 detik,
-        # jadi sleep 5s berada tepat di batas dan bisa kalah cepat.
+        # Poll, bukan sleep tetap: startup node ≈ 2-5 detik, sleep tetap
+        # bisa kalah cepat.
         run: |
           $ok = $false
           for ($i = 1; $i -le 15; $i++) {
