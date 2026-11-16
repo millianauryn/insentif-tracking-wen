@@ -18,6 +18,16 @@ import PickerChips from '../components/PickerChips';
 import { useConfirm } from '../components/Confirm';
 import { parentOptionsFor, keepValidParent } from '../lib/positionFilters';
 
+// Akibat hapus per jenis — cascade ada di schema.sql, disebut eksplisit di dialog
+// supaya tidak ada data ikut hilang diam-diam.
+const DELETE_CONSEQUENCE = {
+  division: 'Semua hubungan divisi–cabang ikut terhapus, dan principal yang menunjuk ke divisi ini jadi tanpa divisi.',
+  principal: 'SEMUA brand di bawahnya ikut terhapus, dan referensi brand di dokumen jadi kosong.',
+  brand: 'Referensi brand di dokumen jadi kosong (nama baris tetap tersimpan).',
+  region: 'Semua hubungan wilayah–cabang ikut terhapus, dan cabang jadi tanpa wilayah.',
+  branch: 'Semua akun dan jabatan yang terhubung ke cabang ini kehilangan cabangnya.',
+};
+
 const EMPTY_MASTER = { divisions: [], principals: [], brands: [], regions: [], branches: [] };
 
 // Pilihan icon akun (superadmin pilih saat buat/edit akun): emoji; kosong → inisial nama
@@ -175,15 +185,22 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
     }
   };
 
-  const deleteMasterItem = async (id, key) => {
-    if (!window.confirm('Hapus data ini?')) return;
+  const deleteMasterItem = async (item, key) => {
+    const ok = await confirm({
+      title: `Hapus ${item.name}?`,
+      message: `${DELETE_CONSEQUENCE[key] || 'Data ini akan dihapus.'}\n\nTidak bisa dikembalikan.`,
+      confirmLabel: 'Hapus',
+      cancelLabel: 'Batal',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setUserError('');
     try {
-      if (key === 'division') await deleteDivision(id);
-      else if (key === 'principal') await deletePrincipal(id);
-      else if (key === 'brand') await deleteBrand(id);
-      else if (key === 'region') await deleteRegion(id);
-      else if (key === 'branch') await deleteBranch(id);
+      if (key === 'division') await deleteDivision(item.id);
+      else if (key === 'principal') await deletePrincipal(item.id);
+      else if (key === 'brand') await deleteBrand(item.id);
+      else if (key === 'region') await deleteRegion(item.id);
+      else if (key === 'branch') await deleteBranch(item.id);
       await onRefresh();
     } catch (requestError) {
       setUserError(requestError.message);
@@ -594,7 +611,7 @@ const [createUserOpen, setCreateUserOpen] = useState(false);
             <button className="icon-action" onClick={(e) => { e.stopPropagation(); toggleActive(item, tab); }} aria-label={`${isActive ? 'Nonaktifkan' : 'Aktifkan'} ${item.name}`} title={`${isActive ? 'Nonaktifkan' : 'Aktifkan'} ${item.name}`}>
               <Icon size={15}><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m15 9-6 6M9 9l6 6"/></Icon>
             </button>
-            <button className="icon-action danger" onClick={(e) => { e.stopPropagation(); deleteMasterItem(item.id, tab); }} aria-label={`Hapus ${item.name}`} title={`Hapus ${item.name}`}>
+            <button className="icon-action danger" onClick={(e) => { e.stopPropagation(); deleteMasterItem(item, tab); }} aria-label={`Hapus ${item.name}`} title={`Hapus ${item.name}`}>
               <Icon size={15}><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></Icon>
             </button>
           </div>

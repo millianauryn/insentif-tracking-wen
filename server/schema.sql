@@ -115,6 +115,9 @@ CREATE TABLE IF NOT EXISTS incentive_documents (
     format_id INTEGER REFERENCES document_formats(id) ON DELETE SET NULL,
     division_id INTEGER REFERENCES divisions(id) ON DELETE SET NULL,
     salesman TEXT,
+    -- Tautan ke posisi: agregasi SPV & cek duplikat memakai id, bukan nama
+    -- (rename posisi tidak memutus hitungan). NULL = dokumen lama / nama bebas.
+    salesman_position_id INTEGER REFERENCES positions(id) ON DELETE SET NULL,
     product TEXT,
     period TEXT,
     status TEXT NOT NULL DEFAULT 'Draft' CHECK (status IN ('Draft', 'Final')),
@@ -152,6 +155,9 @@ CREATE TABLE IF NOT EXISTS document_criteria_rows (
     target_value REAL,
     achievement_value REAL,
     percentage REAL,
+    -- Persen yang diketik manual officer (mis. CALL COMPLIANCE) — berbeda dari
+    -- `percentage` yang selalu dihitung server dari target/tercapai.
+    percentage_value REAL,
     status TEXT,
     incentive_amount REAL,
     sort_order INTEGER NOT NULL DEFAULT 0

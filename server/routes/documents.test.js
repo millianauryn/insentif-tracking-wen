@@ -376,4 +376,58 @@ describe('Documents API', () => {
     expect(all.body.total).toBe(3);
     expect(all.body.documents).toHaveLength(3);
   });
+
+  it('persen manual officer (percentage_value) ikut tersimpan dan kembali dari server', async () => {
+    const created = await officer.post('/api/documents').send({
+      format_id: 1, period: '2026-10', golongan_rows: [],
+      criteria_rows: [{ criteria_id: 1, target_value: null, achievement_value: null, percentage_value: 85 }],
+    }).expect(201);
+    const id = created.body.document.id;
+
+    const stored = db.prepare('SELECT percentage_value, percentage FROM document_criteria_rows WHERE document_id = ?').get(id);
+    expect(stored.percentage_value).toBe(85);
+
+    await officer.patch(`/api/documents/${id}`).send({
+      criteria_rows: [{ criteria_id: 1, percentage_value: 90 }],
+    }).expect(200);
+
+    const got = await officer.get(`/api/documents/${id}`).expect(200);
+    expect(got.body.document.criteria_rows[0].percentage_value).toBe(90);
+  });
+
+  it('duplikat periode terdeteksi walau posisi sales sudah diganti nama', async () => {
+    await officer.post('/api/documents').send({ format_id: 1, period: '2026-10', salesman: 'SARI', golongan_rows: [] }).expect(201);
+
+    // Superadmin mengganti nama posisi — identitas sales tetap id posisi yang sama.
+    db.prepare("UPDATE positions SET name = 'SARI BARU' WHERE name = 'SARI'").run();
+
+    const second = await officer.post('/api/documents').send({ format_id: 1, period: '2026-10', salesman: 'SARI BARU', golongan_rows: [] }).expect(409);
+    expect(second.body.error.code).toBe('DUPLICATE_SALES_PERIOD');
+  });
+
+  it('dokumen SPV Final dibekukan: PATCH tidak menghitung ulang dan baris ditolak', async () => {
+    db.prepare("INSERT INTO incentive_documents (owner_id, format_id, salesman, period, status, doc_kind) VALUES (1, 1, 'SARI', '2026-10', 'Final', 'sales')").run();
+    const salesId = db.prepare('SELECT id FROM incentive_documents ORDER BY id DESC LIMIT 1').get().id;
+    db.prepare("INSERT INTO document_criteria_rows (document_id, criteria_id, label, target_unit, target_value, achievement_value) VALUES (?, 1, 'Target', 'pcs', 10, 12)").run(salesId);
+
+    const created = await officer.post('/api/documents').send({
+      doc_kind: 'spv', position_id: 1, format_id: 1, period: '2026-10', period_end: '2026-10',
+    }).expect(201);
+    const id = created.body.document.id;
+    await admin.post(`/api/documents/${id}/finalize`).expect(200);
+
+    // Sumber berubah setelah Final — snapshot tidak boleh ikut berubah.
+    db.prepare('UPDATE document_criteria_rows SET target_value = 999 WHERE document_id = ?').run(salesId);
+
+    await admin.patch(`/api/documents/${id}`).send({ insentif_total: 5000, audit_reason: 'koreksi nominal' }).expect(200);
+    const rows = db.prepare('SELECT target_value FROM document_criteria_rows WHERE document_id = ?').all(id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].target_value).toBe(10);
+
+    // Baris kriteria ditolak — tidak ada jalan menimpa snapshot Final.
+    await admin.patch(`/api/documents/${id}`).send({
+      criteria_rows: [{ criteria_id: 1, incentive_amount: 999999 }], audit_reason: 'koreksi baris',
+    }).expect(409);
+    expect(db.prepare('SELECT incentive_amount FROM document_criteria_rows WHERE document_id = ?').get(id).incentive_amount).not.toBe(999999);
+  });
 });

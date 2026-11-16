@@ -171,4 +171,32 @@ describe('Agregasi baris SPV', () => {
     expect(rows.golongan_rows).toEqual([]);
     expect(rows.criteria_rows).toHaveLength(2);
   });
+
+  it('agregasi tetap menghitung dokumen walau posisi sales sudah diganti nama', () => {
+    const id = makeSalesDoc(db, {
+      salesman: 'SARI', period: '2026-10',
+      golongan: [{ label: 'Brand X', principal_id: 1, brand_id: 1, target: 10, achievement: 12 }],
+    });
+    // Tautan id posisi — di produksi diisi saat dokumen dibuat / backfill migrasi.
+    const posId = db.prepare("SELECT id FROM positions WHERE name = 'SARI'").get().id;
+    db.prepare('UPDATE incentive_documents SET salesman_position_id = ? WHERE id = ?').run(posId, id);
+
+    // Rename posisi: pencocokan nama lama pasti gagal, tautan id tetap cocok.
+    db.prepare("UPDATE positions SET name = 'SARI DIGANTI' WHERE id = ?").run(posId);
+
+    const rows = computeSpvRows(db, 2, '2026-10', '2026-10'); // SPV BUDO (id 2)
+    expect(rows.golongan_rows).toHaveLength(1);
+    expect(rows.golongan_rows[0].achievement).toBe(12);
+  });
+
+  it('dokumen lama tanpa tautan id tetap terhitung lewat nama', () => {
+    // makeSalesDoc tidak mengisi salesman_position_id -> jatuh ke pencocokan nama lama.
+    makeSalesDoc(db, {
+      salesman: 'RUDI', period: '2026-10',
+      golongan: [{ label: 'Brand X', principal_id: 1, brand_id: 1, target: 5, achievement: 7 }],
+    });
+    const rows = computeSpvRows(db, 2, '2026-10', '2026-10');
+    expect(rows.golongan_rows).toHaveLength(1);
+    expect(rows.golongan_rows[0].achievement).toBe(7);
+  });
 });

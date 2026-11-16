@@ -105,6 +105,33 @@ function migrateDatabase(db) {
     db.exec('ALTER TABLE incentive_documents ADD COLUMN position_id INTEGER REFERENCES positions(id) ON DELETE SET NULL');
   }
 
+  // Tautan posisi pada dokumen sales: agregasi SPV & cek duplikat pakai id, bukan nama.
+  const linkCols = db.prepare('PRAGMA table_info(incentive_documents)').all().map((c) => c.name);
+  if (!linkCols.includes('salesman_position_id')) {
+    db.exec('ALTER TABLE incentive_documents ADD COLUMN salesman_position_id INTEGER REFERENCES positions(id) ON DELETE SET NULL');
+  }
+
+  // Persen manual officer (CALL COMPLIANCE) — kolomnya sendiri, bukan `percentage` hasil hitung server.
+  const critCols = db.prepare('PRAGMA table_info(document_criteria_rows)').all().map((c) => c.name);
+  if (!critCols.includes('percentage_value')) {
+    db.exec('ALTER TABLE document_criteria_rows ADD COLUMN percentage_value REAL');
+  }
+
+  // Backfill tautan posisi dokumen lama: hanya untuk nama yang unik di positions.
+  // Nama ganda/typo dibiarkan NULL — agregasi tetap memakai nama (perlakuan lama).
+  const unlinked = db.prepare(`
+    SELECT id, salesman FROM incentive_documents
+    WHERE doc_kind = 'sales' AND salesman_position_id IS NULL
+      AND salesman IS NOT NULL AND trim(salesman) <> ''
+  `).all();
+  if (unlinked.length) {
+    const link = db.prepare('UPDATE incentive_documents SET salesman_position_id = ? WHERE id = ?');
+    for (const doc of unlinked) {
+      const posId = resolveSalesmanPositionId(db, doc.salesman);
+      if (posId) link.run(posId, doc.id);
+    }
+  }
+
   // Migrate branches: city (kota) for wilayah derivation
   const branchCols = db.prepare('PRAGMA table_info(branches)').all().map((c) => c.name);
   if (!branchCols.includes('city')) {
@@ -163,6 +190,16 @@ function migrateDatabase(db) {
     db.exec("CREATE INDEX IF NOT EXISTS idx_position_criteria_position ON position_criteria(position_id)");
     db.exec("CREATE INDEX IF NOT EXISTS idx_position_criteria_criteria ON position_criteria(criteria_id)");
   }
+}
+
+// Posisi untuk nama salesman: cocok nama (huruf kecil, trim) hanya bila unik.
+// Dipakai dokumen baru, cek duplikat periode, dan backfill tautan dokumen lama.
+// NULL kalau nama ganda/typo/tidak ada — pemakai jatuh ke pencocokan nama lama.
+function resolveSalesmanPositionId(db, salesman) {
+  const name = String(salesman || '').trim().toLowerCase();
+  if (!name) return null;
+  const rows = db.prepare('SELECT id FROM positions WHERE lower(trim(name)) = ?').all(name);
+  return rows.length === 1 ? rows[0].id : null;
 }
 
 async function hashPassword(password) {
@@ -254,6 +291,7 @@ module.exports = {
   openDatabase,
   migrateDatabase,
   seedDatabase,
+  resolveSalesmanPositionId,
   hashPassword,
   verifyPassword,
   createSession,

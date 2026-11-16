@@ -228,8 +228,11 @@ async function start() {
   sweep();
   setInterval(sweep, 24 * 60 * 60 * 1000).unref();
   await seedDatabase(db);
-  server = app.listen(port, () => {
-    console.log(`Incentive API listening on http://localhost:${port}`);
+  // Dev (NODE_ENV != production): hanya loopback — dev-login superadmin tidak boleh
+  // terbuka ke LAN/tailnet. Produksi tetap semua interface (Docker port mapping, funnel).
+  const host = process.env.NODE_ENV === 'production' ? undefined : '127.0.0.1';
+  server = app.listen(port, host, () => {
+    console.log(`Incentive API listening on http://${host || 'localhost'}:${port}`);
   });
   server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {

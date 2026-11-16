@@ -31,17 +31,24 @@ function spvScopeError(db, user, positionId) {
 }
 
 // Dokumen sales Final milik anak SPV dalam rentang periode.
+// Utama: tautan id posisi — rename posisi tidak memutus hitungan.
+// Fallback: nama untuk dokumen lama yang belum punya tautan (sebelum kolom ini ada).
 function sourceDocuments(db, positionId, periodStart, periodEnd) {
   const sales = db.prepare("SELECT id, name FROM positions WHERE parent_position_id = ? AND position_type = 'SALES'").all(positionId);
   if (!sales.length) return [];
+  const ids = sales.map((s) => s.id);
   const names = sales.map((s) => s.name.toLowerCase());
-  const placeholders = names.map(() => '?').join(',');
+  const phId = ids.map(() => '?').join(',');
+  const phName = names.map(() => '?').join(',');
   return db.prepare(`
     SELECT * FROM incentive_documents
     WHERE doc_kind = 'sales' AND status = 'Final'
       AND period >= ? AND period <= ?
-      AND lower(trim(salesman)) IN (${placeholders})
-  `).all(periodStart, periodEnd, ...names);
+      AND (
+        salesman_position_id IN (${phId})
+        OR (salesman_position_id IS NULL AND lower(trim(salesman)) IN (${phName}))
+      )
+  `).all(periodStart, periodEnd, ...ids, ...names);
 }
 
 function computeSpvRows(db, positionId, periodStart, periodEnd) {
