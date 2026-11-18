@@ -1,11 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '../components/ui/button';
-import { canFinalizeDocument } from '../access';
 import Icon from '../components/Icon';
 import PickerChips from '../components/PickerChips';
+import { MultipleSelect } from '../components/ui/multiple-select';
 import ComboSelect from '../components/ComboSelect';
-import { computeTotalFor, computeGrandTotal, principalValueFor, principalAutoValue } from '../lib/golongan';
-import { monthNames } from '../lib/period';
+import MonthPicker from '../components/MonthPicker';
+import './CompactTable.css';
+import { isGugurCriteria } from '../lib/criteria';
+import { computeTotalFor, computeTotalAutoFor, computeGrandTotal, principalAutoValue, principalValueFor } from '../lib/golongan';
+import { branchRegionIds } from '../lib/orgTree';
 import { parseMoney } from '../lib/money';
 import { terbilang } from '../lib/terbilang';
 
@@ -112,7 +115,7 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
   if (row.type === 'divisi') {
     return (
       <tr {...trProps} className={`golongan-divisi-row${rowStateClass}`}>
-        <td colSpan={6}>
+        <td colSpan={5}>
           <label className="text-[11px] font-semibold text-ink-700 mr-2">Divisi</label>
           <select
             value={row.divisi || ''}
@@ -159,8 +162,9 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
     </select>
   );
 
-  // Total rows: auto-computed from principal + brand rows (not editable)
+  // Total rows: auto dari principal + brand; bisa ditimpa manual lewat kolom pencapaian.
   if (row.type === 'total-divisi' || row.type === 'total') {
+    const auto = computeTotalAutoFor(allRows, index);
     const total = computeTotalFor(allRows, index);
     const tPct = total.target > 0 ? (total.achievement / total.target) * 100 : 0;
     const tStatus = total.target > 0 && tPct >= 100 ? 'Tercapai' : 'Gugur';
@@ -168,17 +172,15 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
       <tr {...trProps} className={`font-semibold${rowStateClass}`}>
         <td>{row.type === 'total-divisi' ? divisiSelect(row.divisi || '', (v) => onUpdate(row.id, 'divisi', v)) : <input value={row.label || ''} onChange={(e) => onUpdate(row.id, 'label', e.target.value)} disabled={!canEdit} />}</td>
         <td>{jenisSelect}</td>
-        <td className="text-right">{total.target.toLocaleString('id-ID')}</td>
-        <td className="text-right">{total.achievement.toLocaleString('id-ID')}</td>
-        <td className="text-right">{tPct.toFixed(1)}%</td>
+        <td className="text-right">{total.target > 0 ? '100%' : ''}</td>
+        <td><span className="pct-input"><input type="number" min="0" step="0.01" value={row.achievement ?? ''} onChange={(e) => onUpdate(row.id, 'achievement', e.target.value)} disabled={!canEdit} placeholder={auto.achievement ? String(auto.achievement) : ''} aria-label={`Tercapai persen total ${index + 1}`} /><span>%</span></span></td>
         <td><span className={`result-badge ${tStatus === 'Tercapai' ? 'success' : 'warning'}`}>{total.target > 0 ? tStatus : ''}</span></td>
         <td className="text-center">{actionCell}</td>
       </tr>
     );
   }
 
-  // Principal: editable manual inputs; placeholders show the auto sum from linked brands above.
-  // No read-only lock — filled manual values override the auto sum.
+  // Principal: pencapaian otomatis = jumlah brand di atasnya; bisa ditimpa manual.
   if (row.type === 'principal') {
     const auto = principalAutoValue(allRows, index);
     const eff = principalValueFor(allRows, index);
@@ -188,9 +190,8 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
       <tr {...trProps} className={`font-semibold${rowStateClass}`}>
         <td>{nameFieldFor('principal')}</td>
         <td>{jenisSelect}</td>
-        <td><input type="number" min="0" value={row.target ?? ''} onChange={(e) => onUpdate(row.id, 'target', e.target.value)} disabled={!canEdit} placeholder={auto.count > 0 ? String(auto.target) : ''} /></td>
-        <td><input type="number" min="0" value={row.achievement ?? ''} onChange={(e) => onUpdate(row.id, 'achievement', e.target.value)} disabled={!canEdit} placeholder={auto.count > 0 ? String(auto.achievement) : ''} /></td>
-        <td className="text-right">{eff.target > 0 ? `${pPct.toFixed(1)}%` : '0.0%'}</td>
+        <td>100%</td>
+        <td><span className="pct-input"><input type="number" min="0" step="0.01" value={row.achievement ?? ''} onChange={(e) => onUpdate(row.id, 'achievement', e.target.value)} disabled={!canEdit} placeholder={auto.count > 0 ? String(auto.achievement) : ''} aria-label={`Tercapai persen principal ${index + 1}`} /><span>%</span></span></td>
         <td><span className={`result-badge ${pStatus === 'Tercapai' ? 'success' : 'warning'}`}>{eff.target > 0 ? pStatus : ''}</span></td>
         <td className="text-center">{actionCell}</td>
       </tr>
@@ -201,9 +202,8 @@ function GolonganRow({ row, index, allRows, onUpdate, onRemove, onJenisChange, c
     <tr {...trProps} className={rowStateClass}>
       <td>{nameFieldFor(row.type || 'brand')}</td>
       <td>{jenisSelect}</td>
-      <td><input type="number" min="0" value={row.target ?? ''} onChange={(e) => onUpdate(row.id, 'target', e.target.value)} disabled={!canEdit} /></td>
-      <td><input type="number" min="0" value={row.achievement ?? ''} onChange={(e) => onUpdate(row.id, 'achievement', e.target.value)} disabled={!canEdit} /></td>
-      <td className="text-right">{target > 0 ? `${pct.toFixed(1)}%` : '0.0%'}</td>
+      <td>100%</td>
+      <td><span className="pct-input"><input type="number" min="0" step="0.01" value={row.achievement ?? ''} onChange={(e) => onUpdate(row.id, 'achievement', e.target.value)} disabled={!canEdit} aria-label={`Tercapai persen baris ${index + 1}`} /><span>%</span></span></td>
       <td><span className={`result-badge ${status === 'Tercapai' ? 'success' : 'warning'}`}>{statusLabel}</span></td>
       <td className="text-center">{actionCell}</td>
     </tr>
@@ -257,14 +257,13 @@ export function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, 
   })();
 
   return (
-    <div className="table-wrap">
+    <div className="table-wrap compact-table">
       <table>
         <thead>
           <tr className="golongan-header">
             <th>GOLONGAN</th>
             <th className="w-[130px]">JENIS</th>
             <th>TARGET</th>
-            <th>TERCAPAI (Rp.)</th>
             <th>TERCAPAI (%)</th>
             <th>KET</th>
             <th className="w-[50px]" aria-label="Aksi" />
@@ -273,7 +272,7 @@ export function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, 
         {canEdit && (
           <tbody>
             <tr className="golongan-divisi-row">
-              <td colSpan={6}>
+              <td colSpan={5}>
                 <label className="text-[11px] font-semibold text-ink-700 mr-2">Divisi</label>
                 <select
                   value={salesDivisi || ''}
@@ -326,18 +325,25 @@ export function GolonganTable({ rows, onUpdate, onRemove, onJenisChange, onAdd, 
 }
 
 function KriteriaRow({ row, onUpdate, canEdit, incentiveEditable }) {
-  const target = parseMoney(row.target_value) ?? 0;
+  // TOTAL OMZET: target tetap 100%, yang diisi officer hanya pencapaian dalam persen.
+  const isOmzet = row.label === 'TOTAL OMZET';
+  const target = isOmzet ? 100 : (parseMoney(row.target_value) ?? 0);
   const achievement = parseMoney(row.achievement_value) ?? 0;
   const percentage = target > 0 ? (achievement / target) * 100 : 0;
   const status = target > 0 && percentage >= 100 ? 'Tercapai' : 'Gugur';
   const isGugur50 = row.label === 'GOL YG GUGUR KURANG DARI 50%';
   const isCallCompliance = row.label === 'CALL COMPLIANCE';
+  const gugur = isGugurCriteria(row);
 
   return (
     <tr className="kriteria-row">
       <td>{row.label}</td>
-      <td><input type="number" min="0" value={row.target_value ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'target_value', e.target.value)} disabled={!canEdit} /></td>
-      <td><input type="number" min="0" value={row.achievement_value ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'achievement_value', e.target.value)} disabled={!canEdit} /></td>
+      {isOmzet ? <td>100%</td> : <td><input type="number" min="0" value={row.target_value ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'target_value', e.target.value)} disabled={!canEdit} /></td>}
+      {isOmzet ? (
+        <td><span className="pct-input"><input type="number" min="0" step="0.01" value={row.achievement_value ?? ''} disabled aria-label="Tercapai total omzet (%) dari tabel golongan" /><span>%</span></span></td>
+      ) : (
+        <td><input type="number" min="0" value={row.achievement_value ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'achievement_value', e.target.value)} disabled={!canEdit} /></td>
+      )}
       {isGugur50 ? (
         <td></td>
       ) : isCallCompliance ? (
@@ -350,7 +356,7 @@ function KriteriaRow({ row, onUpdate, canEdit, incentiveEditable }) {
       ) : (
         <td><span className={`result-badge ${status === 'Tercapai' ? 'success' : 'warning'}`}>{target > 0 ? status : ''}</span></td>
       )}
-      <td><input type="number" value={row.incentive_amount ?? ''} onChange={(e) => onUpdate(row.criteria_id, 'incentive_amount', e.target.value)} disabled={!canEdit && !incentiveEditable} aria-label={`Insentive ${row.label}`} /></td>
+      <td><input type="number" value={gugur ? '0' : (row.incentive_amount ?? '')} onChange={(e) => onUpdate(row.criteria_id, 'incentive_amount', e.target.value)} disabled={gugur || (!canEdit && !incentiveEditable)} aria-label={`Insentive ${row.label}`} /></td>
     </tr>
   );
 }
@@ -361,7 +367,7 @@ export function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalC
   const totalValue = totalOverride ?? autoSum;
 
   return (
-    <div className="table-wrap">
+    <div className="table-wrap compact-table">
       <table>
         <thead>
           <tr className="kriteria-header">
@@ -402,7 +408,7 @@ export function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalC
 export default function Documents({
   docType = 'sales',
   user,
-  onCreate, onUpdate, onSubmit, onCancel,
+  onCreate, onUpdate, onCancel,
   documentId, golonganRows, updateGolonganRow, removeGolonganRow, addGolonganRow, reorderGolonganRow,
   criteriaRows, updateCriteriaRow,
   updateSales, sales, period, setPeriod,
@@ -413,8 +419,7 @@ export default function Documents({
   masterData = EMPTY_MASTER,
   positions = [],
 }) {
-  const canEdit = ['superadmin', 'officer'].includes(user.role) && documentStatus === 'Draft';
-  const canFinalize = canFinalizeDocument(user, documentStatus);
+  const canEdit = ['superadmin', 'officer'].includes(user.role);
 
   // Officer: wilayah auto-fills from own linked cabang (city → region fallback)
   const isSuper = user.role === 'superadmin';
@@ -427,28 +432,59 @@ export default function Documents({
     if (city) updateSales('region', city);
   }, [isSuper, user.branch_ids, masterData, sales.region, updateSales]);
 
-  // Sales options: officer → positions at own branches; superadmin → positions at branches in chosen kota
+  // Superadmin: filter Area (region) dan Cabang menentukan daftar salesman.
+  // Dokumen lama hanya menyimpan kota (sales.region), jadi kota itu dipakai sebagai cadangan.
+  const [areaName, setAreaName] = useState('');
+  const [branchName, setBranchName] = useState('');
+  const hasScope = Boolean(areaName || branchName || sales.region);
+  const activeBranches = useMemo(
+    () => masterData.branches.filter((b) => b.is_active !== 0 && b.active !== 0),
+    [masterData.branches],
+  );
+  const areaRegion = useMemo(
+    () => masterData.regions.find((r) => r.name === areaName),
+    [masterData.regions, areaName],
+  );
+  const regionOptions = useMemo(
+    () => masterData.regions.filter((r) => r.is_active !== 0).map((r) => ({ value: r.name })),
+    [masterData.regions],
+  );
+  const branchOptions = useMemo(
+    () => activeBranches
+      .filter((b) => !areaName || (areaRegion && branchRegionIds(b).includes(areaRegion.id)))
+      .map((b) => ({ value: b.name })),
+    [activeBranches, areaName, areaRegion],
+  );
+  const scopedBranches = useMemo(() => {
+    if (branchName) return activeBranches.filter((b) => b.name === branchName);
+    if (areaName) return areaRegion ? activeBranches.filter((b) => branchRegionIds(b).includes(areaRegion.id)) : [];
+    return sales.region ? activeBranches.filter((b) => b.city === sales.region) : [];
+  }, [activeBranches, branchName, areaName, areaRegion, sales.region]);
+
+  // Sales options: officer → positions at own branches; superadmin → positions at scoped branches
   // (memo: dihitung ulang hanya saat inputs berubah, bukan tiap ketik di form dokumen)
   const salesOptions = useMemo(() => {
     const positionsAtBranches = (branchIds) =>
       positions.filter((p) => p.active && (p.branch_ids || []).some((id) => branchIds.includes(id)));
     return isSuper
-      ? (sales.region
-          ? positionsAtBranches(masterData.branches.filter((b) => b.city === sales.region).map((b) => b.id))
-          : [])
+      ? positionsAtBranches(scopedBranches.map((b) => b.id))
       : positionsAtBranches(user.branch_ids || []);
-  }, [positions, isSuper, sales.region, masterData.branches, user.branch_ids]);
+  }, [positions, isSuper, scopedBranches, user.branch_ids]);
+
+  const pickArea = (v) => {
+    setAreaName(v);
+    setBranchName('');
+    updateSales('region', '');
+  };
+  const pickBranch = (v) => {
+    setBranchName(v);
+    const branch = activeBranches.find((b) => b.name === v);
+    updateSales('region', branch?.city || '');
+  };
   const salesList = useMemo(() => {
     const salesOnly = salesOptions.filter((p) => p.position_type === 'SALES');
     return salesOnly.length ? salesOnly : salesOptions;
   }, [salesOptions]);
-
-  // Superadmin wilayah dropdown: distinct kota from active branches
-  const kotaOptions = [...new Set(
-    masterData.branches
-      .filter((b) => (b.is_active !== 0 && b.active !== 0) && b.city)
-      .map((b) => b.city)
-  )].sort();
 
   // Wilayah shown in doc header (kota)
   const wilayah = sales.region || '-';
@@ -492,8 +528,8 @@ export default function Documents({
       : '';
   const kwSignatureName = selectedPosition?.name || sales.name || '–';
   const kwSignatureRole = selectedPosition?.position_type === 'SALES'
-    ? 'SALESMAN'
-    : (selectedPosition?.position_type || 'SALESMAN');
+    ? 'SALES'
+    : (selectedPosition?.position_type || 'SALES');
 
   const save = () => (documentId ? onUpdate() : onCreate());
 
@@ -502,24 +538,17 @@ export default function Documents({
   totals.percentage = totals.target > 0 ? (totals.achievement / totals.target) * 100 : 0;
   totals.status = totals.target > 0 && totals.percentage >= 100 ? 'Tercapai' : 'Gugur';
 
-  const handlePrint = () => window.print();
-
   const changeJenis = (row, type) => {
     const isAutoLabel = row.label === 'TOTAL DIVISI' || row.label === 'TOTAL';
     updateGolonganRow(row.id, 'type', type);
     updateGolonganRow(row.id, 'isGroup', type !== 'brand');
+    // Brand dan principal selalu target 100%. Pencapaian principal otomatis dari brand di atas.
+    if (type === 'principal') updateGolonganRow(row.id, 'achievement', '');
+    updateGolonganRow(row.id, 'target', type === 'brand' || type === 'principal' ? 100 : '');
     if (type === 'total-divisi' && (!row.label || isAutoLabel)) updateGolonganRow(row.id, 'label', 'TOTAL DIVISI');
     if (type === 'total' && (!row.label || isAutoLabel)) updateGolonganRow(row.id, 'label', 'TOTAL');
     if ((type === 'brand' || type === 'principal' || type === 'divisi') && isAutoLabel) updateGolonganRow(row.id, 'label', '');
     if (type === 'brand' || type === 'principal' || type === 'total') updateGolonganRow(row.id, 'divisi', '');
-  };
-
-  // Picking a month keeps the typed year (or the current year) — year stays manual.
-  // Free typing writes raw text: appending the year on every keystroke duplicated it.
-  const pickMonth = (value, picked) => {
-    if (!picked) { setPeriod(value); return; }
-    const year = /(\d{4})$/.exec(period || '')?.[1] || String(new Date().getFullYear());
-    setPeriod(`${value} ${year}`);
   };
 
   // SPV page: rekap format (Excel-table style), read-only. BM stays a placeholder.
@@ -550,29 +579,23 @@ export default function Documents({
         <div className="page-head-copy">
           <h1>Perhitungan Insentif</h1>
           <div className="doc-head-meta">
-            <span className={`status-pill ${documentStatus === 'Final' ? 'final' : 'draft'}`}>{documentStatus}</span>
-            <span className="meta-text">{period} · {sales.name || 'Salesman belum dipilih'}</span>
+            <span className="meta-text">{period} · {sales.name || 'Sales belum dipilih'}</span>
           </div>
         </div>
         <div className="page-head-actions">
-          <Button className="button secondary" type="button" onClick={handlePrint}>
-            <Icon size={15}><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5h20v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></Icon>
-            Cetak
-          </Button>
+          {canEdit && (
+            <Button className="button secondary" type="button" onClick={onCancel}>Dokumen Baru</Button>
+          )}
           <Button className="button primary" type="button" onClick={save} disabled={!canEdit}>
             <Icon size={16}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></Icon>
-            {documentId ? 'Simpan Perubahan' : 'Simpan Draft'}
+            {documentId ? 'Simpan Perubahan' : 'Simpan'}
           </Button>
-          {canFinalize && (
-            <Button className="button secondary" type="button" onClick={onSubmit} disabled={!documentId}>Finalisasi</Button>
-          )}
         </div>
       </div>
 
       <div className="print-header">
         <div className="print-title">
           <h1>PERHITUNGAN INSENTIF</h1>
-          <Button className="button primary" onClick={handlePrint}>Cetak</Button>
         </div>
       </div>
 
@@ -581,60 +604,68 @@ export default function Documents({
         <div className="section-heading">
           <div className="section-icon blue"><Icon><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></Icon></div>
           <div><h2>Informasi Dokumen</h2><p>Data dasar dokumen insentif sales.</p></div>
-          <span className={`draft-badge ${documentStatus === 'Final' ? 'final-badge' : ''}`}>{documentStatus}</span>
+          {documentStatus === 'Final' && <span className="draft-badge final-badge">Final</span>}
         </div>
         <div className="form-grid">
-          <label className="block">
-            Wilayah (Kota)
-            {isSuper ? (
-              <ComboSelect
-                value={sales.region}
-                onChange={(v) => updateSales('region', v)}
-                options={kotaOptions.map((k) => ({ value: k }))}
-                placeholder={kotaOptions.length ? 'Pilih atau ketik wilayah...' : 'Belum ada kota di cabang'}
-                disabled={!canEdit}
-                emptyHint={kotaOptions.length ? 'Tidak ada wilayah cocok.' : 'Belum ada kota di cabang.'}
-              />
-            ) : (
+          {isSuper ? (
+            <>
+              <label className="block">
+                Area
+                <ComboSelect
+                  value={areaName}
+                  onChange={pickArea}
+                  options={regionOptions}
+                  placeholder={regionOptions.length ? 'Pilih atau ketik area...' : 'Belum ada area'}
+                  disabled={!canEdit}
+                  emptyHint={regionOptions.length ? 'Tidak ada area cocok.' : 'Belum ada area.'}
+                />
+              </label>
+              <label className="block">
+                Cabang / Distributor
+                <ComboSelect
+                  value={branchName}
+                  onChange={pickBranch}
+                  options={branchOptions}
+                  placeholder={branchOptions.length ? 'Pilih atau ketik cabang...' : 'Belum ada cabang'}
+                  disabled={!canEdit}
+                  emptyHint={branchOptions.length ? 'Tidak ada cabang cocok.' : 'Belum ada cabang di area ini.'}
+                />
+              </label>
+            </>
+          ) : (
+            <label className="block">
+              Wilayah (Kota)
               <input value={wilayah} readOnly disabled />
-            )}
-          </label>
+            </label>
+          )}
           <label className="block">
-            Salesman
+            Sales
             <ComboSelect
               value={sales.name}
               onChange={(v) => updateSales('name', v)}
               options={salesList.map((p) => ({ value: p.name, hint: p.position_type }))}
-              placeholder={isSuper && !sales.region ? 'Pilih wilayah dulu' : 'Pilih atau ketik nama sales...'}
+              placeholder={isSuper && !hasScope ? 'Pilih area atau cabang dulu' : 'Pilih atau ketik nama sales...'}
               disabled={!canEdit}
-              emptyHint={salesList.length ? 'Tidak ada sales cocok.' : isSuper && !sales.region ? 'Pilih wilayah dulu.' : 'Belum ada sales di cabang Anda.'}
+              emptyHint={salesList.length ? 'Tidak ada sales cocok.' : isSuper && !hasScope ? 'Pilih area atau cabang dulu.' : 'Belum ada sales di cabang Anda.'}
             />
           </label>
-          <label className="block">
-            Bulan
-            <ComboSelect
-              value={period}
-              onChange={pickMonth}
-              options={monthNames().map((m) => ({ value: m }))}
-              placeholder="Pilih bulan, ketik tahunnya..."
-              disabled={!canEdit}
-              emptyHint="Tidak ada bulan cocok."
-            />
-          </label>
-          <div className="col-span-2">
-            <PickerChips
-              label="Produk"
-              hint="(nama principal)"
-              variant="inline"
-              searchPlaceholder="Cari produk..."
-              showClear={false}
-              items={masterData.principals
-                .filter((pr) => pr.is_active !== 0 && pr.active !== 0)
-                .map((pr) => ({ id: pr.name, name: pr.name }))}
-              selected={selectedBrands}
-              onChange={(names) => updateSales('product', joinBrands(names))}
-              canEdit={canEdit}
-            />
+          <div className="doc-period-product">
+            <div className="col-span-1">
+              <label className="block">
+                Bulan
+                <MonthPicker value={period} onChange={setPeriod} disabled={!canEdit} placeholder="Pilih bulan" />
+              </label>
+            </div>
+            <div className="col-span-1">
+              <MultipleSelect
+                label="Produk"
+                tags={masterData.principals
+                  .filter((pr) => pr.is_active !== 0 && pr.active !== 0)
+                  .map((pr) => ({ key: pr.name, name: pr.name }))}
+                defaultValue={selectedBrands.map((name) => ({ key: name, name }))}
+                onChange={(items) => updateSales('product', joinBrands(items.map((i) => i.name)))}
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -643,7 +674,7 @@ export default function Documents({
         <div className="doc-header">
           <div className="doc-meta">
             <div><strong>Wilayah:</strong><span>{wilayah}</span></div>
-            <div><strong>Salesman:</strong><span>{sales.name || '-'}</span></div>
+            <div><strong>Sales:</strong><span>{sales.name || '-'}</span></div>
             <div><strong>Produk:</strong><span>{sales.product || '-'}</span></div>
             <div><strong>Bulan:</strong><span>{period || '-'}</span></div>
           </div>
@@ -702,14 +733,13 @@ export default function Documents({
       </section>
 
       <footer className="action-bar">
-        <div className="autosave"><span className="save-dot" />{saved ? 'Draft tersimpan' : 'Draft belum disimpan'}</div>
+        <div className="autosave"><span className="save-dot" />{saved ? 'Tersimpan' : 'Belum disimpan'}</div>
         <div className="actions">
           <Button className="button secondary" onClick={onCancel}>Batal</Button>
           <Button className="button primary" onClick={save} disabled={!canEdit}>
             <Icon size={17}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></Icon>
-            {documentId ? 'Simpan Perubahan' : 'Simpan Draft'}
+            {documentId ? 'Simpan Perubahan' : 'Simpan'}
           </Button>
-          {canFinalize && <Button className="button secondary" onClick={onSubmit} disabled={!documentId}>Finalisasi</Button>}
         </div>
       </footer>
     </>

@@ -66,8 +66,8 @@ function createDocumentsRouter(db, options = {}) {
       const spvRow = isSpv ? db.prepare('SELECT name FROM positions WHERE id = ?').get(Number(input.position_id)) : null;
       const result = db.prepare(`
         INSERT INTO incentive_documents (owner_id, format_id, division_id, salesman, salesman_position_id, product, period, period_end, doc_kind, position_id, status, wilayah, insentif_total, kwitansi, divisi)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', ?, ?, ?, ?)
-      `).run(ownerId, input.format_id, input.division_id || null, isSpv ? (spvRow?.name ?? null) : (input.salesman || null), isSpv ? null : resolveSalesmanPositionId(db, input.salesman), input.product || null, input.period, spvPeriodEnd, isSpv ? 'spv' : 'sales', isSpv ? Number(input.position_id) : null, input.wilayah || null, encodeNumber(input.insentif_total), encodeKwitansi(input.kwitansi), input.divisi || null);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(ownerId, input.format_id, input.division_id || null, isSpv ? (spvRow?.name ?? null) : (input.salesman || null), isSpv ? null : resolveSalesmanPositionId(db, input.salesman), input.product || null, input.period, spvPeriodEnd, isSpv ? 'spv' : 'sales', isSpv ? Number(input.position_id) : null, isSpv ? 'Draft' : 'Final', input.wilayah || null, encodeNumber(input.insentif_total), encodeKwitansi(input.kwitansi), input.divisi || null);
       const documentId = result.lastInsertRowid;
       if (!isSpv) {
         const criteria = db.prepare(`
@@ -130,8 +130,10 @@ function createDocumentsRouter(db, options = {}) {
   router.patch('/:id', auth, (req, res) => {
     const document = getReadableDocument(db, req.user, req.params.id);
     if (!document) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
-    if (req.user.role !== 'superadmin' && (document.owner_id !== req.user.id || document.status !== 'Draft')) {
-      return res.status(409).json({ error: { code: 'DOCUMENT_LOCKED', message: 'Only owner can edit Draft documents' } });
+    // Dokumen sales langsung Final: owner (officer) boleh mengedit ulang. SPV tetap Draft-only.
+    const ownerCanEdit = document.owner_id === req.user.id && (document.doc_kind !== 'spv' || document.status === 'Draft');
+    if (req.user.role !== 'superadmin' && !ownerCanEdit) {
+      return res.status(409).json({ error: { code: 'DOCUMENT_LOCKED', message: 'Only owner can edit this document' } });
     }
     const input = req.body || {};
     // Superadmin yang mengoreksi dokumen Final wajib mengisi alasan audit.
@@ -319,6 +321,11 @@ function updateDocument(db, document, input) {
     fields.push('kwitansi = ?');
     values.push(encodeKwitansi(input.kwitansi));
   }
+  // Dokumen sales tidak punya tahap Draft: setiap simpan menjadikannya Final.
+  if (document.doc_kind !== 'spv') {
+    fields.push('status = ?');
+    values.push('Final');
+  }
   const update = db.transaction(() => {
     if (fields.length) {
       values.push(document.id);
@@ -365,15 +372,17 @@ function insertGolonganRows(db, documentId, rows) {
 
 function upsertCriteriaRows(db, documentId, rows) {
   if (!Array.isArray(rows)) return;
-  const existing = db.prepare('SELECT criteria_id FROM document_criteria_rows WHERE document_id = ?').all(documentId);
+  const existing = db.prepare('SELECT criteria_id, label FROM document_criteria_rows WHERE document_id = ?').all(documentId);
   const existingIds = new Set(existing.map(r => r.criteria_id));
+  // TOTAL OMZET: target selalu 100 (persen); officer hanya mengisi pencapaian dalam persen.
+  const omzetIds = new Set(existing.filter(r => r.label === 'TOTAL OMZET').map(r => r.criteria_id));
   const update = db.prepare(`
     UPDATE document_criteria_rows SET target_value = ?, achievement_value = ?, percentage = ?, percentage_value = ?, status = ?, incentive_amount = ?
     WHERE document_id = ? AND criteria_id = ?
   `);
   rows.forEach(row => {
     if (!existingIds.has(row.criteria_id)) return; // snapshot: only update existing, never insert new
-    const target = parseMoney(row.target_value);
+    const target = omzetIds.has(row.criteria_id) ? 100 : parseMoney(row.target_value);
     const achievement = parseMoney(row.achievement_value);
     const incentive = parseMoney(row.incentive_amount);
     const pctTarget = target ?? 0;

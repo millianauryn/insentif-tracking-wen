@@ -17,6 +17,15 @@ export function docMatchesPeriode(doc, periode) {
   return doc.period === periode;
 }
 
+// Filter tahun: dokumen yang periodenya (atau rentang SPV) menyentuh tahun itu.
+export function docMatchesYear(doc, year) {
+  if (!year) return true;
+  const target = String(year);
+  const start = String(doc.period || '').slice(0, 4);
+  const end = String(doc.period_end || doc.period || '').slice(0, 4);
+  return start <= target && end >= target;
+}
+
 // Filter SPV: dokumen milik SPV itu sendiri + dokumen sales anak-anaknya.
 export function docMatchesSpv(doc, spvId, childNames = []) {
   if (!spvId) return true;

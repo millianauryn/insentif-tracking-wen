@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeTotalFor, computeGrandTotal, principalValueFor, buildGolonganRowsPayload } from './golongan';
+import { computeTotalFor, computeTotalAutoFor, computeGrandTotal, principalValueFor, buildGolonganRowsPayload } from './golongan';
 
 const masterData = {
   brands: [
@@ -84,6 +84,18 @@ describe('computeTotalFor', () => {
 
   it('returns zeros for missing rows', () => {
     expect(computeTotalFor([], 0)).toEqual({ target: 0, achievement: 0 });
+  });
+
+  it('manual achievement on total rows overrides auto and empty restores auto', () => {
+    const withManual = rows.map((r, i) => i === 6 ? { ...r, achievement: '204.5' } : r);
+    expect(computeTotalAutoFor(withManual, 6)).toEqual({ target: 1234, achievement: 1264 });
+    expect(computeTotalFor(withManual, 6)).toEqual({ target: 1234, achievement: 204.5 });
+    expect(computeTotalFor(rows, 6)).toEqual({ target: 1234, achievement: 1264 });
+  });
+
+  it('manual achievement on total-divisi row overrides its section sum', () => {
+    const withManual = rows.map((r, i) => i === 4 ? { ...r, achievement: '84' } : r);
+    expect(computeTotalFor(withManual, 4)).toEqual({ target: 235, achievement: 84 });
   });
 });
 

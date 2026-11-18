@@ -2,12 +2,14 @@
 import { Button } from '../components/ui/button';
 import Icon from '../components/Icon';
 import ComboSelect from '../components/ComboSelect';
+import MonthPicker from '../components/MonthPicker';
 import { useToast } from '../components/Toast';
 import { GolonganTable, KriteriaTable } from './Documents';
 import { createDocument, updateDocument, finalizeDocument, getDocument, previewSpvRows, errMsg } from '../api';
 import { terbilang } from '../lib/terbilang';
-import { toApiPeriod, fromApiPeriod, monthNames, currentPeriodLabel, periodRangeLabel } from '../lib/period';
+import { toApiPeriod, fromApiPeriod, currentPeriodLabel, periodRangeLabel } from '../lib/period';
 import { parseMoney } from '../lib/money';
+import { branchRegionIds } from '../lib/orgTree';
 
 const EMPTY_KWITANSI = {
   penerima: 'PT. BINTANG SINAR JAYA',
@@ -76,19 +78,14 @@ function toCriteriaRows(rows) {
   }));
 }
 
-// Memilih bulan dari daftar -> lengkapi dengan tahun; ketik bebas -> teks mentah.
-function pickMonth(value, picked, current) {
-  if (!picked) return value;
-  const year = /(\d{4})$/.exec(current || '')?.[1] || String(new Date().getFullYear());
-  return `${value} ${year}`;
-}
-
 export default function SpvDocument({ user, positions, masterData, setDocuments, documentFormatId, loadTargetId, onLoadDone }) {
   const toast = useToast();
   const isSuper = user.role === 'superadmin';
   const [documentId, setDocumentId] = useState(null);
   const [documentStatus, setDocumentStatus] = useState('Draft');
   const [positionId, setPositionId] = useState('');
+  const [areaName, setAreaName] = useState('');
+  const [branchName, setBranchName] = useState('');
   const [periodStart, setPeriodStart] = useState(currentPeriodLabel());
   const [periodEnd, setPeriodEnd] = useState(currentPeriodLabel());
   const [golonganRows, setGolonganRows] = useState([]);
@@ -107,9 +104,32 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
     setCriteriaRows((rows) => rows.map((r) => (r.criteria_id === criteriaId ? { ...r, [field]: value } : r)));
   };
 
-  const spvOptions = useMemo(() => positions.filter((p) => p.position_type === 'SPV' && p.active !== 0
-    && (isSuper || (p.branch_ids || []).some((id) => (user.branch_ids || []).includes(id)))),
-    [positions, isSuper, user.branch_ids]);
+  const branches = useMemo(
+    () => (masterData?.branches || []).filter((b) => b.is_active !== 0 && b.active !== 0),
+    [masterData?.branches],
+  );
+  const regionOptions = useMemo(
+    () => (masterData?.regions || []).filter((r) => r.is_active !== 0).map((r) => ({ value: r.name })),
+    [masterData?.regions],
+  );
+  const areaRegion = (masterData?.regions || []).find((r) => r.name === areaName);
+  const branchOptions = useMemo(
+    () => branches
+      .filter((b) => !areaName || branchRegionIds(b).includes(areaRegion?.id))
+      .map((b) => ({ value: b.name })),
+    [branches, areaName, areaRegion?.id],
+  );
+  const spvOptions = useMemo(() => positions.filter((p) => {
+    if (p.position_type !== 'SPV' || p.active === 0) return false;
+    const ids = p.branch_id ? [p.branch_id] : (p.branch_ids || []);
+    if (!isSuper && !ids.some((id) => (user.branch_ids || []).includes(id))) return false;
+    if (branchName) return ids.includes(branches.find((b) => b.name === branchName)?.id);
+    if (areaName) return ids.some((id) => {
+      const b = branches.find((x) => x.id === id);
+      return b && branchRegionIds(b).includes(areaRegion?.id);
+    });
+    return true;
+  }), [positions, isSuper, user.branch_ids, branches, branchName, areaName, areaRegion?.id]);
 
   const spv = positions.find((p) => String(p.id) === String(positionId)) || null;
   const spvName = spv?.name || '';
@@ -135,6 +155,12 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
         setInsentifTotal(full.insentif_total ?? null);
         setKwitansi({ ...EMPTY_KWITANSI, ...(full.kwitansi || {}) });
         setSavedWilayah(full.wilayah || '');
+        const savedBranch = branches.find((b) =>
+          String(b.city || '').toLowerCase() === String(full.wilayah || '').toLowerCase());
+        setBranchName(savedBranch?.name || '');
+        const savedRegion = (masterData?.regions || []).find((r) =>
+          savedBranch && branchRegionIds(savedBranch).includes(r.id));
+        setAreaName(savedRegion?.name || '');
         setGolonganRows(toGolonganRows(full.golongan_rows || [], masterData));
         setCriteriaRows(toCriteriaRows(full.criteria_rows || []));
         setSaved(true);
@@ -232,6 +258,8 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
     setDocumentId(null);
     setDocumentStatus('Draft');
     setPositionId('');
+    setAreaName('');
+    setBranchName('');
     setGolonganRows([]);
     setCriteriaRows([]);
     setInsentifTotal(null);
@@ -244,23 +272,56 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
     <>
       <div className="page-head doc-page-head">
         <div className="page-head-copy">
-          <h1>Rekap Insentif SPV</h1>
-          <p>Akumulasi insentif sales di bawah SPV untuk periode terpilih.</p>
+          <h1>Perhitungan Insentif</h1>
+          <div className="doc-head-meta">
+            <span className="meta-text">{periodLabel} · {spvName || 'SPV belum dipilih'}</span>
+          </div>
         </div>
         <div className="page-head-actions">
-          <Button className="button secondary" type="button" onClick={() => window.print()}>
-            <Icon size={15}><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5h20v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></Icon>
-            Cetak
-          </Button>
+          <Button className="button secondary" type="button" onClick={reset}>Dokumen Baru</Button>
           <Button className="button primary" type="button" onClick={save} disabled={!canEditDoc || saving}>
-            {documentId ? 'Simpan Perubahan' : 'Simpan Draft'}
+            <Icon size={16}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></Icon>
+            {documentId ? 'Simpan Perubahan' : 'Simpan'}
           </Button>
           {canFinalize && <Button className="button secondary" type="button" onClick={submit}>Finalisasi</Button>}
         </div>
       </div>
 
+      <div className="print-header">
+        <div className="print-title">
+          <h1>PERHITUNGAN INSENTIF</h1>
+        </div>
+      </div>
+
       <section className="content-card info-card">
+        <div className="section-heading">
+          <div className="section-icon blue"><Icon><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/></Icon></div>
+          <div><h2>Informasi Dokumen</h2><p>Data dasar dokumen insentif SPV.</p></div>
+          {documentStatus === 'Final' && <span className="draft-badge final-badge">Final</span>}
+        </div>
         <div className="form-grid">
+          <label className="block">
+            Area
+            <ComboSelect
+              value={areaName}
+              onChange={(v) => { setAreaName(v); setBranchName(''); setPositionId(''); }}
+              options={regionOptions}
+              placeholder={regionOptions.length ? 'Pilih atau ketik area...' : 'Belum ada area'}
+              disabled={!canEditDoc}
+              emptyHint={regionOptions.length ? 'Tidak ada area cocok.' : 'Belum ada area.'}
+            />
+          </label>
+          <label className="block">
+            Cabang / Distributor
+            <ComboSelect
+              value={branchName}
+              onChange={(v) => { setBranchName(v); setPositionId(''); }}
+              options={branchOptions}
+              placeholder={branchOptions.length ? 'Pilih atau ketik cabang...' : 'Belum ada cabang'}
+              disabled={!canEditDoc}
+              emptyHint={branchOptions.length ? 'Tidak ada cabang cocok.' : 'Belum ada cabang di area ini.'}
+            />
+          </label>
           <label className="block">
             SPV
             <ComboSelect
@@ -269,42 +330,31 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
               options={spvOptions.map((p) => ({ value: p.name, hint: p.sales_code || '' }))}
               placeholder="Pilih SPV..."
               disabled={!canEditDoc}
-              emptyHint="Tidak ada SPV di cabang Anda."
+              emptyHint="Tidak ada SPV di cabang atau area ini."
             />
           </label>
-          <label className="block">
-            Bulan Mulai
-            <ComboSelect
-              value={periodStart}
-              onChange={(v, picked) => setPeriodStart(pickMonth(v, picked, periodStart))}
-              options={monthNames().map((m) => ({ value: m }))}
-              placeholder="Pilih bulan, ketik tahunnya..."
-              disabled={!canEditDoc}
-              emptyHint="Tidak ada bulan cocok."
-            />
-          </label>
-          <label className="block">
-            Bulan Akhir
-            <ComboSelect
-              value={periodEnd}
-              onChange={(v, picked) => setPeriodEnd(pickMonth(v, picked, periodEnd))}
-              options={monthNames().map((m) => ({ value: m }))}
-              placeholder="Pilih bulan, ketik tahunnya..."
-              disabled={!canEditDoc}
-              emptyHint="Tidak ada bulan cocok."
-            />
-          </label>
-          <label className="block">
-            Wilayah (Kota)
-            <input value={wilayah} readOnly disabled />
-          </label>
+          <div className="doc-period-range">
+            <div className="col-span-1">
+              <label className="block">
+                Periode Awal
+                <MonthPicker value={periodStart} onChange={setPeriodStart} disabled={!canEditDoc} placeholder="Pilih bulan awal" />
+              </label>
+            </div>
+            <div className="col-span-1">
+              <label className="block">
+                Periode Akhir
+                <MonthPicker value={periodEnd} onChange={setPeriodEnd} disabled={!canEditDoc} placeholder="Pilih bulan akhir" />
+              </label>
+            </div>
+          </div>
         </div>
       </section>
 
       <section className="content-card info-card print-section">
         <div className="doc-header">
           <div className="doc-meta">
-            <div><strong>Wilayah:</strong><span>{wilayah || '-'}</span></div>
+            <div><strong>Area:</strong><span>{areaName || '-'}</span></div>
+            <div><strong>Cabang:</strong><span>{branchName || '-'}</span></div>
             <div><strong>Jabatan:</strong><span>SPV</span></div>
             <div><strong>Nama Pejabat:</strong><span>{spvName || '-'}</span></div>
             <div><strong>Bulan:</strong><span>{periodLabel || '-'}</span></div>
@@ -348,7 +398,16 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
         <div className="kwitansi-card">
           <h3><u>KWITANSI</u></h3>
           <div className="kwitansi-grid">
-            <div className="kw-row"><label>Sudah terima dari :</label><span>{kwitansi.penerima}</span></div>
+            <div className="kw-row"><label>Sudah terima dari :</label>{isSuper ? (
+              <ComboSelect
+                value={kwitansi.penerima}
+                onChange={(v) => setKwitansi({ ...kwitansi, penerima: v })}
+                options={(masterData?.branches || []).filter((b) => b.is_active !== 0 && b.active !== 0).map((b) => ({ value: b.name }))}
+                placeholder="Pilih cabang..."
+                disabled={!canEditDoc}
+                emptyHint="Belum ada cabang."
+              />
+            ) : <span>{kwitansi.penerima}</span>}</div>
             <div className="kw-row"><label>Jumlah Uang</label><input value={kwitansi.jumlahUang} onChange={(e) => setKwitansi({ ...kwitansi, jumlahUang: e.target.value })} disabled={!canEditDoc} /></div>
             <div className="kw-row"><label>Buat Pembayaran</label><input value={kwitansi.keterangan} onChange={(e) => setKwitansi({ ...kwitansi, keterangan: e.target.value })} disabled={!canEditDoc} /></div>
             <div className="kw-row"><label>Terbilang Rp.</label><input value={kwitansi.nominal} onChange={(e) => setKwitansi({ ...kwitansi, nominal: e.target.value, terbilang: terbilang(e.target.value.replace(/[^\d-]/g, '') || insentifTotal || 0) })} disabled={!canEditDoc} /></div>
@@ -365,11 +424,12 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
       </section>
 
       <footer className="action-bar">
-        <div className="autosave"><span className="save-dot" />{saved ? 'Draft tersimpan' : 'Draft belum disimpan'}</div>
+        <div className="autosave"><span className="save-dot" />{saved ? 'Tersimpan' : 'Belum disimpan'}</div>
         <div className="actions">
           <Button className="button secondary" onClick={reset}>Batal</Button>
           <Button className="button primary" onClick={save} disabled={!canEditDoc || saving}>
-            {documentId ? 'Simpan Perubahan' : 'Simpan Draft'}
+            <Icon size={17}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></Icon>
+            {documentId ? 'Simpan Perubahan' : 'Simpan'}
           </Button>
           {canFinalize && <Button className="button secondary" onClick={submit}>Finalisasi</Button>}
         </div>

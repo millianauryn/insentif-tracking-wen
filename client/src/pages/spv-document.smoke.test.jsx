@@ -22,19 +22,27 @@ const props = {
 };
 
 describe('SPV document render', () => {
-  it('merender header SPV dengan empat pembeda', () => {
+  it('memakai header dan section Informasi Dokumen seperti halaman sales', () => {
     const html = renderToString(<SpvDocument {...props} />);
-    expect(html).toContain('Rekap Insentif SPV');
-    expect(html).toContain('Wilayah');
+    expect(html).toContain('Perhitungan Insentif');
+    expect(html).toContain('PERHITUNGAN INSENTIF');
+    expect(html).toContain('Informasi Dokumen');
+    expect(html).toContain('Simpan');
+    expect(html).not.toContain('Simpan Draft');
+    // Informasi dokumen SPV: area, cabang, SPV, bulan — tanpa Wilayah (Kota).
+    expect(html).toContain('Area');
+    expect(html).toContain('Cabang / Distributor');
+    expect(html).not.toContain('Wilayah (Kota)');
     expect(html).toContain('Jabatan');
     expect(html).toContain('Nama Pejabat');
     expect(html).toContain('Bulan');
   });
 
-  it('menampilkan input SPV dan rentang bulan', () => {
+  it('menampilkan input SPV dan pemilih rentang bulan model MonthPicker', () => {
     const html = renderToString(<SpvDocument {...props} />);
-    expect(html).toContain('Bulan Mulai');
-    expect(html).toContain('Bulan Akhir');
+    expect(html).toContain('Periode Awal');
+    expect(html).toContain('Periode Akhir');
+    expect((html.match(/month-picker-trigger/g) || []).length).toBe(2);
     expect(html).toContain('Pilih SPV');
   });
 

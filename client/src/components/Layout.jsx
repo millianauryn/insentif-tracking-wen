@@ -19,7 +19,7 @@ import pbgLogo from '../assets/logo-pbg.png';
 
 const NAV = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/insetif', label: 'Dokumen Tersimpan', icon: FileText, end: true },
+  { to: '/insetif', label: 'Analisa Dokumen', icon: FileText, end: true },
 ];
 
 const DOC_CHILDREN = [
@@ -130,10 +130,10 @@ function SideNav({ onNavigate, collapsed = false, onToggle }) {
             className={`nav-item w-full ${docActive ? 'nav-item-active' : ''}${collapsed ? ' justify-center !px-2' : ''}`}
             onClick={() => (collapsed ? navigate('/documents/sales') : setDocOpen((o) => !o))}
             aria-expanded={collapsed ? undefined : docExpanded}
-            title={collapsed ? 'Dokumen' : undefined}
+            title={collapsed ? 'Inputan Dokumen' : undefined}
           >
             <FileText size={17} color={docExpanded ? '#0c5848' : '#6c7a73'} />
-            {!collapsed && <span className="flex-1 text-left">Dokumen</span>}
+            {!collapsed && <span className="flex-1 text-left">Inputan Dokumen</span>}
             {!collapsed && (
             <ChevronDown
               size={15}

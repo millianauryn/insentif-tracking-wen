@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import { docPeriodLabel, docMatchesPeriode, docMatchesSpv } from './docFilters';
+import { docPeriodLabel, docMatchesPeriode, docMatchesSpv, docMatchesYear } from './docFilters';
+
+describe('filter tahun dokumen', () => {
+  const spv = { doc_kind: 'spv', period: '2026-11', period_end: '2027-02', salesman: 'BUDO' };
+  const sales = { doc_kind: 'sales', period: '2026-10', period_end: null, salesman: 'SARI' };
+
+  it('dokumen cocok dengan tahun periodenya', () => {
+    expect(docMatchesYear(sales, 2026)).toBe(true);
+    expect(docMatchesYear(sales, '2025')).toBe(false);
+  });
+
+  it('rentang SPV yang melewati tahun ikut di kedua tahun', () => {
+    expect(docMatchesYear(spv, 2026)).toBe(true);
+    expect(docMatchesYear(spv, 2027)).toBe(true);
+    expect(docMatchesYear(spv, 2028)).toBe(false);
+  });
+
+  it('tanpa tahun semua dokumen lolos', () => {
+    expect(docMatchesYear(sales, '')).toBe(true);
+  });
+});
 
 describe('filter dokumen SPV', () => {
   const spv = { doc_kind: 'spv', period: '2026-09', period_end: '2026-11', position_id: 2, salesman: 'BUDO' };

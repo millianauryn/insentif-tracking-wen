@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { createDocument, updateDocument, finalizeDocument, deleteDocument, getDocument, listCriteria, listDocumentFormats, listDocuments, listUsers, listMasterData, listPositions, errMsg } from './api';
+import { createDocument, updateDocument, deleteDocument, getDocument, listCriteria, listDocumentFormats, listDocuments, listUsers, listMasterData, listPositions, errMsg } from './api';
 import { canManageAdmin } from './access';
+import { isGugurCriteria } from './lib/criteria';
 import { useAuth } from './context/AuthContext';
 import { useToast } from './components/Toast';
 import { reorder } from './lib/reorder';
-import { buildGolonganRowsPayload } from './lib/golongan';
+import { buildGolonganRowsPayload, computeTotalFor, computeGrandTotal } from './lib/golongan';
 import { toApiPeriod, fromApiPeriod, currentPeriodLabel } from './lib/period';
 import { parseMoney } from './lib/money';
 import Layout from './components/Layout';
@@ -32,11 +33,25 @@ const INITIAL_SALES = {
 let nextRowId = 1;
 const makeRow = (props = {}) => ({ id: `r${nextRowId++}`, ...props });
 
+// Baris default: satu baris brand, dan TOTAL DIVISI serta TOTAL sudah ada di bawah.
+const defaultGolonganRows = () => [
+  makeRow({ label: '', target: 100, achievement: '', type: 'brand', isGroup: false }),
+  makeRow({ label: 'TOTAL DIVISI', target: '', achievement: '', type: 'total-divisi', isGroup: true, divisi: '' }),
+  makeRow({ label: 'TOTAL', target: '', achievement: '', type: 'total', isGroup: true }),
+];
+
+// Data lama menyimpan target & pencapaian dalam Rp. Sekarang target selalu 100 dan pencapaian dalam persen.
+const legacyPercent = (target, achievement) => {
+  if (achievement == null || achievement === '') return '';
+  const t = Number(target);
+  return t > 0 ? String(Math.round((Number(achievement) / t) * 1000) / 10) : String(achievement);
+};
+
 function App() {
   const { user, loading: authLoading } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
-  const [golonganRows, setGolonganRows] = useState(() => [makeRow({ label: '', target: '', achievement: '', type: 'brand', isGroup: false })]);
+  const [golonganRows, setGolonganRows] = useState(() => defaultGolonganRows());
   const [criteriaRows, setCriteriaRows] = useState([]);
   const [criteria, setCriteria] = useState([]);
   const [sales, setSales] = useState(INITIAL_SALES);
@@ -44,7 +59,7 @@ function App() {
   const [documentFormatId, setDocumentFormatId] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [spvTargetId, setSpvTargetId] = useState(null);
-  const [documentStatus, setDocumentStatus] = useState('Draft');
+  const [documentStatus, setDocumentStatus] = useState('');
   const [adminData, setAdminData] = useState({ users: [], criteria: [], masterData: { divisions: [], principals: [], brands: [], regions: [], branches: [] } });
   const [positions, setPositions] = useState([]);
   const [period, setPeriod] = useState(currentPeriodLabel());
@@ -87,7 +102,7 @@ function App() {
         setDocumentFormatId(formats[0]?.id ?? null);
         setDocuments(next);
         setCriteria(crit);
-        setCriteriaRows(crit.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', percentage_value: '', incentive_amount: '' })));
+        setCriteriaRows(crit.map((c) => ({ criteria_id: c.id, label: c.label, target_value: c.label === 'TOTAL OMZET' ? '100' : '', achievement_value: '', percentage_value: '', incentive_amount: '' })));
         setPositions(pos.positions || []);
         setAdminData((prev) => ({
           users: usersRes ? usersRes.users : prev.users,
@@ -111,7 +126,13 @@ function App() {
 
   const updateGolonganRow = (id, field, value) => {
     if (user?.role === 'observer') return;
-    setGolonganRows((current) => current.map((row) => row.id === id ? { ...row, [field]: value } : row));
+    setGolonganRows((current) => current.map((row) => {
+      if (row.id !== id) return row;
+      const next = { ...row, [field]: value };
+      // Principal: pencapaian manual (%) dianggap target 100; kosong = otomatis dari brand di atasnya.
+      if (field === 'achievement' && row.type === 'principal') next.target = value === '' || value == null ? '' : 100;
+      return next;
+    }));
     setSaved(false);
   };
 
@@ -119,7 +140,7 @@ function App() {
     if (user?.role === 'observer') return;
     setGolonganRows((current) => {
       const next = current.filter((row) => row.id !== id);
-      return next.length ? next : [makeRow({ label: '', target: '', achievement: '', type: 'brand', isGroup: false })];
+      return next.length ? next : defaultGolonganRows();
     });
     setSaved(false);
   };
@@ -128,8 +149,13 @@ function App() {
     if (user?.role === 'observer') return;
     const isGroup = type === 'principal' || type === 'total-divisi' || type === 'total' || type === 'divisi';
     const label = type === 'total-divisi' ? 'TOTAL DIVISI' : type === 'total' ? 'TOTAL' : '';
-    const row = makeRow({ label, isGroup, type, divisi: '', target: '', achievement: '' });
-    setGolonganRows((current) => [...current, row]);
+    const row = makeRow({ label, isGroup, type, divisi: '', target: type === 'brand' ? 100 : '', achievement: '' });
+    // Baris baru masuk sebelum blok total di bawah; TOTAL DIVISI dan TOTAL tetap di akhir.
+    setGolonganRows((current) => {
+      let insertAt = current.length;
+      while (insertAt > 0 && (current[insertAt - 1].type === 'total-divisi' || current[insertAt - 1].type === 'total')) insertAt -= 1;
+      return [...current.slice(0, insertAt), row, ...current.slice(insertAt)];
+    });
     setSaved(false);
   };
 
@@ -140,9 +166,34 @@ function App() {
     setSaved(false);
   };
 
+  // TOTAL OMZET diambil dari baris TOTAL di tabel golongan (persen), tidak diisi manual.
+  useEffect(() => {
+    const totalIndex = golonganRows.map((r) => r.type).lastIndexOf('total');
+    const total = totalIndex >= 0 ? computeTotalFor(golonganRows, totalIndex) : computeGrandTotal(golonganRows);
+    const pct = total.target > 0 ? Math.round((total.achievement / total.target) * 1000) / 10 : 0;
+    setCriteriaRows((current) => {
+      let changed = false;
+      const next = current.map((row) => {
+        if (row.label !== 'TOTAL OMZET') return row;
+        if (String(row.achievement_value) === String(pct) && row.target_value === '100') return row;
+        changed = true;
+        const updated = { ...row, target_value: '100', achievement_value: String(pct) };
+        if (isGugurCriteria(updated)) updated.incentive_amount = '0';
+        return updated;
+      });
+      return changed ? next : current;
+    });
+  }, [golonganRows]);
+
   const updateCriteriaRow = (criteriaId, field, value) => {
     if (user?.role === 'observer') return;
-    setCriteriaRows((current) => current.map((row) => row.criteria_id === criteriaId ? { ...row, [field]: value } : row));
+    setCriteriaRows((current) => current.map((row) => {
+      if (row.criteria_id !== criteriaId) return row;
+      const next = { ...row, [field]: value };
+      // Gugur: insentif yang diberi otomatis 0.
+      if ((field === 'target_value' || field === 'achievement_value') && isGugurCriteria(next)) next.incentive_amount = '0';
+      return next;
+    }));
     setSaved(false);
   };
 
@@ -188,9 +239,10 @@ function App() {
         kwitansi,
       });
       setDocumentId(result.document.id);
+      setDocumentStatus(result.document.status);
       setDocuments((current) => [result.document, ...current.filter((d) => d.id !== result.document.id)]);
       setSaved(true);
-      toast('success', 'Dokumen Draft tersimpan.');
+      toast('success', 'Dokumen tersimpan.');
     } catch (err) {
       toast('error', errMsg(err));
     } finally {
@@ -215,6 +267,7 @@ function App() {
         criteria_rows: buildCriteriaRows(),
         kwitansi,
       });
+      setDocumentStatus(result.document.status);
       setDocuments((current) => current.map((d) => d.id === result.document.id ? result.document : d));
       setSaved(true);
       toast('success', 'Dokumen terupdate.');
@@ -222,19 +275,6 @@ function App() {
       toast('error', errMsg(err));
     } finally {
       setSaving(false);
-    }
-  };
-
-  const submitForApproval = async () => {
-    if (!['observer', 'superadmin'].includes(user?.role)) return;
-    if (!documentId) return;
-    try {
-      const result = await finalizeDocument(documentId);
-      setDocumentStatus(result.document.status);
-      setDocuments((current) => current.map((d) => d.id === result.document.id ? { ...d, status: result.document.status } : d));
-      toast('success', 'Dokumen dikirim untuk approval.');
-    } catch (err) {
-      toast('error', errMsg(err));
     }
   };
 
@@ -282,23 +322,23 @@ function App() {
                 divisi,
                 isGroup: !!row.is_group,
                 type,
-                target: row.target ?? '',
-                achievement: row.achievement ?? '',
+                target: row.target != null ? 100 : '',
+                achievement: legacyPercent(row.target, row.achievement),
               });
             })
-          : [makeRow({ label: '', target: '', achievement: '', type: 'brand', isGroup: false })]
+          : defaultGolonganRows()
       );
       setCriteriaRows(
         full.criteria_rows?.length
           ? full.criteria_rows.map((row) => ({
               criteria_id: row.criteria_id,
               label: row.label,
-              target_value: row.target_value ?? '',
-              achievement_value: row.achievement_value ?? '',
+              target_value: row.label === 'TOTAL OMZET' ? '100' : (row.target_value ?? ''),
+              achievement_value: row.label === 'TOTAL OMZET' ? legacyPercent(row.target_value, row.achievement_value) : (row.achievement_value ?? ''),
               percentage_value: row.percentage_value ?? '',
               incentive_amount: row.incentive_amount ?? '',
             }))
-          : criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', percentage_value: '', incentive_amount: '' }))
+          : criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: c.label === 'TOTAL OMZET' ? '100' : '', achievement_value: '', percentage_value: '', incentive_amount: '' }))
       );
       setSales({ ...INITIAL_SALES, name: full.salesman || '', product: full.product || '', region: full.wilayah || '', divisi: full.divisi || '' });
       setPeriod(fromApiPeriod(full.period));
@@ -318,9 +358,9 @@ function App() {
 
   const cancelEdit = () => {
     setDocumentId(null);
-    setDocumentStatus('Draft');
-    setGolonganRows([makeRow({ label: '', target: '', achievement: '', type: 'brand', isGroup: false })]);
-    setCriteriaRows(criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: '', achievement_value: '', percentage_value: '', incentive_amount: '' })));
+    setDocumentStatus('');
+    setGolonganRows(defaultGolonganRows());
+    setCriteriaRows(criteria.map((c) => ({ criteria_id: c.id, label: c.label, target_value: c.label === 'TOTAL OMZET' ? '100' : '', achievement_value: '', percentage_value: '', incentive_amount: '' })));
     setSales(INITIAL_SALES);
     setPeriod(currentPeriodLabel());
     setInsentifTotal(null);
@@ -339,7 +379,6 @@ function App() {
         setDocuments={setDocuments}
         onCreate={saveDraft}
         onUpdate={updateDraft}
-        onSubmit={submitForApproval}
         onLoad={loadDocument}
         onCancel={cancelEdit}
         documentId={documentId}
@@ -410,6 +449,7 @@ function App() {
                 setDocuments={setDocuments}
                 onRefresh={listDocuments}
                 positions={positions}
+                masterData={adminData.masterData}
                 onLoad={(doc) => loadDocument(doc)}
                 onDelete={removeDocument}
                 onNewDoc={() => { cancelEdit(); navigate('/documents'); }}

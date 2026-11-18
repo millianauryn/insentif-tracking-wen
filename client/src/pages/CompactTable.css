@@ -1,0 +1,8 @@
+/* Tabel golongan & kriteria di form sales: dibuat ringkas, tanpa lebar minimum 820px. */
+.table-wrap.compact-table table {
+  min-width: 0;
+}
+.table-wrap.compact-table th,
+.table-wrap.compact-table td {
+  white-space: normal;
+}

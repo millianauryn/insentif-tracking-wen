@@ -117,6 +117,10 @@
 .form-grid input, .form-grid select { min-height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-size: 12px; }
 .form-grid .button { align-self: start; justify-self: start; min-height: 32px; padding: 0 16px; font-size: 12px; }
 .form-grid .col-span-2, .form-grid .col-span-3 { grid-column: 1 / -1; }
+/* Bulan + Produk: box produk memanjang sampai sejajar ujung box Salesman. */
+.doc-period-product { grid-column: 1 / -1; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; align-items: start; min-width: 0; }
+/* SPV: dua pemilih bulan dengan lebar yang sama. */
+.doc-period-range { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; min-width: 0; }
 
 /* Document meta (screen) */
 .doc-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 24px; margin-bottom: 16px; }
@@ -384,6 +388,8 @@
 
 @media screen and (max-width: 720px) {
   .form-grid { grid-template-columns: 1fr; }
+  .doc-period-product { grid-template-columns: 1fr; }
+  .doc-period-range { grid-template-columns: 1fr; }
   .kpi-strip { grid-template-columns: 1fr 1fr; }
   .kpi-cell { padding: 14px; }
   .kpi-value { font-size: 25px; }

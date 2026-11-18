@@ -11,12 +11,12 @@
 
 ## Roles & Flows
 
-**Roles**: `superadmin` (manage + approve), `officer` (create/edit Draft), `observer` (Direksi — approve/read-only). `super`/`officer`/`direksi` are dev quick-login accounts (`/api/auth/dev-login`, only when not production).
+**Roles**: `superadmin` (manage + koreksi Final), `officer` (input dokumen sales; langsung Final saat disimpan, boleh edit ulang miliknya), `observer` (Direksi — read-only). `super`/`officer`/`direksi` are dev quick-login accounts (`/api/auth/dev-login`, only when not production).
 
 **Login/logout**: `POST /api/auth/login` → session cookie; `GET /api/auth/me` restores user; `POST /api/auth/logout` deletes session. Rate limit 10/15 min/IP. Pengaman = cookie httpOnly + `SameSite=Lax` + aksi tulis selalu non-GET (tidak ada token CSRF). Username lowercased client-side; password ≥6.
 
 **Documents (Dokumen Sales)** (`server/routes/documents.js`):
-- Status `Draft` → `Final`. Officer creates/edits/deletes Draft (own docs). Observer + superadmin finalize; superadmin may correct Final (audited). Observer POST create is 403.
+- Dokumen sales (ADR-001): simpan = langsung `Final` (`POST /api/documents` dan `PATCH /:id` menulis status Final). Officer mengedit ulang dokumen sales miliknya sendiri. Tidak ada tahap approval untuk sales. `POST /:id/finalize` tetap untuk alur SPV (observer + superadmin). Superadmin may correct Final (audited). Observer POST create is 403.
 - Save = `POST /api/documents` (create) / `PATCH /:id` (update) with `format_id, salesman, product, period (YYYY-MM), wilayah, divisi, insentif_total, golongan_rows[], criteria_rows[], kwitansi{}`. `divisi` (nama) disimpan di kolom `incentive_documents.divisi` dan dibaca lagi saat load. Golongan rows: label prefix `DIVISI:<nama>` / `TOTALDIVISI:<nama>` (tanpa migrasi skema). Batas: ≤50 baris, label ≤80, target/achievement finit ≥0.
 - **List pagination**: `GET /documents?limit&offset` (limit default tanpa param = semua; klien memakai `limit=500`) + `total` di respons.
 - **One incentive per sales per period**: `findDuplicateDoc` (case-insensitive) blocks a second live doc for same salesman+period (409 `DUPLICATE_SALES_PERIOD`); empty salesman exempt. DB backstop: unique index `idx_doc_sales_period` (parsial, aktif sejak pembersihan duplikat 2026-11-09).
@@ -24,7 +24,9 @@
 - Kriteria editing: target/achievement/%/insentif per criteria; `CALL COMPLIANCE` % is manually typed (number + `%` suffix, `percentage_value`); `GOL YG GUGUR <50%` insentif typed with a minus and subtracted in totals. Dua label reserved (`CALL COMPLIANCE`, `GOL YG GUGUR KURANG DARI 50%`) tidak bisa dibuat/diubah via API (409 `RESERVED_LABEL`) — klien mengenali input minus/percent dari label ini.
 - Kwitansi (auto/display): `penerima` (officer = first linked branch name, superadmin = dropdown), `Jumlah Uang`/`Buat Pembayaran` default `Incentive penjualan bulan <periode>`, `Terbilang Rp.` = total insentif (editable override via `nominal`), signature = salesman name + `SALESMAN` (no sales code). Preview on list uses same totals.
 
-**Dokumen Tersimpan (`Insetif`)**: search + BM/SPV/Sales/Periode filters, paginated (`ListPager` 10/25/50/100, horizontal `1 / N`). Detail panel opens full preview (golongan + kriteria + kwitansi tables) via `getDocument`. Draft ∩ Final both listed (badge case-insensitive). `Tandai Final` only visible to observer/superadmin and calls the API; `Edit`/`Hapus` only on Draft for officer-owner/superadmin (confirm dialog) — `DELETE /:id` is Draft-only (409 on Final).
+**ADR-001 — Dokumen sales langsung Final (2026-11-17)**: Konteks: alur Draft → approval observer memperlambat input. Keputusan: dokumen sales disimpan langsung berstatus Final; officer boleh mengedit ulang dokumen Final miliknya; tombol approval dan tag Draft dihapus dari UI sales. Dampak: dokumen sales lama yang masih `Draft` di database tidak dimigrasi (tetap Draft sampai disimpan ulang). Dokumen SPV tidak berubah.
+
+**Dokumen Tersimpan (`Insetif`)**: search + BM/SPV/Sales/Periode filters, paginated (`ListPager` 10/25/50/100, horizontal `1 / N`). Detail panel opens full preview (golongan + kriteria + kwitansi tables) via `getDocument`. Draft ∩ Final both listed (badge case-insensitive). Tidak ada tombol `Tandai Final` untuk sales (ADR-001). `Edit` tampil untuk officer-owner/superadmin; `Hapus` hanya untuk dokumen lama yang masih Draft (confirm dialog) — `DELETE /:id` Draft-only (409 on Final).
 
 **Jabatan positions** (`server/routes/positions.js`): BM→SPV→SALES hierarchy with `sales_code`, `branch_ids`, `criteria_ids` — list diambil dengan 2 query bulk (bukan per baris); aturan hierarki divalidasi saat create (SPV wajib parent BM, SALES wajib parent SPV; test di `positions.test.js`). Users (`server/routes/users.js`): officer requires ≥1 branch; position must be active `SALES` sharing a selected branch; `sales_code`/`position_id` editable; validasi lengkap sebelum tulis.
 
@@ -51,8 +53,8 @@ cd server; npm test                        # server 58 tests
 ## Guardrails (do not change function)
 
 1. One sales / one period enforced in `documents.js` — update UI copy, not the rule.
-2. Finalize only observer+superadmin (`access.js:canFinalizeDocument` + `documents.js:/finalize`).
-3. Draft-only Edit/Delete; Final only superadmin-correct with audit.
+2. Approval/finalize hanya untuk SPV (observer + superadmin, `documents.js:/finalize`). Dokumen sales langsung Final (ADR-001).
+3. Delete Draft-only. Dokumen sales Final boleh diedit owner officer (ADR-001); dokumen SPV Final dikunci; koreksi superadmin pada Final wajib audit.
 4. Officer sees only own docs; observer/superadmin see all (`GET /documents`).
 5. Two reserved criteria labels stay exactly as written (client keys off them); API rejects create/rename of them.
 6. `divisi` field round-trips: client sends it, server stores `incentive_documents.divisi`, client reads it on load — keep all three in sync.

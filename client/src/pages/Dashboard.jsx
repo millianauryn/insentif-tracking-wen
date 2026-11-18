@@ -6,6 +6,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '.
 import { cn } from 'cn';
 import Icon from '../components/Icon';
 import { branchRegionIds, cityOf, filterBranches, buildOrgTree, pruneTree, countPositions } from '../lib/orgTree';
+import { docMatchesYear } from '../lib/docFilters';
 
 function EmptyState({ title, copy }) {
   return (
@@ -42,7 +43,7 @@ function tenureLabel(joinDate) {
 
 // Satu simpul tree: area / wilayah / cabang / position.
 // Barisnya bisa diklik untuk buka/tutup (tanpa harus klik ikon kecil).
-function TreeNode({ node, depth, expanded, onToggle, documentsFinal }) {
+function TreeNode({ node, depth, expanded, onToggle, documentsFinal, year }) {
   const kids = node.children || [];
   const open = expanded.has(node.key);
   const isPosition = node.kind === 'position';
@@ -86,7 +87,7 @@ function TreeNode({ node, depth, expanded, onToggle, documentsFinal }) {
       </div>
       {isPosition && (
         <div className="org-summary">
-          <span className="org-summary-item">Insentif yang diterima: <span className="org-summary-value">{docFinal}</span></span>
+          <span className="org-summary-item">Insentif yang diterima tahun {year}: <span className="org-summary-value">{docFinal}</span></span>
         </div>
       )}
       {toggleable && open && (
@@ -99,6 +100,7 @@ function TreeNode({ node, depth, expanded, onToggle, documentsFinal }) {
               expanded={expanded}
               onToggle={onToggle}
               documentsFinal={documentsFinal}
+              year={year}
             />
           ))}
         </div>
@@ -114,6 +116,19 @@ export default function Dashboard({ documents = [], user, positions = [], users 
   const [areaId, setAreaId] = useState('');
   const [city, setCity] = useState('');
   const [branchId, setBranchId] = useState('');
+  // Default: tahun berjalan. Dokumen dihitung per tahun yang dipilih.
+  const [year, setYear] = useState(() => String(new Date().getFullYear()));
+
+  const yearOptions = useMemo(() => {
+    const years = new Set([String(new Date().getFullYear())]);
+    documents.forEach((d) => {
+      [d.period, d.period_end].forEach((p) => {
+        const y = String(p || '').slice(0, 4);
+        if (/^\d{4}$/.test(y)) years.add(y);
+      });
+    });
+    return [...years].sort((a, b) => b.localeCompare(a));
+  }, [documents]);
 
   const toggleNode = (key) => setExpanded((prev) => {
     const next = new Set(prev);
@@ -156,10 +171,12 @@ export default function Dashboard({ documents = [], user, positions = [], users 
   const documentsFinal = useMemo(() => {
     const counts = {};
     documents.forEach((d) => {
-      if (String(d.status).toLowerCase() === 'final') counts[d.salesman] = (counts[d.salesman] || 0) + 1;
+      if (String(d.status).toLowerCase() === 'final' && docMatchesYear(d, year)) {
+        counts[d.salesman] = (counts[d.salesman] || 0) + 1;
+      }
     });
     return counts;
-  }, [documents]);
+  }, [documents, year]);
 
   const hasFilter = Boolean(query.trim() || areaId || city || branchId);
 
@@ -205,9 +222,18 @@ export default function Dashboard({ documents = [], user, positions = [], users 
                   aria-label="Cari struktur jabatan"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <div>
-                  <label htmlFor="dash-area" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Area</label>
+                  <label htmlFor="dash-tahun" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Tahun</label>
+                  <Select value={year} onValueChange={setYear}>
+                    <SelectTrigger id="dash-tahun" className="h-10 w-full"><SelectValue placeholder="Pilih tahun" /></SelectTrigger>
+                    <SelectContent>
+                      {yearOptions.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label htmlFor="dash-area"className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Area</label>
                   <Select value={areaId} items={areaItems} onValueChange={(v) => { setAreaId(v); setCity(''); setBranchId(''); }}>
                     <SelectTrigger id="dash-area" className="h-10 w-full"><SelectValue placeholder="Semua area" /></SelectTrigger>
                     <SelectContent>
@@ -249,6 +275,7 @@ export default function Dashboard({ documents = [], user, positions = [], users 
                     expanded={expanded}
                     onToggle={toggleNode}
                     documentsFinal={documentsFinal}
+                    year={year}
                   />
                 ))}
               </div>

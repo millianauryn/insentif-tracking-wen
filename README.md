@@ -1,6 +1,6 @@
 # Insentif Tracking
 
-Web pencatatan insentif sales: officer membuat Draft, observer (Direksi) menyetujui jadi Final.
+Web pencatatan insentif sales: officer menyimpan dokumen sales dan langsung Final (lihat ADR-001 di `docs/architecture.md`). Dokumen SPV tetap melalui approval observer.
 
 Canonical spec: [docs/architecture.md](docs/architecture.md) — fungsi saat ini tidak boleh berubah tanpa ADR.
 

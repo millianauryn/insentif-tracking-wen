@@ -60,7 +60,7 @@ function sumScope(scope) {
 // Total rows auto-sum principal + brand rows (target & achievement).
 // 'total' = whole table; 'total-divisi' = rows since the Divisi header above
 // (matching row.divisi if set, else nearest Divisi header; fallback: previous total/divisi separator).
-export function computeTotalFor(rows, rowIndex) {
+export function computeTotalAutoFor(rows, rowIndex) {
   const row = rows[rowIndex];
   if (!row) return { target: 0, achievement: 0 };
   if (row.type === 'total-divisi') {
@@ -88,6 +88,15 @@ export function computeTotalFor(rows, rowIndex) {
   }
   const scope = rows.slice(start, row.type === 'total' ? rows.length : rowIndex);
   return sumScope(scope);
+}
+
+// Manual override for a total row: non-empty row.achievement replaces the auto sum.
+// Clearing the field restores the automatic calculation.
+export function computeTotalFor(rows, rowIndex) {
+  const auto = computeTotalAutoFor(rows, rowIndex);
+  const row = rows[rowIndex];
+  const manual = row?.achievement !== '' && row?.achievement !== null && row?.achievement !== undefined;
+  return manual ? { ...auto, achievement: Number(row.achievement) || 0 } : auto;
 }
 
 // Grand total over the whole table (summary cards + kwitansi Total Keseluruhan)

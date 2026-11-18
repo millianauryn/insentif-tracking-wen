@@ -12,9 +12,12 @@ import {
 import { Badge } from '../components/ui/badge';
 import { useToast } from '../components/Toast';
 import { useAuth } from '../context/AuthContext';
-import { fromApiPeriod, apiMonthsInRange } from '../lib/period';
-import { docPeriodLabel, docMatchesPeriode, docMatchesSpv } from '../lib/docFilters';
-import { errMsg, finalizeDocument, getDocument } from '../api';
+import { toApiPeriod } from '../lib/period';
+import { docPeriodLabel, docMatchesSpv } from '../lib/docFilters';
+import { docMatchesScope, docMatchesPeriodeRange, positionBranchId, sortDocsByHierarchy } from '../lib/docHierarchy';
+import { branchRegionIds } from '../lib/orgTree';
+import MonthPicker from '../components/MonthPicker';
+import { errMsg, getDocument } from '../api';
 import ListPager from '../components/ListPager';
 import { Search, ChevronLeft, ChevronRight, Plus, Loader2, FolderOpen, RotateCcw } from 'lucide-react';
 
@@ -154,12 +157,6 @@ function FullDocPreview({ doc }) {
 }
 
 const childrenOf = (positions, id) => positions.filter((p) => p.parent_position_id === id);
-const descendantsOf = (positions, id) => {
-  const out = [];
-  const walk = (parentId) => childrenOf(positions, parentId).forEach((c) => { out.push(c); walk(c.id); });
-  walk(id);
-  return out;
-};
 const parentOf = (positions, p) => positions.find((x) => x.id === p.parent_position_id);
 
 function makeBadge(status) {
@@ -171,36 +168,122 @@ function makeBadge(status) {
       </Badge>
     );
   }
+  // Dokumen sales langsung Final saat disimpan; tidak ada tag Draft lagi.
+  return null;
+}
+
+function DocFiltersBar({
+  idPrefix, search, onSearch, areaId, onArea, branchId, onBranch,
+  areaOptions, branchOptions, spvId, onSpv, spvOptions,
+  salesId, onSales, salesOptions, periodStart, onPeriodStart, periodEnd, onPeriodEnd,
+}) {
+  const pickStart = (value) => {
+    onPeriodStart(value);
+    if (periodEnd && toApiPeriod(value) > toApiPeriod(periodEnd)) onPeriodEnd(value);
+  };
+
   return (
-    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 gap-1.5 px-2 py-0.5">
-      <span className="w-1.5 h-1.5 rounded-full bg-amber-700" aria-hidden="true" />
-      Draft
-    </Badge>
+    <div className="flex flex-col gap-3">
+      <div className="min-w-0">
+        <label htmlFor={`${idPrefix}-q`} className="sr-only">Cari dokumen</label>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--ink-3)]" aria-hidden="true" />
+          <Input
+            id={`${idPrefix}-q`}
+            type="search"
+            placeholder="Cari sales, produk, periode..."
+            value={search}
+            onChange={(e) => onSearch(e.target.value)}
+            className="pr-3 h-10"
+            style={{ paddingLeft: 44 }}
+            autoComplete="off"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 items-end">
+        <div>
+          <label htmlFor={`${idPrefix}-area`} className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Area</label>
+          <Select value={areaId} onValueChange={(v) => { onArea(v); onBranch(''); onSpv(''); onSales(''); }}>
+            <SelectTrigger id={`${idPrefix}-area`} className="h-10 w-full">
+              <SelectValue placeholder="Semua area">{areaId ? areaOptions.find((a) => String(a.id) === areaId)?.name : 'Semua area'}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Semua area</SelectItem>
+              {areaOptions.map((a) => <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label htmlFor={`${idPrefix}-cabang`} className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Cabang</label>
+          <Select value={branchId} onValueChange={(v) => { onBranch(v); onSpv(''); onSales(''); }}>
+            <SelectTrigger id={`${idPrefix}-cabang`} className="h-10 w-full">
+              <SelectValue placeholder="Semua cabang">{branchId ? branchOptions.find((b) => String(b.id) === branchId)?.name : 'Semua cabang'}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Semua cabang</SelectItem>
+              {branchOptions.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label htmlFor={`${idPrefix}-spv`} className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">SPV</label>
+          <Select value={spvId} onValueChange={(v) => { onSpv(v); onSales(''); }}>
+            <SelectTrigger id={`${idPrefix}-spv`} className="h-10 w-full">
+              <SelectValue placeholder="Semua SPV">{spvId ? spvOptions.find((p) => String(p.id) === spvId)?.name : 'Semua SPV'}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Semua SPV</SelectItem>
+              {spvOptions.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label htmlFor={`${idPrefix}-sales`} className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Sales</label>
+          <Select value={salesId} onValueChange={onSales}>
+            <SelectTrigger id={`${idPrefix}-sales`} className="h-10 w-full">
+              <SelectValue placeholder="Semua sales">{salesId ? salesOptions.find((p) => String(p.id) === salesId)?.name : 'Semua sales'}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Semua sales</SelectItem>
+              {salesOptions.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <span className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode Awal</span>
+          <MonthPicker value={periodStart} onChange={pickStart} placeholder="Pilih bulan awal" />
+        </div>
+        <div>
+          <span className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode Akhir</span>
+          <MonthPicker value={periodEnd} onChange={onPeriodEnd} placeholder="Pilih bulan akhir" />
+        </div>
+      </div>
+    </div>
   );
 }
 
-export default function Insetif({ documents, setDocuments, onRefresh, positions = [], onLoad, onDelete, onNewDoc }) {
+export default function Insetif({ documents, setDocuments, onRefresh, positions = [], masterData = {}, onLoad, onDelete, onNewDoc }) {
   const toast = useToast();
   // Map nama -> posisi: lookup per baris O(1), bukan find O(n) tiap render.
   const positionByName = useMemo(() => new Map(positions.map((p) => [p.name, p])), [positions]);
   const { user } = useAuth();
-  const canFinalize = ['observer', 'superadmin'].includes(user?.role);
   const isDraft = (s) => String(s).toLowerCase() !== 'final';
   const [searchParams] = useSearchParams();
   const nameParam = searchParams.get('name') || '';
   const openDocParam = searchParams.get('openDoc') || '';
 
   const [search, setSearch] = useState(nameParam);
-  const [bmId, setBmId] = useState('');
+  const [areaId, setAreaId] = useState('');
+  const [branchId, setBranchId] = useState('');
   const [spvId, setSpvId] = useState('');
   const [salesId, setSalesId] = useState('');
-  const [periode, setPeriode] = useState('');
+  const [periodStart, setPeriodStart] = useState('');
+  const [periodEnd, setPeriodEnd] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
   const [activeDocId, setActiveDocId] = useState(null);
-  const [finalBusy, setFinalBusy] = useState(false);
   const [fullDoc, setFullDoc] = useState(null);
   const [fullLoading, setFullLoading] = useState(false);
 
@@ -212,19 +295,15 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
     const target = positions.find((p) => p.name === nameParam);
     if (!target) return;
     if (target.position_type === 'BM') {
-      setBmId(String(target.id));
+      // BM hanya satu, jadi tidak dipakai sebagai filter.
+      setAreaId(''); setBranchId(''); setSpvId(''); setSalesId('');
     } else if (target.position_type === 'SPV') {
       setSpvId(String(target.id));
-      const bm = parentOf(positions, target);
-      if (bm) setBmId(String(bm.id));
+      setSalesId('');
     } else {
       setSalesId(String(target.id));
       const spv = parentOf(positions, target);
-      if (spv) {
-        setSpvId(String(spv.id));
-        const bm = parentOf(positions, spv);
-        if (bm) setBmId(String(bm.id));
-      }
+      if (spv) setSpvId(String(spv.id));
     }
   }, [nameParam, positions]);
 
@@ -257,52 +336,54 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
     return () => { cancelled = true; };
   }, [activeDocId]);
 
-  const bms = positions.filter((p) => p.position_type === 'BM');
-  const spvOptions = bmId
-    ? childrenOf(positions, Number(bmId)).filter((p) => p.position_type === 'SPV')
-    : positions.filter((p) => p.position_type === 'SPV');
-  const salesScope = spvId
-    ? childrenOf(positions, Number(spvId))
-    : bmId
-      ? descendantsOf(positions, Number(bmId))
-      : positions;
+  const branches = useMemo(() => masterData.branches || [], [masterData.branches]);
+  const areaOptions = useMemo(() => masterData.regions || [], [masterData.regions]);
+  const branchOptions = useMemo(
+    () => areaId ? branches.filter((b) => branchRegionIds(b).includes(Number(areaId))) : branches,
+    [areaId, branches],
+  );
+  const inScope = (p) => {
+    const bid = Number(positionBranchId(p, positions) || 0);
+    if (!bid) return true;
+    return branchId
+      ? Number(branchId) === bid
+      : !areaId || branchOptions.some((b) => Number(b.id) === bid);
+  };
+  const spvOptions = positions.filter((p) => p.position_type === 'SPV' && inScope(p));
+  const salesScope = spvId ? childrenOf(positions, Number(spvId)) : positions.filter(inScope);
   const salesOptions = salesScope.filter((p) => p.position_type === 'SALES');
 
-  const periodeOptions = useMemo(() => {
-    // Dokumen SPV bringing seluruh bulan dalam rentangnya, supaya bisa difilter per bulan.
-    const months = new Set();
-    for (const d of documents) {
-      if (!d.period) continue;
-      if (d.doc_kind === 'spv') apiMonthsInRange(d.period, d.period_end).forEach((m) => months.add(m));
-      else months.add(d.period);
-    }
-    return [...months].sort().reverse();
-  }, [documents]);
+  const startApi = periodStart ? toApiPeriod(periodStart) : '';
+  const endApi = periodEnd ? toApiPeriod(periodEnd) : '';
+  const hasPeriod = !!(startApi && endApi && endApi >= startApi);
 
   const visibleDocs = useMemo(() => {
-    let rows = documents;
+    if (!hasPeriod) return [];
+    let rows = documents.filter((d) => docMatchesScope(d, { areaId, branchId }, { positions, branches, positionByName }));
     if (salesId) {
       const s = positions.find((p) => p.id === Number(salesId));
-      if (s) rows = rows.filter((d) => d.salesman === s.name);
+      if (s) rows = rows.filter((d) => d.salesman === s.name || d.salesman_position_id === s.id);
     } else if (spvId) {
       const names = childrenOf(positions, Number(spvId)).map((p) => p.name);
       rows = rows.filter((d) => docMatchesSpv(d, spvId, names));
-    } else if (bmId) {
-      const names = descendantsOf(positions, Number(bmId)).map((p) => p.name);
-      rows = rows.filter((d) => names.includes(d.salesman));
     }
-    if (periode) rows = rows.filter((d) => docMatchesPeriode(d, periode));
+    rows = rows.filter((d) => docMatchesPeriodeRange(d, startApi, endApi));
     const q = search.trim().toLowerCase();
     if (q) {
       rows = rows.filter((d) =>
         `${d.salesman || ''} ${d.product || ''} ${docPeriodLabel(d)}`.toLowerCase().includes(q),
       );
     }
-    return rows;
-  }, [documents, positions, salesId, spvId, bmId, periode, search]);
+    return sortDocsByHierarchy(rows, positions, positionByName);
+  }, [documents, positions, positionByName, branches, areaId, branchId, salesId, spvId, startApi, endApi, hasPeriod, search]);
 
   // Kembali ke halaman 1 saat pencarian atau filter berubah.
-  useEffect(() => { setPage(1); }, [search, bmId, spvId, salesId, periode]);
+  useEffect(() => { setPage(1); }, [search, areaId, branchId, spvId, salesId, periodStart, periodEnd]);
+
+  const resetFilters = () => {
+    setSearch(''); setAreaId(''); setBranchId(''); setSpvId(''); setSalesId('');
+    setPeriodStart(''); setPeriodEnd('');
+  };
 
   // Jika hasil filter menyusut (mis. dokumen dihapus), turunkan halaman ke posisi valid.
   useEffect(() => {
@@ -331,7 +412,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
   };
 
   const activeDoc = documents.find((d) => d.id === activeDocId);
-  const canEditDoc = !!activeDoc && isDraft(activeDoc.status) && ['officer', 'superadmin'].includes(user?.role);
+  const canEditDoc = !!activeDoc && ['officer', 'superadmin'].includes(user?.role);
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
@@ -346,82 +427,17 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
         >
           {/* Filters */}
           <div className="p-6 border-b border-[var(--line)]" role="search" aria-label="Filter dokumen">
-            <div className="flex flex-col gap-3">
-              <div className="min-w-0">
-                <label htmlFor="q" className="sr-only">Cari dokumen</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--ink-3)]" aria-hidden="true" />
-                  <Input
-                    id="q"
-                    type="search"
-                    placeholder="Cari sales, produk, periode..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pr-3 h-10"
-                    style={{ paddingLeft: 44 }}
-                    autoComplete="off"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                <div>
-                  <label htmlFor="filter-bm" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">BM</label>
-                  <Select value={bmId} onValueChange={(v) => { setBmId(v); setSpvId(''); setSalesId(''); }}>
-                    <SelectTrigger id="filter-bm" className="h-10 w-full">
-                      <SelectValue placeholder="Semua BM">{bmId ? bms.find((p) => String(p.id) === bmId)?.name : 'Semua BM'}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Semua BM</SelectItem>
-                      {bms.map((p) => (
-                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label htmlFor="filter-spv" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">SPV</label>
-                  <Select value={spvId} onValueChange={(v) => { setSpvId(v); setSalesId(''); }}>
-                    <SelectTrigger id="filter-spv" className="h-10 w-full">
-                      <SelectValue placeholder="Semua SPV">{spvId ? spvOptions.find((p) => String(p.id) === spvId)?.name : 'Semua SPV'}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Semua SPV</SelectItem>
-                      {spvOptions.map((p) => (
-                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label htmlFor="filter-sales" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Sales</label>
-                  <Select value={salesId} onValueChange={setSalesId}>
-                    <SelectTrigger id="filter-sales" className="h-10 w-full">
-                      <SelectValue placeholder="Semua sales">{salesId ? salesOptions.find((p) => String(p.id) === salesId)?.name : 'Semua sales'}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Semua sales</SelectItem>
-                      {salesOptions.map((p) => (
-                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label htmlFor="filter-periode" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode</label>
-                  <Select value={periode} onValueChange={setPeriode}>
-                    <SelectTrigger id="filter-periode" className="h-10 w-full">
-                      <SelectValue placeholder="Semua periode">{periode ? fromApiPeriod(periode) : 'Semua periode'}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Semua periode</SelectItem>
-                      {periodeOptions.map((key) => (
-                        <SelectItem key={key} value={key}>{fromApiPeriod(key)}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
+            <DocFiltersBar
+              idPrefix="filter"
+              search={search} onSearch={setSearch}
+              areaId={areaId} onArea={setAreaId}
+              branchId={branchId} onBranch={setBranchId}
+              areaOptions={areaOptions} branchOptions={branchOptions}
+              spvId={spvId} onSpv={setSpvId} spvOptions={spvOptions}
+              salesId={salesId} onSales={setSalesId} salesOptions={salesOptions}
+              periodStart={periodStart} onPeriodStart={setPeriodStart}
+              periodEnd={periodEnd} onPeriodEnd={setPeriodEnd}
+            />
           </div>
 
           {/* Document List */}
@@ -469,11 +485,15 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 px-6 py-12 border-t border-[var(--line)]">
                 <FolderOpen className="size-11 text-[var(--ink-3)]" aria-hidden="true" />
-                <h3 className="text-[15px] font-semibold text-[var(--ink)]">Tidak ada dokumen ditemukan</h3>
+                <h3 className="text-[15px] font-semibold text-[var(--ink)]">
+                  {hasPeriod ? 'Tidak ada dokumen ditemukan' : 'Pilih periode terlebih dahulu'}
+                </h3>
                 <p className="text-[13px] text-[var(--ink-2)] text-center max-w-[340px] leading-[1.55]">
-                  Coba ubah kata kunci pencarian atau filter yang dipilih untuk melihat dokumen lain.
+                  {hasPeriod
+                    ? 'Coba ubah kata kunci pencarian atau filter yang dipilih untuk melihat dokumen lain.'
+                    : 'Isi Periode Awal dan Periode Akhir untuk menampilkan dokumen tersimpan.'}
                 </p>
-                <Button variant="outline" size="sm" onClick={() => { setSearch(''); setBmId(''); setSpvId(''); setSalesId(''); setPeriode(''); }}>
+                <Button variant="outline" size="sm" onClick={resetFilters}>
                   Hapus semua filter
                 </Button>
               </div>
@@ -567,6 +587,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                       >
                         Edit
                       </Button>
+                      {isDraft(activeDoc.status) && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -580,30 +601,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                       >
                         Hapus
                       </Button>
+                      )}
                     </>
-                  )}
-                  {canFinalize && String(activeDoc.status).toLowerCase() !== 'final' && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      type="button"
-                      disabled={finalBusy}
-                      onClick={async () => {
-                        if (finalBusy) return;
-                        setFinalBusy(true);
-                        try {
-                          const result = await finalizeDocument(activeDocId);
-                          setDocuments((prev) => prev.map((d) => d.id === result.document.id ? { ...d, status: result.document.status } : d));
-                          toast('success', 'Dokumen ditandai sebagai final.');
-                        } catch (err) {
-                          toast('error', errMsg(err));
-                        } finally {
-                          setFinalBusy(false);
-                        }
-                      }}
-                    >
-                      Tandai Final
-                    </Button>
                   )}
                 </div>
               </div>
@@ -671,82 +670,17 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
 
           {/* Filters Mobile */}
           <div className="p-4 border-b border-[var(--line)]" role="search" aria-label="Filter dokumen">
-            <div className="grid grid-cols-1 gap-3">
-              <div>
-                <label htmlFor="q-m" className="sr-only">Cari dokumen</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--ink-3)]" aria-hidden="true" />
-                  <Input
-                    id="q-m"
-                    type="search"
-                    placeholder="Cari sales, produk, periode..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pr-3 h-10"
-                    style={{ paddingLeft: 44 }}
-                    autoComplete="off"
-                  />
-                </div>
-              </div>
-              <div>
-                <label htmlFor="filter-bm-m" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">BM</label>
-                <Select value={bmId} onValueChange={(v) => { setBmId(v); setSpvId(''); setSalesId(''); }}>
-                  <SelectTrigger id="filter-bm-m" className="h-10 w-full">
-                    <SelectValue placeholder="Semua BM">{bmId ? bms.find((p) => String(p.id) === bmId)?.name : 'Semua BM'}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Semua BM</SelectItem>
-                    {bms.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="filter-spv-m" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">SPV</label>
-                  <Select value={spvId} onValueChange={(v) => { setSpvId(v); setSalesId(''); }}>
-                    <SelectTrigger id="filter-spv-m" className="h-10 w-full">
-                      <SelectValue placeholder="Semua SPV">{spvId ? spvOptions.find((p) => String(p.id) === spvId)?.name : 'Semua SPV'}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Semua SPV</SelectItem>
-                      {spvOptions.map((p) => (
-                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label htmlFor="filter-sales-m" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Sales</label>
-                  <Select value={salesId} onValueChange={setSalesId}>
-                    <SelectTrigger id="filter-sales-m" className="h-10 w-full">
-                      <SelectValue placeholder="Semua sales">{salesId ? salesOptions.find((p) => String(p.id) === salesId)?.name : 'Semua sales'}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">Semua sales</SelectItem>
-                      {salesOptions.map((p) => (
-                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div>
-                <label htmlFor="filter-periode-m" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode</label>
-                <Select value={periode} onValueChange={setPeriode}>
-                  <SelectTrigger id="filter-periode-m" className="h-10 w-full">
-                    <SelectValue placeholder="Semua periode">{periode ? fromApiPeriod(periode) : 'Semua periode'}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Semua periode</SelectItem>
-                    {periodeOptions.map((key) => (
-                      <SelectItem key={key} value={key}>{fromApiPeriod(key)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <DocFiltersBar
+              idPrefix="filter-m"
+              search={search} onSearch={setSearch}
+              areaId={areaId} onArea={setAreaId}
+              branchId={branchId} onBranch={setBranchId}
+              areaOptions={areaOptions} branchOptions={branchOptions}
+              spvId={spvId} onSpv={setSpvId} spvOptions={spvOptions}
+              salesId={salesId} onSales={setSalesId} salesOptions={salesOptions}
+              periodStart={periodStart} onPeriodStart={setPeriodStart}
+              periodEnd={periodEnd} onPeriodEnd={setPeriodEnd}
+            />
           </div>
 
           {/* Document List Mobile */}
@@ -797,11 +731,15 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 px-4 py-10 border-t border-[var(--line)]">
                 <FolderOpen className="size-11 text-[var(--ink-3)]" aria-hidden="true" />
-                <h3 className="text-[15px] font-semibold text-[var(--ink)]">Tidak ada dokumen ditemukan</h3>
+                <h3 className="text-[15px] font-semibold text-[var(--ink)]">
+                  {hasPeriod ? 'Tidak ada dokumen ditemukan' : 'Pilih periode terlebih dahulu'}
+                </h3>
                 <p className="text-[13px] text-[var(--ink-2)] text-center max-w-[340px] leading-[1.55]">
-                  Coba ubah kata kunci pencarian atau filter yang dipilih untuk melihat dokumen lain.
+                  {hasPeriod
+                    ? 'Coba ubah kata kunci pencarian atau filter yang dipilih untuk melihat dokumen lain.'
+                    : 'Isi Periode Awal dan Periode Akhir untuk menampilkan dokumen tersimpan.'}
                 </p>
-                <Button variant="outline" size="sm" onClick={() => { setSearch(''); setBmId(''); setSpvId(''); setSalesId(''); setPeriode(''); }}>
+                <Button variant="outline" size="sm" onClick={resetFilters}>
                   Hapus semua filter
                 </Button>
               </div>
@@ -891,6 +829,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                       >
                         Edit
                       </Button>
+                      {isDraft(activeDoc.status) && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -904,32 +843,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                       >
                         Hapus
                       </Button>
+                      )}
                     </>
-                  )}
-                  {canFinalize && String(activeDoc.status).toLowerCase() !== 'final' && (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      type="button"
-                      disabled={finalBusy}
-                      onClick={async () => {
-                        if (finalBusy) return;
-                        setFinalBusy(true);
-                        try {
-                          const result = await finalizeDocument(activeDocId);
-                          setDocuments((prev) => prev.map((d) => d.id === result.document.id ? { ...d, status: result.document.status } : d));
-                          toast('success', 'Dokumen ditandai sebagai final.');
-                          setActiveDocId(null);
-                        } catch (err) {
-                          toast('error', errMsg(err));
-                        } finally {
-                          setFinalBusy(false);
-                        }
-                      }}
-                      className="min-h-[44px]"
-                    >
-                      Tandai Final
-                    </Button>
                   )}
                 </div>
               </div>

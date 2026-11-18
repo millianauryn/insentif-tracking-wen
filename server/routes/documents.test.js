@@ -33,7 +33,7 @@ describe('Documents API', () => {
     admin = appFor(db, { id: 2, username: 'admin', role: 'superadmin', branch_ids: [] });
   });
 
-  it('creates Draft and snapshots active criteria and flexible Golongan rows', async () => {
+  it('creates Final sales document and snapshots active criteria and flexible Golongan rows', async () => {
     const response = await officer.post('/api/documents').send({
       format_id: 1,
       division_id: null,
@@ -46,7 +46,7 @@ describe('Documents API', () => {
       ]
     }).expect(201);
 
-    expect(response.body.document.status).toBe('Draft');
+    expect(response.body.document.status).toBe('Final');
     expect(db.prepare('SELECT COUNT(*) AS count FROM document_criteria_rows').get().count).toBe(1);
     expect(db.prepare('SELECT COUNT(*) AS count FROM golongan_rows').get().count).toBe(2);
     expect(db.prepare('SELECT label FROM golongan_rows WHERE is_group = 1').get().label).toBe('GROUP PASEO');
@@ -207,15 +207,16 @@ describe('Documents API', () => {
     await admin.patch(`/api/documents/${id}`).send({ insentif_total: 7000, audit_reason: 'koreksi nominal' }).expect(200);
   });
 
-  it('allows owner to edit Draft, blocks officer finalize, lets observer approve, and allows Super Admin correction', async () => {
+  it('sales document is Final on save: owner keeps editing it, others cannot, Super Admin correction needs audit_reason', async () => {
     const created = await officer.post('/api/documents').send({ format_id: 1, period: '2026-10', golongan_rows: [] }).expect(201);
     const id = created.body.document.id;
+    expect(created.body.document.status).toBe('Final');
     const observer = appFor(db, { id: 3, username: 'observer', role: 'observer' });
 
-    await officer.patch(`/api/documents/${id}`).send({ period: '2026-11', golongan_rows: [] }).expect(200);
+    const edited = await officer.patch(`/api/documents/${id}`).send({ period: '2026-11', golongan_rows: [] }).expect(200);
+    expect(edited.body.document.status).toBe('Final');
     await officer.post(`/api/documents/${id}/finalize`).expect(403);
-    await observer.post(`/api/documents/${id}/finalize`).expect(200);
-    await officer.patch(`/api/documents/${id}`).send({ period: '2026-12' }).expect(409);
+    await observer.patch(`/api/documents/${id}`).send({ period: '2026-12' }).expect(409);
     await admin.patch(`/api/documents/${id}`).send({ period: '2027-01' }).expect(422); // Final wajib audit_reason
     await admin.patch(`/api/documents/${id}`).send({ period: '2027-01', audit_reason: 'koreksi periode salah' }).expect(200);
     expect(db.prepare('SELECT COUNT(*) AS count FROM audit_logs WHERE entity_type = \'incentive_document\'').get().count).toBe(1);
@@ -333,18 +334,18 @@ describe('Documents API', () => {
     await officer.post('/api/documents').send({ format_id: 1, salesman: '', period: '2026-11', golongan_rows: [] }).expect(201);
   });
 
-  it('allows owner to delete Draft but blocks delete of Final', async () => {
+  it('owner can delete only a legacy Draft; Final documents cannot be deleted', async () => {
     const created = await officer.post('/api/documents').send({ format_id: 1, period: '2026-10', golongan_rows: [] }).expect(201);
     const id = created.body.document.id;
     const observer = appFor(db, { id: 3, username: 'observer', role: 'observer' });
     await observer.delete(`/api/documents/${id}`).expect(403);
+    // Dokumen lama yang masih berstatus Draft tetap bisa dihapus pemiliknya.
+    db.prepare("UPDATE incentive_documents SET status = 'Draft' WHERE id = ?").run(id);
     await officer.delete(`/api/documents/${id}`).expect(200);
     await officer.get(`/api/documents/${id}`).expect(404);
 
     const created2 = await officer.post('/api/documents').send({ format_id: 1, period: '2026-10', golongan_rows: [] }).expect(201);
-    const id2 = created2.body.document.id;
-    await appFor(db, { id: 2, username: 'admin', role: 'superadmin' }).post(`/api/documents/${id2}/finalize`).expect(200);
-    await officer.delete(`/api/documents/${id2}`).expect(409);
+    await officer.delete(`/api/documents/${created2.body.document.id}`).expect(409);
   });
 
   it('persists divisi selection on create, update and clear', async () => {

@@ -40,7 +40,33 @@ describe('Documents render smoke', () => {
     const html = renderToString(<Documents {...baseProps} />);
     expect(html).toContain('PERHITUNGAN INSENTIF');
     expect(html).toContain('Informasi Dokumen');
-    expect(html).toContain('Wilayah (Kota)');
+    expect(html).toContain('Area');
+    expect(html).toContain('Cabang / Distributor');
+    expect(html).not.toContain('Wilayah (Kota)');
+  });
+
+  it('pencapaian principal bisa diedit dengan placeholder auto dari brand', () => {
+    const rows = [
+      { id: 'b1', label: 'ANTIS', type: 'brand', isGroup: false, target: '100', achievement: '40' },
+      { id: 'p1', label: 'ENESIS', type: 'principal', isGroup: true, target: '', achievement: '' },
+    ];
+    const html = renderToString(<Documents {...baseProps} golonganRows={rows} />);
+    const input = html.match(/<input[^>]*aria-label="Tercapai persen principal 2"[^>]*>/)?.[0] ?? '';
+    expect(input).toContain('placeholder="40"');
+    expect(input).not.toContain('readonly');
+    expect(input).not.toContain('disabled');
+  });
+
+  it('pencapaian baris total bisa diedit dengan placeholder auto', () => {
+    const rows = [
+      { id: 'b1', label: 'ANTIS', type: 'brand', isGroup: false, target: '100', achievement: '40' },
+      { id: 't1', label: 'TOTAL', type: 'total', isGroup: false, target: '', achievement: '' },
+    ];
+    const html = renderToString(<Documents {...baseProps} golonganRows={rows} />);
+    const input = html.match(/<input[^>]*aria-label="Tercapai persen total 2"[^>]*>/)?.[0] ?? '';
+    expect(input).toContain('placeholder="40"');
+    expect(input).not.toContain('readonly');
+    expect(input).not.toContain('disabled');
   });
 
   it('halaman SPV tidak lagi placeholder', () => {
