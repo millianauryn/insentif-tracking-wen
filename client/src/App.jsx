@@ -381,6 +381,7 @@ function App() {
         onUpdate={updateDraft}
         onLoad={loadDocument}
         onCancel={cancelEdit}
+        onDelete={removeDocument}
         documentId={documentId}
         golonganRows={golonganRows}
         updateGolonganRow={updateGolonganRow}

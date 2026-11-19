@@ -49,12 +49,12 @@ describe('docMatchesPeriodeRange', () => {
 });
 
 describe('sortDocsByHierarchy', () => {
-  it('BM, lalu SPV diikuti sales-salesnya, sesuai urutan posisi', () => {
+  it('BM, lalu semua SPV, baru sales dikelompokkan per SPV', () => {
     const rows = [
       doc('SAL3', 6), doc('SAL1', 4), doc('SPVB', 3), doc('SAL2', 5), doc('SPVA', 2), doc('BM1', 1),
     ];
     expect(sortDocsByHierarchy(rows, positions, names).map((d) => d.salesman))
-      .toEqual(['BM1', 'SPVA', 'SAL1', 'SAL2', 'SPVB', 'SAL3']);
+      .toEqual(['BM1', 'SPVA', 'SPVB', 'SAL1', 'SAL2', 'SAL3']);
   });
 
   it('dokumen tanpa data jabatan ditempatkan di akhir', () => {

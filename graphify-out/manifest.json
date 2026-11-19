@@ -1596,15 +1596,15 @@
     "semantic_hash": ""
   },
   "client/src/lib/docHierarchy.js": {
-    "mtime": 1794985355.6491084,
-    "seen": 1794985525.916844,
-    "ast_hash": "e869d897ae642238e853fb45cc3550ab",
+    "mtime": 1795049968.8766062,
+    "seen": 1795050120.0197952,
+    "ast_hash": "125998e2133a533169c3d3924ffd96ce",
     "semantic_hash": ""
   },
   "client/src/lib/docHierarchy.test.js": {
-    "mtime": 1794985365.9088829,
-    "seen": 1794985525.916857,
-    "ast_hash": "88f04c45c9053939c56a519816f97256",
+    "mtime": 1795049989.011256,
+    "seen": 1795050120.0197988,
+    "ast_hash": "1df67f782b428d87baac71a05958b20e",
     "semantic_hash": ""
   }
 }

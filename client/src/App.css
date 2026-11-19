@@ -118,7 +118,7 @@
 .form-grid .button { align-self: start; justify-self: start; min-height: 32px; padding: 0 16px; font-size: 12px; }
 .form-grid .col-span-2, .form-grid .col-span-3 { grid-column: 1 / -1; }
 /* Bulan + Produk: box produk memanjang sampai sejajar ujung box Salesman. */
-.doc-period-product { grid-column: 1 / -1; display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; align-items: start; min-width: 0; }
+.doc-period-product { grid-column: 1 / -1; display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 16px; align-items: start; min-width: 0; }
 /* SPV: dua pemilih bulan dengan lebar yang sama. */
 .doc-period-range { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; min-width: 0; }
 
@@ -446,6 +446,12 @@
   .draft-badge { display: none !important; }
   .section-heading { margin-bottom: 10px; }
   .section-icon { display: none; }
+
+  /* Hilangkan semua nominal (Rp) dari print, sisakan hanya persen */
+  .kriteria-header th:last-child { display: none !important; }
+  .kriteria-row td:last-child { display: none !important; }
+  .kwitansi-card .kw-row:nth-child(4) { display: none !important; }
+  .kw-total { display: none !important; }
 }
 
 /* Org tree (Dashboard): area > wilayah > cabang > jabatan, dengan tenure */

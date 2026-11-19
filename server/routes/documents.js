@@ -93,7 +93,9 @@ function createDocumentsRouter(db, options = {}) {
       return db.prepare('SELECT * FROM incentive_documents WHERE id = ?').get(documentId);
     });
 
-    res.status(201).json({ document: create() });
+    const created = create();
+    writeAudit(db, req.user.id, 'CREATE', 'incentive_document', created.id, null, documentScalars(created));
+    res.status(201).json({ document: created });
   });
 
   // Preview SPV: baris hasil hitung tanpa menyimpan dokumen, supaya tabel di halaman
@@ -121,6 +123,33 @@ function createDocumentsRouter(db, options = {}) {
     res.json({ ...computed, criteria_rows: criteria });
   });
 
+  // Riwayat submission dokumen: siapa menginput dan kapan (berdasarkan audit log).
+  router.get('/:id/history', auth, (req, res) => {
+    const document = getReadableDocument(db, req.user, req.params.id);
+    if (!document) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
+    const rows = db.prepare(`
+      SELECT a.id, a.action, a.created_at,
+             COALESCE(p.name, u.username) AS actor_name, u.role AS actor_role
+      FROM audit_logs a
+      JOIN users u ON u.id = a.actor_id
+      LEFT JOIN positions p ON p.id = u.position_id
+      WHERE a.entity_type = 'incentive_document' AND a.entity_id = ?
+      ORDER BY a.created_at DESC, a.id DESC
+    `).all(document.id);
+    if (rows.length) return res.json({ history: rows });
+
+    // Dokumen lama sebelum audit aktif: gunakan timestamp pada baris dokumen.
+    const owner = db.prepare(`
+      SELECT COALESCE(p.name, u.username) AS actor_name
+      FROM users u LEFT JOIN positions p ON p.id = u.position_id WHERE u.id = ?
+    `).get(document.owner_id);
+    const fallback = [{ id: document.id, action: 'SUBMIT', created_at: document.created_at, actor_name: owner?.actor_name || 'Officer', actor_role: 'officer' }];
+    if (document.updated_at && document.updated_at !== document.created_at) {
+      fallback.unshift({ id: document.id, action: 'UPDATE', created_at: document.updated_at, actor_name: owner?.actor_name || 'Officer', actor_role: 'officer' });
+    }
+    res.json({ history: fallback });
+  });
+
   router.get('/:id', auth, (req, res) => {
     const document = getReadableDocument(db, req.user, req.params.id);
     if (!document) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
@@ -136,13 +165,6 @@ function createDocumentsRouter(db, options = {}) {
       return res.status(409).json({ error: { code: 'DOCUMENT_LOCKED', message: 'Only owner can edit this document' } });
     }
     const input = req.body || {};
-    // Superadmin yang mengoreksi dokumen Final wajib mengisi alasan audit.
-    if (req.user.role === 'superadmin' && document.status === 'Final') {
-      const reason = String(input.audit_reason || '').trim();
-      if (reason.length < 3) {
-        return res.status(422).json({ error: { code: 'VALIDATION_ERROR', message: 'audit_reason wajib diisi (min 3 huruf) untuk koreksi Final' } });
-      }
-    }
     // Dokumen SPV: baris selalu dihitung server; kunci rentang/SPV dibekukan saat Final.
     if (document.doc_kind === 'spv') {
       if (Array.isArray(input.golongan_rows)) {
@@ -204,15 +226,12 @@ function createDocumentsRouter(db, options = {}) {
       }
       throw error;
     }
-    if (req.user.role === 'superadmin' && document.status === 'Final') {
-      // Audit: hanya baris skalar (tanpa golongan/kriteria children) agar baris tidak membengkak.
-      const scalars = (d) => ({
-        id: d.id, salesman: d.salesman, product: d.product, period: d.period,
-        status: d.status, wilayah: d.wilayah, divisi: d.divisi ?? null,
-        insentif_total: d.insentif_total, kwitansi: d.kwitansi ?? null,
-      });
-      writeAudit(db, req.user.id, 'UPDATE', 'incentive_document', document.id, { ...scalars(document), audit_reason: String(input.audit_reason || '').trim() }, scalars(getDocument(db, document.id)));
-    }
+    // Rekam setiap submission/update (officer maupun koreksi superadmin) untuk riwayat.
+    writeAudit(
+      db, req.user.id, 'UPDATE', 'incentive_document', document.id,
+      documentScalars(document),
+      documentScalars(getDocument(db, document.id)),
+    );
     res.json({ document: withLiveRows(db, getDocument(db, document.id)) });
   });
 
@@ -221,9 +240,6 @@ function createDocumentsRouter(db, options = {}) {
     if (!document) return res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Document not found' } });
     if (req.user.role !== 'superadmin' && document.owner_id !== req.user.id) {
       return res.status(403).json({ error: { code: 'AUTH_FORBIDDEN', message: 'Cannot delete this document' } });
-    }
-    if (document.status !== 'Draft') {
-      return res.status(409).json({ error: { code: 'DOCUMENT_LOCKED', message: 'Only Draft documents can be deleted' } });
     }
     const remove = db.transaction(() => {
       // anak (golongan/criteria) ikut terhapus via ON DELETE CASCADE di schema.sql
@@ -242,6 +258,7 @@ function createDocumentsRouter(db, options = {}) {
     if (document.status !== 'Draft') return res.status(409).json({ error: { code: 'DOCUMENT_LOCKED', message: 'Document is already Final' } });
     if (document.doc_kind === 'spv') snapshotSpvRows(db, document);
     db.prepare("UPDATE incentive_documents SET status = 'Final', updated_at = datetime('now') WHERE id = ?").run(document.id);
+    writeAudit(db, req.user.id, 'FINALIZE', 'incentive_document', document.id, documentScalars(document), documentScalars(getDocument(db, document.id)));
     res.json({ document: getDocument(db, document.id) });
   });
 
@@ -467,6 +484,14 @@ function decodeKwitansi(value) {
 function writeAudit(db, actorId, action, entityType, entityId, oldValue, newValue) {
   db.prepare(`INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?)`)
     .run(actorId, action, entityType, entityId, JSON.stringify(oldValue), JSON.stringify(newValue));
+}
+
+function documentScalars(d) {
+  return {
+    id: d.id, salesman: d.salesman, product: d.product, period: d.period,
+    status: d.status, wilayah: d.wilayah, divisi: d.divisi ?? null,
+    insentif_total: d.insentif_total, kwitansi: d.kwitansi ?? null,
+  };
 }
 
 module.exports = createDocumentsRouter;

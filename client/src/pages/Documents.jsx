@@ -8,6 +8,7 @@ import MonthPicker from '../components/MonthPicker';
 import './CompactTable.css';
 import { isGugurCriteria } from '../lib/criteria';
 import { computeTotalFor, computeTotalAutoFor, computeGrandTotal, principalAutoValue, principalValueFor } from '../lib/golongan';
+import { deleteDocument } from '../api';
 import { branchRegionIds } from '../lib/orgTree';
 import { parseMoney } from '../lib/money';
 import { terbilang } from '../lib/terbilang';
@@ -408,7 +409,7 @@ export function KriteriaTable({ rows, onUpdate, canEdit, totalOverride, onTotalC
 export default function Documents({
   docType = 'sales',
   user,
-  onCreate, onUpdate, onCancel,
+  onCreate, onUpdate, onCancel, onDelete,
   documentId, golonganRows, updateGolonganRow, removeGolonganRow, addGolonganRow, reorderGolonganRow,
   criteriaRows, updateCriteriaRow,
   updateSales, sales, period, setPeriod,
@@ -533,6 +534,17 @@ export default function Documents({
 
   const save = () => (documentId ? onUpdate() : onCreate());
 
+  const handleDelete = async () => {
+    if (!documentId || !onDelete) return;
+    if (!window.confirm(`Hapus dokumen ${sales.name || documentId} periode ${period || '-'}\n\nTekan OK untuk mengonfirmasi penghapusan.`)) return;
+    try {
+      await deleteDocument(documentId);
+      onDelete(documentId);
+    } catch (err) {
+      // errors handled by caller/toast
+    }
+  };
+
   const grand = computeGrandTotal(golonganRows);
   const totals = { target: grand.target, achievement: grand.achievement };
   totals.percentage = totals.target > 0 ? (totals.achievement / totals.target) * 100 : 0;
@@ -590,6 +602,9 @@ export default function Documents({
             <Icon size={16}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></Icon>
             {documentId ? 'Simpan Perubahan' : 'Simpan'}
           </Button>
+          {documentId && documentStatus === 'Draft' && canEdit && onDelete && (
+            <Button className="button secondary text-button danger" type="button" onClick={handleDelete}>Hapus Dokumen</Button>
+          )}
         </div>
       </div>
 
@@ -740,6 +755,9 @@ export default function Documents({
             <Icon size={17}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></Icon>
             {documentId ? 'Simpan Perubahan' : 'Simpan'}
           </Button>
+          {documentId && documentStatus === 'Draft' && canEdit && onDelete && (
+            <Button className="button secondary text-button danger" type="button" onClick={handleDelete}>Hapus Dokumen</Button>
+          )}
         </div>
       </footer>
     </>

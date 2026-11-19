@@ -67,14 +67,14 @@ function hierarchyKey(doc, positions, positionByName) {
   };
 }
 
-// Urutan: BM dahulu, lalu setiap SPV diikuti sales-salesnya.
+// Urutan: BM, lalu semua dokumen SPV, baru sales-salesnya per SPV.
 export function sortDocsByHierarchy(docs, positions = [], positionByName = new Map()) {
   return [...docs].sort((a, b) => {
     const ka = hierarchyKey(a, positions, positionByName);
     const kb = hierarchyKey(b, positions, positionByName);
     return ka.bm - kb.bm
-      || ka.spv - kb.spv
       || ka.group - kb.group
+      || ka.spv - kb.spv
       || ka.self - kb.self
       || String(a.period || '').localeCompare(String(b.period || ''))
       || Number(a.id || 0) - Number(b.id || 0);
