@@ -22,6 +22,7 @@ import ListPager from '../components/ListPager';
 import { Search, ChevronLeft, ChevronRight, Plus, Loader2, FolderOpen, RotateCcw } from 'lucide-react';
 
 const fmtNum = (n) => (n === null || n === undefined || n === '' ? '-' : Number(n).toLocaleString('id-ID'));
+const parseMoney = (v) => { if (!v && v !== 0) return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
 const pctOf = (a, t) => (Number(t) > 0 ? (Number(a) / Number(t)) * 100 : 0);
 const ketOf = (a, t) => (Number(t) > 0 && pctOf(a, t) >= 100 ? 'Tercapai' : Number(t) > 0 ? 'Gugur' : '');
 
@@ -29,127 +30,230 @@ function isDivisiLabel(label) {
   return String(label || '').toUpperCase().startsWith('DIVISI:');
 }
 function isTotalDivisiLabel(label) {
-  return String(label || '').toUpperCase().startsWith('TOTALDIVISI:');
+  return String(label || '').toUpperCase().startsWith('TOTAL DIVISI');
 }
 function displayLabel(label) {
   if (isDivisiLabel(label)) return label.slice(7);
-  if (isTotalDivisiLabel(label)) return `TOTAL DIVISI ${label.slice(12)}`.trim();
+  if (isTotalDivisiLabel(label)) return 'TOTAL DIVISI';
   return label || '';
+}
+function isGugurCriteria(row) {
+  return row.label === 'GOL YG GUGUR KURANG DARI 50%';
+}
+function isCallCompliance(row) {
+  return row.label === 'CALL COMPLIANCE';
+}
+function isTotalOmzet(row) {
+  return row.label === 'TOTAL OMZET';
 }
 
 function FullDocPreview({ doc }) {
   const golongan = doc.golongan_rows || [];
   const kriteria = doc.criteria_rows || [];
-  const sumInsentif = kriteria.reduce((s, r) => s + (Number(r.incentive_amount) || 0), 0);
-  const totalInsentif = doc.insentif_total ?? sumInsentif;
   const kw = doc.kwitansi || {};
   const tujuan = kw.keterangan || kw.jumlahUang || (doc.period ? `Incentive penjualan bulan ${docPeriodLabel(doc)}` : '');
+
+  // Total insentif: auto-sum dari criteria, overridable by insentif_total
+  const autoSum = kriteria.reduce((s, r) => s + (parseMoney(r.incentive_amount) ?? 0), 0);
+  const effectiveInsentif = doc.insentif_total ?? autoSum;
+
+  // Header section
+  const headerRows = doc.doc_kind === 'spv' ? (
+    <>
+      <p>SUPERVISOR : SPV</p>
+      <p>NAMA PEJABAT : {doc.salesman || '-'}</p>
+    </>
+  ) : (
+    <>
+      <p>SALES : {doc.salesman || '-'}</p>
+      <p>PRODUK : {doc.product || '-'}</p>
+    </>
+  );
+
+  // Helper for Golongan table
+  const sectionDivisi = (() => {
+    const out = [];
+    let current = null;
+    golongan.forEach((r) => {
+      out.push(current);
+      if (isDivisiLabel(r.label)) current = r.divisi ? String(r.divisi) : null;
+      else if (isTotalDivisiLabel(r.label)) current = null;
+    });
+    return out;
+  })();
+
   return (
     <div className="space-y-5 text-[13px]">
       <div className="text-center border border-[var(--line)] rounded-lg px-3 py-3 bg-[#fbfdfc]">
         <p className="font-bold tracking-wide text-[14px]">PERHITUNGAN INSENTIF</p>
         <p className="mt-1">WILAYAH : {doc.wilayah || '-'}</p>
-        {doc.doc_kind === 'spv' ? (
-          <>
-            {/* SPV tidak punya produk/brand sendiri — tampilkan identitas pejabatnya. */}
-            <p>SUPERVISOR : SPV</p>
-            <p>NAMA PEJABAT : {doc.salesman || '-'}</p>
-          </>
-        ) : (
-          <>
-            <p>SALESMAN : {doc.salesman || '-'}</p>
-            <p>PRODUK : {doc.product || '-'}</p>
-          </>
-        )}
+        {headerRows}
         <p>BULAN : {docPeriodLabel(doc)}</p>
       </div>
 
+      {/* GOLONGAN TABLE - matches Documents.jsx format */}
       <div className="border border-[var(--line)] rounded-lg overflow-hidden">
         <table className="w-full table-fixed text-[10.5px] leading-[1.25]">
-          <colgroup><col className="w-[28%]" /><col className="w-[17%]" /><col className="w-[23%]" /><col className="w-[16%]" /><col className="w-[16%]" /></colgroup>
+          <colgroup>
+            <col className="w-[28%]" />
+            <col className="w-[130px]" />
+            <col />
+            <col className="w-[16%]" />
+            <col className="w-[16%]" />
+            <col className="w-[50px]" />
+          </colgroup>
           <thead>
             <tr className="bg-[#e8eef3] text-left">
               <th className="border border-[var(--line)] px-1 py-0.5 break-words">GOLONGAN</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 text-center break-words">JENIS</th>
               <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TARGET</th>
-              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TERCAPAI</th>
-              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">(%)</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TERCAPAI (%)</th>
               <th className="border border-[var(--line)] px-1 py-0.5 break-words">KET</th>
+              <th className="border border-[var(--line)] px-1 py-0.5" aria-label="Aksi" />
             </tr>
           </thead>
           <tbody>
-            {golongan.map((r) => {
+            {golongan.map((r, idx) => {
               const label = displayLabel(r.label);
               const divisiRow = isDivisiLabel(r.label);
               const groupRow = !!r.is_group || isTotalDivisiLabel(r.label);
+              const activeDivisi = sectionDivisi[idx] || null;
+              if (divisiRow) {
+                return (
+                  <tr key={r.id} className="bg-[#f3e2c7] font-bold">
+                    <td colSpan={6} className="border border-[var(--line)] px-1.5 py-1 text-center">{label}</td>
+                  </tr>
+                );
+              }
               const pct = pctOf(r.achievement, r.target);
               const ket = ketOf(r.achievement, r.target);
-              if (divisiRow) {
-                return <tr key={r.id} className="bg-[#f3e2c7] font-bold"><td colSpan={5} className="border border-[var(--line)] px-1.5 py-1 text-center">{label}</td></tr>;
-              }
               return (
                 <tr key={r.id} className={groupRow ? 'font-bold bg-[#f0f4f8]' : ''}>
                   <td className="border border-[var(--line)] px-1 py-0.5 break-words">{label}</td>
+                  <td className="border border-[var(--line)] px-1 py-0.5 text-center break-words">
+                    {r.jenis || (activeDivisi ? (
+                      <select value={activeDivisi} disabled className="input text-[10px] w-full">
+                        <option value="">-- Pilih Divisi --</option>
+                        {r.divisi_options?.map?.((d) => <option key={d} value={d}>{d}</option>)}
+                      </select>
+                    ) : '-')}
+                  </td>
                   <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(r.target)}</td>
-                  <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{fmtNum(r.achievement)}</td>
                   <td className="border border-[var(--line)] px-1.5 py-1 text-right whitespace-nowrap">{Number(r.target) > 0 ? `${pct.toFixed(0)}%` : ''}</td>
                   <td className="border border-[var(--line)] px-1.5 py-1 whitespace-nowrap">{ket}</td>
+                  <td />
                 </tr>
               );
             })}
-            {!golongan.length && <tr><td colSpan={5} className="border border-[var(--line)] px-1.5 py-2 text-center text-[var(--ink-3)]">Golongan kosong.</td></tr>}
+            {!golongan.length && (
+              <tr>
+                <td colSpan={6} className="border border-[var(--line)] px-1.5 py-2 text-center text-[var(--ink-3)]">Golongan kosong.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
+      {/* KRITERIA TABLE - matches Documents.jsx format */}
       <div className="border border-[var(--line)] rounded-lg overflow-hidden">
         <table className="w-full table-fixed text-[10.5px] leading-[1.25]">
-          <colgroup><col className="w-[28%]" /><col className="w-[12%]" /><col className="w-[19%]" /><col className="w-[9%]" /><col className="w-[13%]" /><col className="w-[19%]" /></colgroup>
+          <colgroup>
+            <col className="w-[28%]" />
+            <col className="w-[12%]" />
+            <col className="w-[19%]" />
+            <col className="w-[9%]" />
+            <col className="w-[13%]" />
+            <col className="w-[19%]" />
+          </colgroup>
           <thead>
             <tr className="bg-[#e8eef3] text-left">
               <th className="border border-[var(--line)] px-1 py-0.5 break-words">KRITERIA</th>
               <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TARGET</th>
-              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TERCAPAI</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">TERCAPAI (JUMLAH)</th>
               <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">%</th>
               <th className="border border-[var(--line)] px-1 py-0.5 break-words">KET</th>
-              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">INSENTIF YG DIBERI</th>
+              <th className="border border-[var(--line)] px-1 py-0.5 text-right break-words">INSENTIVE YG DIBERI</th>
             </tr>
           </thead>
           <tbody>
             {kriteria.map((r) => {
-              const pct = pctOf(r.achievement_value, r.target_value);
-              const ket = ketOf(r.achievement_value, r.target_value);
+              const isOmzet = isTotalOmzet(r);
+              const isGugur50 = isGugurCriteria(r);
+              const isCall = isCallCompliance(r);
+              const target = isOmzet ? 100 : (parseMoney(r.target_value) ?? 0);
+              const achievement = parseMoney(r.achievement_value) ?? 0;
+              const percentage = target > 0 ? (achievement / target) * 100 : 0;
+              const status = target > 0 && percentage >= 100 ? 'Tercapai' : 'Gugur';
+              const gugur = isGugur50;
+              const incentive = gugur ? 0 : (parseMoney(r.incentive_amount) ?? 0);
+
               return (
-                <tr key={r.criteria_id || r.id}>
+                <tr key={r.criteria_id || r.id} className="kriteria-row">
                   <td className="border border-[var(--line)] px-1 py-0.5 break-words">- {r.label}</td>
-                  <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{fmtNum(r.target_value)}</td>
-                  <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{fmtNum(r.achievement_value)}</td>
-                  <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{Number(r.target_value) > 0 ? `${pct.toFixed(0)}%` : r.percentage_value != null && r.percentage_value !== '' ? `${Number(r.percentage_value).toFixed(1)}%` : ''}</td>
-                  <td className="border border-[var(--line)] px-1 py-0.5 whitespace-nowrap">{ket}</td>
-                  <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{fmtNum(r.incentive_amount)}</td>
+                  {isOmzet ? (
+                    <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">100%</td>
+                  ) : (
+                    <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{fmtNum(r.target_value)}</td>
+                  )}
+                  {isOmzet ? (
+                    <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">
+                      <span className="pct-input">
+                        <input type="number" min="0" step="0.01" value={r.achievement_value ?? ''} disabled aria-label="Tercapai total omzet (%)" />
+                        <span>%</span>
+                      </span>
+                    </td>
+                  ) : (
+                    <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{fmtNum(r.achievement_value)}</td>
+                  )}
+                  {isGugur50 ? (
+                    <td className="border border-[var(--line)] px-1 py-0.5" />
+                  ) : isCall ? (
+                    <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">
+                      <span className="pct-input">
+                        <input type="number" min="0" step="0.01" value={r.percentage_value ?? percentage.toFixed(1)} disabled aria-label="Call Compliance (%)" />
+                        <span>%</span>
+                      </span>
+                    </td>
+                  ) : (
+                    <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{target > 0 ? `${percentage.toFixed(1)}%` : ''}</td>
+                  )}
+                  {isGugur50 ? (
+                    <td className="border border-[var(--line)] px-1 py-0.5" />
+                  ) : (
+                    <td className="border border-[var(--line)] px-1 py-0.5 whitespace-nowrap">
+                      <span className={`result-badge ${status === 'Tercapai' ? 'success' : 'warning'}`}>{target > 0 ? status : ''}</span>
+                    </td>
+                  )}
+                  <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{fmtNum(incentive)}</td>
                 </tr>
               );
             })}
-            {!kriteria.length && <tr><td colSpan={6} className="border border-[var(--line)] px-1.5 py-2 text-center text-[var(--ink-3)]">Kriteria kosong.</td></tr>}
-            <tr className="font-bold bg-[#f0f4f8]">
-              <td className="border border-[var(--line)] px-1 py-0.5">TOTAL</td>
+            {!kriteria.length && (
+              <tr>
+                <td colSpan={6} className="border border-[var(--line)] px-1.5 py-2 text-center text-[var(--ink-3)]">Kriteria kosong.</td>
+              </tr>
+            )}
+            <tr className="font-semibold bg-slate-50">
+              <td className="border border-[var(--line)] px-1 py-0.5">TOTAL INSENTIVE</td>
               <td className="border border-[var(--line)]" colSpan={4} />
-              <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{fmtNum(totalInsentif)}</td>
+              <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{fmtNum(effectiveInsentif)}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
+      {/* KWITANSI - matches Documents.jsx format */}
       <div className="border border-[var(--line)] rounded-lg px-4 py-3">
         <p className="text-center font-bold underline mb-3">KWITANSI</p>
         <div className="space-y-2">
           <p><span className="inline-block w-40 text-[var(--ink-3)]">Sudah terima dari :</span> {kw.penerima || 'PT. BINTANG SINAR JAYA'}</p>
           <p><span className="inline-block w-40 text-[var(--ink-3)]">Jumlah Uang</span> {tujuan}</p>
           <p><span className="inline-block w-40 text-[var(--ink-3)]">Buat Pembayaran</span> {tujuan}</p>
-          <p><span className="inline-block w-40 text-[var(--ink-3)]">Terbilang Rp.</span> <strong>{Number(totalInsentif) !== 0 ? fmtNum(totalInsentif) : '-'}</strong></p>
+          <p><span className="inline-block w-40 text-[var(--ink-3)]">Terbilang Rp.</span> <strong>{Number(effectiveInsentif) !== 0 ? fmtNum(effectiveInsentif) : '-'}</strong></p>
         </div>
         <div className="mt-6 text-right">
           <p className="font-bold uppercase">{doc.salesman || '-'}</p>
-          <p className="text-[var(--ink-3)] text-[11px] uppercase">Salesman</p>
+          <p className="text-[var(--ink-3)] text-[11px] uppercase">SALES</p>
         </div>
       </div>
     </div>
