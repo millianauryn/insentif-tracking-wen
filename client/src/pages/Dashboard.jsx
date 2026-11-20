@@ -8,6 +8,8 @@ import Icon from '../components/Icon';
 import { branchRegionIds, cityOf, filterBranches, buildOrgTree, pruneTree, countPositions } from '../lib/orgTree';
 import { docMatchesYear } from '../lib/docFilters';
 
+const fmtNum = (n) => (n === null || n === undefined || n === '' ? '-' : Number(n).toLocaleString('id-ID'));
+
 function EmptyState({ title, copy }) {
   return (
     <div className="empty-state">
@@ -87,7 +89,7 @@ function TreeNode({ node, depth, expanded, onToggle, documentsFinal, year }) {
       </div>
       {isPosition && (
         <div className="org-summary">
-          <span className="org-summary-item">Insentif yang diterima tahun {year}: <span className="org-summary-value">{docFinal}</span></span>
+          <span className="org-summary-item">Insentif yang diterima tahun {year}: <span className="org-summary-value">Rp {fmtNum(docFinal)}</span></span>
         </div>
       )}
       {toggleable && open && (
@@ -169,13 +171,14 @@ export default function Dashboard({ documents = [], user, positions = [], users 
   const totalSales = countPositions(prunedTree, "SALES");
 
   const documentsFinal = useMemo(() => {
-    const counts = {};
+    const totals = {};
     documents.forEach((d) => {
       if (String(d.status).toLowerCase() === 'final' && docMatchesYear(d, year)) {
-        counts[d.salesman] = (counts[d.salesman] || 0) + 1;
+        const insentif = Number(d.insentif_total || 0);
+        totals[d.salesman] = (totals[d.salesman] || 0) + insentif;
       }
     });
-    return counts;
+    return totals;
   }, [documents, year]);
 
   const hasFilter = Boolean(query.trim() || areaId || city || branchId);
