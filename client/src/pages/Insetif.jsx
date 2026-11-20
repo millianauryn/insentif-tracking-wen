@@ -279,10 +279,10 @@ function HistoryBlock({ data, loading, showTitle = true }) {
           {data.map((item, idx) => (
             <li key={`${item.id}-${idx}`} className="p-3 bg-[var(--bg)] rounded-xl border border-[var(--line)]">
               <div className="flex flex-wrap items-center gap-2 text-[13px] font-medium text-[var(--ink)]">
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--primary-soft)] text-[var(--primary)]">{item.action}</span>
+                <span className="font-semibold text-[var(--ink-2)]">{item.action}</span>
                 <span className="text-[var(--ink-2)]">oleh</span>
                 <span className="font-semibold">{item.actor_name}</span>
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--ink-soft)] text-[var(--ink-2)]">{item.actor_role}</span>
+                <span className="font-semibold text-[var(--ink-2)]">{item.actor_role}</span>
               </div>
               <p className="mt-2 text-[12px] text-[var(--ink-2)]">
                 {new Date(item.created_at).toLocaleString('id-ID', {
