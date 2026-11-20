@@ -92,7 +92,7 @@ function FullDocPreview({ doc }) {
       </div>
 
       {/* GOLONGAN TABLE - matches Documents.jsx format */}
-      <div className="border border-[var(--line)] rounded-lg overflow-hidden">
+      <div className="overflow-x-auto border border-[var(--line)] rounded-lg">
         <table className="w-full table-fixed text-[10.5px] leading-[1.25]">
           <colgroup>
             <col className="w-[28%]" />
@@ -155,7 +155,7 @@ function FullDocPreview({ doc }) {
       </div>
 
       {/* KRITERIA TABLE - matches Documents.jsx format */}
-      <div className="border border-[var(--line)] rounded-lg overflow-hidden">
+      <div className="overflow-x-auto border border-[var(--line)] rounded-lg">
         <table className="w-full table-fixed text-[10.5px] leading-[1.25]">
           <colgroup>
             <col className="w-[28%]" />
@@ -197,10 +197,7 @@ function FullDocPreview({ doc }) {
                   )}
                   {isOmzet ? (
                     <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">
-                      <span className="pct-input">
-                        <input type="number" min="0" step="0.01" value={r.achievement_value ?? ''} disabled aria-label="Tercapai total omzet (%)" />
-                        <span>%</span>
-                      </span>
+                      <span className="text-[var(--ink-2)]">{Number(r.achievement_value ?? 0).toFixed(2)}%</span>
                     </td>
                   ) : (
                     <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{fmtNum(r.achievement_value)}</td>
@@ -209,10 +206,7 @@ function FullDocPreview({ doc }) {
                     <td className="border border-[var(--line)] px-1 py-0.5" />
                   ) : isCall ? (
                     <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">
-                      <span className="pct-input">
-                        <input type="number" min="0" step="0.01" value={r.percentage_value ?? percentage.toFixed(1)} disabled aria-label="Call Compliance (%)" />
-                        <span>%</span>
-                      </span>
+                      <span className="text-[var(--ink-2)]">{Number(r.percentage_value ?? percentage).toFixed(1)}%</span>
                     </td>
                   ) : (
                     <td className="border border-[var(--line)] px-1 py-0.5 text-right whitespace-nowrap">{target > 0 ? `${percentage.toFixed(1)}%` : ''}</td>
