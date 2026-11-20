@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -19,7 +19,7 @@ import { branchRegionIds } from '../lib/orgTree';
 import MonthPicker from '../components/MonthPicker';
 import { errMsg, getDocument, getDocumentHistory } from '../api';
 import ListPager from '../components/ListPager';
-import { Search, ChevronLeft, ChevronRight, Plus, Loader2, FolderOpen, RotateCcw } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Plus, Loader2, FolderOpen, RotateCcw, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 const fmtNum = (n) => (n === null || n === undefined || n === '' ? '-' : Number(n).toLocaleString('id-ID'));
 const parseMoney = (v) => { if (!v && v !== 0) return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
@@ -53,11 +53,9 @@ function FullDocPreview({ doc }) {
   const kw = doc.kwitansi || {};
   const tujuan = kw.keterangan || kw.jumlahUang || (doc.period ? `Incentive penjualan bulan ${docPeriodLabel(doc)}` : '');
 
-  // Total insentif: auto-sum dari criteria, overridable by insentif_total
   const autoSum = kriteria.reduce((s, r) => s + (parseMoney(r.incentive_amount) ?? 0), 0);
   const effectiveInsentif = doc.insentif_total ?? autoSum;
 
-  // Header section
   const headerRows = doc.doc_kind === 'spv' ? (
     <>
       <p>SUPERVISOR : SPV</p>
@@ -70,7 +68,6 @@ function FullDocPreview({ doc }) {
     </>
   );
 
-  // Helper for Golongan table
   const sectionDivisi = (() => {
     const out = [];
     let current = null;
@@ -91,7 +88,6 @@ function FullDocPreview({ doc }) {
         <p>BULAN : {docPeriodLabel(doc)}</p>
       </div>
 
-      {/* GOLONGAN TABLE - matches Documents.jsx format */}
       <div className="overflow-x-auto border border-[var(--line)] rounded-lg">
         <table className="w-full table-fixed text-[10.5px] leading-[1.25]">
           <colgroup>
@@ -154,7 +150,6 @@ function FullDocPreview({ doc }) {
         </table>
       </div>
 
-      {/* KRITERIA TABLE - matches Documents.jsx format */}
       <div className="overflow-x-auto border border-[var(--line)] rounded-lg">
         <table className="w-full table-fixed text-[10.5px] leading-[1.25]">
           <colgroup>
@@ -236,7 +231,6 @@ function FullDocPreview({ doc }) {
         </table>
       </div>
 
-      {/* KWITANSI - matches Documents.jsx format */}
       <div className="border border-[var(--line)] rounded-lg px-4 py-3">
         <p className="text-center font-bold underline mb-3">KWITANSI</p>
         <div className="space-y-2">
@@ -304,103 +298,217 @@ function makeBadge(status) {
       </Badge>
     );
   }
-  // Dokumen sales langsung Final saat disimpan; tidak ada tag Draft lagi.
   return null;
 }
 
-function DocFiltersBar({
-  idPrefix, search, onSearch, areaId, onArea, branchId, onBranch,
-  areaOptions, branchOptions, spvId, onSpv, spvOptions,
-  salesId, onSales, salesOptions, periodStart, onPeriodStart, periodEnd, onPeriodEnd,
+function TopFilterBar({
+  search, onSearch,
+  areaId, onArea,
+  branchId, onBranch,
+  areaOptions, branchOptions,
+  spvId, onSpv, spvOptions,
+  salesId, onSales, salesOptions,
+  periodStart, onPeriodStart,
+  periodEnd, onPeriodEnd,
+  onReset,
+  hasPeriod,
 }) {
-  const pickStart = (value) => {
+  const pickStart = useCallback((value) => {
     onPeriodStart(value);
     if (periodEnd && toApiPeriod(value) > toApiPeriod(periodEnd)) onPeriodEnd(value);
-  };
+  }, [onPeriodStart, onPeriodEnd, periodEnd]);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="min-w-0">
-        <label htmlFor={`${idPrefix}-q`} className="sr-only">Cari dokumen</label>
-        <div className="relative">
+    <div className="bg-white border border-[var(--line)] rounded-[var(--radius)] p-4 shadow-[var(--shadow)]">
+      <div className="flex flex-col gap-4">
+        {/* Search row */}
+        <div className="relative max-w-md">
+          <label htmlFor="top-search" className="sr-only">Cari dokumen</label>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--ink-3)]" aria-hidden="true" />
           <Input
-            id={`${idPrefix}-q`}
+            id="top-search"
             type="search"
             placeholder="Cari sales, produk, periode..."
             value={search}
             onChange={(e) => onSearch(e.target.value)}
-            className="pr-3 h-10"
+            className="h-10 pr-3"
             style={{ paddingLeft: 44 }}
             autoComplete="off"
           />
         </div>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 items-end">
-        <div>
-          <label htmlFor={`${idPrefix}-area`} className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Area</label>
-          <Select value={areaId} onValueChange={(v) => { onArea(v); onBranch(''); onSpv(''); onSales(''); }}>
-            <SelectTrigger id={`${idPrefix}-area`} className="h-10 w-full">
-              <SelectValue placeholder="Semua area">{areaId ? areaOptions.find((a) => String(a.id) === areaId)?.name : 'Semua area'}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Semua area</SelectItem>
-              {areaOptions.map((a) => <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
+
+        {/* Filter dropdowns row */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
+          <div>
+            <label htmlFor="top-area" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Area</label>
+            <Select value={areaId} onValueChange={(v) => { onArea(v); onBranch(''); onSpv(''); onSales(''); }}>
+              <SelectTrigger id="top-area" className="h-10 w-full">
+                <SelectValue placeholder="Semua area">{areaId ? areaOptions.find((a) => String(a.id) === areaId)?.name : 'Semua area'}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Semua area</SelectItem>
+                {areaOptions.map((a) => <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label htmlFor="top-cabang" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Cabang</label>
+            <Select value={branchId} onValueChange={(v) => { onBranch(v); onSpv(''); onSales(''); }}>
+              <SelectTrigger id="top-cabang" className="h-10 w-full">
+                <SelectValue placeholder="Semua cabang">{branchId ? branchOptions.find((b) => String(b.id) === branchId)?.name : 'Semua cabang'}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Semua cabang</SelectItem>
+                {branchOptions.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label htmlFor="top-spv" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">SPV</label>
+            <Select value={spvId} onValueChange={(v) => { onSpv(v); onSales(''); }}>
+              <SelectTrigger id="top-spv" className="h-10 w-full">
+                <SelectValue placeholder="Semua SPV">{spvId ? spvOptions.find((p) => String(p.id) === spvId)?.name : 'Semua SPV'}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Semua SPV</SelectItem>
+                {spvOptions.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label htmlFor="top-sales" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Sales</label>
+            <Select value={salesId} onValueChange={onSales}>
+              <SelectTrigger id="top-sales" className="h-10 w-full">
+                <SelectValue placeholder="Semua sales">{salesId ? salesOptions.find((p) => String(p.id) === salesId)?.name : 'Semua sales'}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Semua sales</SelectItem>
+                {salesOptions.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <span className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode Awal</span>
+            <MonthPicker value={periodStart} onChange={pickStart} placeholder="Pilih bulan awal" />
+          </div>
+          <div>
+            <span className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode Akhir</span>
+            <MonthPicker value={periodEnd} onChange={onPeriodEnd} placeholder="Pilih bulan akhir" />
+          </div>
         </div>
-        <div>
-          <label htmlFor={`${idPrefix}-cabang`} className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Cabang</label>
-          <Select value={branchId} onValueChange={(v) => { onBranch(v); onSpv(''); onSales(''); }}>
-            <SelectTrigger id={`${idPrefix}-cabang`} className="h-10 w-full">
-              <SelectValue placeholder="Semua cabang">{branchId ? branchOptions.find((b) => String(b.id) === branchId)?.name : 'Semua cabang'}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Semua cabang</SelectItem>
-              {branchOptions.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-spv`} className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">SPV</label>
-          <Select value={spvId} onValueChange={(v) => { onSpv(v); onSales(''); }}>
-            <SelectTrigger id={`${idPrefix}-spv`} className="h-10 w-full">
-              <SelectValue placeholder="Semua SPV">{spvId ? spvOptions.find((p) => String(p.id) === spvId)?.name : 'Semua SPV'}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Semua SPV</SelectItem>
-              {spvOptions.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <label htmlFor={`${idPrefix}-sales`} className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Sales</label>
-          <Select value={salesId} onValueChange={onSales}>
-            <SelectTrigger id={`${idPrefix}-sales`} className="h-10 w-full">
-              <SelectValue placeholder="Semua sales">{salesId ? salesOptions.find((p) => String(p.id) === salesId)?.name : 'Semua sales'}</SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Semua sales</SelectItem>
-              {salesOptions.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <span className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode Awal</span>
-          <MonthPicker value={periodStart} onChange={pickStart} placeholder="Pilih bulan awal" />
-        </div>
-        <div>
-          <span className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode Akhir</span>
-          <MonthPicker value={periodEnd} onChange={onPeriodEnd} placeholder="Pilih bulan akhir" />
-        </div>
+
+        {/* Reset button */}
+        {(search || areaId || branchId || spvId || salesId || periodStart || periodEnd) && (
+          <div className="pt-2 border-t border-[var(--line)] flex justify-end">
+            <Button variant="ghost" size="sm" onClick={onReset} className="text-[var(--ink-2)] hover:text-[var(--ink)]">
+              Hapus semua filter
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-export default function Insetif({ documents, setDocuments, onRefresh, positions = [], masterData = {}, onLoad, onDelete, onNewDoc }) {
+function SidebarHeader({ title, count, collapsed, onToggle }) {
+  return (
+    <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--line)] bg-[var(--bg)] flex-shrink-0">
+      {!collapsed && (
+        <h3 className="text-[12px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)] truncate">
+          {title} <span className="font-normal text-[var(--ink-2)]">({count})</span>
+        </h3>
+      )}
+      <Button
+        variant="ghost"
+        size="sm"
+        type="button"
+        onClick={onToggle}
+        className="h-8 w-8 p-0 rounded-lg flex items-center justify-center transition-colors"
+        aria-label={collapsed ? 'Buka sidebar' : 'Tutup sidebar'}
+        aria-expanded={!collapsed}
+      >
+        {collapsed ? (
+          <ChevronsRight className="size-4" aria-hidden="true" />
+        ) : (
+          <ChevronsLeft className="size-4" aria-hidden="true" />
+        )}
+      </Button>
+    </div>
+  );
+}
+
+function DocumentCard({
+  doc,
+  isSelected,
+  positionByName,
+  onClick,
+  onKeyDown,
+  ref,
+}) {
+  const pos = positionByName.get(doc.salesman);
+  const posType = doc.doc_kind === 'spv' ? 'SPV' : (pos?.position_type || '');
+  const product = doc.product || '';
+
+  return (
+    <div
+      ref={ref}
+      role="listitem"
+      className={`group relative flex flex-col p-3 cursor-pointer transition-all duration-200 border-b border-[var(--line)] last:border-b-0 ${
+        isSelected
+          ? 'bg-[var(--primary-soft)] ring-inset ring-2 ring-[var(--primary)] shadow-[var(--shadow-sm)]'
+          : 'hover:bg-[var(--bg)]'
+      }`}
+      onClick={onClick}
+      onKeyDown={onKeyDown}
+      tabIndex={0}
+      aria-current={isSelected ? 'true' : undefined}
+      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${docPeriodLabel(doc)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
+    >
+      {/* Baris 1: Nama lengkap */}
+      <p className="font-medium text-[13px] leading-[1.3] text-[var(--ink)] group-hover:text-[var(--primary)] transition-colors truncate max-w-full">
+        {doc.salesman || 'Tanpa nama sales'}
+      </p>
+
+      {/* Baris 2: Periode */}
+      <p className="mt-1 text-[12px] text-[var(--ink-2)] whitespace-nowrap truncate">
+        {docPeriodLabel(doc)}
+      </p>
+
+      {/* Baris 3: Badge role/produk kiri, status kanan */}
+      <div className="mt-1.5 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          {posType ? (
+            <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
+              posType === 'BM' ? 'bg-blue-100 text-blue-700' :
+              posType === 'SPV' ? 'bg-emerald-100 text-emerald-700' :
+              'bg-amber-100 text-amber-700'
+            }`}>
+              {posType}
+            </span>
+          ) : null}
+          {product && (
+            <span className="shrink-0 text-[10px] text-[var(--ink-2)] truncate max-w-[120px]">
+              {product}
+            </span>
+          )}
+        </div>
+        <div className="shrink-0">{makeBadge(doc.status)}</div>
+      </div>
+    </div>
+  );
+}
+
+export default function Insetif({
+  documents,
+  setDocuments,
+  onRefresh,
+  positions = [],
+  masterData = {},
+  onLoad,
+  onDelete,
+  onNewDoc,
+}) {
   const toast = useToast();
-  // Map nama -> posisi: lookup per baris O(1), bukan find O(n) tiap render.
   const positionByName = useMemo(() => new Map(positions.map((p) => [p.name, p])), [positions]);
   const { user } = useAuth();
   const isDraft = (s) => String(s).toLowerCase() !== 'final';
@@ -408,6 +516,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
   const nameParam = searchParams.get('name') || '';
   const openDocParam = searchParams.get('openDoc') || '';
 
+  // Filter states
   const [search, setSearch] = useState(nameParam);
   const [areaId, setAreaId] = useState('');
   const [branchId, setBranchId] = useState('');
@@ -415,11 +524,13 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
   const [salesId, setSalesId] = useState('');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
+
+  // UI states
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-
   const [activeDocId, setActiveDocId] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [historyData, setHistoryData] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -428,13 +539,15 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
 
   const listRef = useRef(null);
   const detailRef = useRef(null);
+  const selectedItemRef = useRef(null);
+  const cardRefs = useRef(new Map());
 
+  // Initialize filters from URL params
   useEffect(() => {
     if (!nameParam || !positions.length) return;
     const target = positions.find((p) => p.name === nameParam);
     if (!target) return;
     if (target.position_type === 'BM') {
-      // BM hanya satu, jadi tidak dipakai sebagai filter.
       setAreaId(''); setBranchId(''); setSpvId(''); setSalesId('');
     } else if (target.position_type === 'SPV') {
       setSpvId(String(target.id));
@@ -446,7 +559,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
     }
   }, [nameParam, positions]);
 
-  // Open detail panel for a doc clicked from Dashboard (?openDoc=<id>).
+  // Open doc from dashboard
   useEffect(() => {
     if (!openDocParam || !documents.length) return;
     if (documents.some((d) => String(d.id) === openDocParam)) {
@@ -454,13 +567,13 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
     }
   }, [openDocParam, documents]);
 
-  // Klik nama sales → tabel muncul + navbar ciut otomatis.
+  // Sidebar width events
   useEffect(() => {
     if (activeDocId) window.dispatchEvent(new Event('insetif-narrow'));
     else window.dispatchEvent(new Event('insetif-expand'));
   }, [activeDocId]);
 
-  // Ambil baris golongan/kriteria/kwitansi agar panel detail menampilkan input officer.
+  // Load full document
   useEffect(() => {
     if (!activeDocId) {
       setFullDoc(null);
@@ -475,6 +588,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
     return () => { cancelled = true; };
   }, [activeDocId]);
 
+  // Filter options
   const branches = useMemo(() => masterData.branches || [], [masterData.branches]);
   const areaOptions = useMemo(() => masterData.regions || [], [masterData.regions]);
   const branchOptions = useMemo(
@@ -496,6 +610,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
   const endApi = periodEnd ? toApiPeriod(periodEnd) : '';
   const hasPeriod = !!(startApi && endApi && endApi >= startApi);
 
+  // Filtered & sorted documents
   const visibleDocs = useMemo(() => {
     if (!hasPeriod) return [];
     let rows = documents.filter((d) => docMatchesScope(d, { areaId, branchId }, { positions, branches, positionByName }));
@@ -516,15 +631,32 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
     return sortDocsByHierarchy(rows, positions, positionByName);
   }, [documents, positions, positionByName, branches, areaId, branchId, salesId, spvId, startApi, endApi, hasPeriod, search]);
 
-  // Kembali ke halaman 1 saat pencarian atau filter berubah.
+  // Reset to page 1 on filter change
   useEffect(() => { setPage(1); }, [search, areaId, branchId, spvId, salesId, periodStart, periodEnd]);
 
-  const resetFilters = () => {
+  // Auto-select first document when filter results change or on initial load
+  useEffect(() => {
+    if (visibleDocs.length === 0) return;
+    if (!activeDocId) {
+      setActiveDocId(visibleDocs[0].id);
+    } else if (!visibleDocs.some((d) => d.id === activeDocId)) {
+      setActiveDocId(visibleDocs[0].id);
+    }
+  }, [visibleDocs, activeDocId]);
+
+  // Scroll selected item into view
+  useEffect(() => {
+    const ref = cardRefs.current.get(activeDocId);
+    if (ref?.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  }, [activeDocId]);
+
+  const resetFilters = useCallback(() => {
     setSearch(''); setAreaId(''); setBranchId(''); setSpvId(''); setSalesId('');
     setPeriodStart(''); setPeriodEnd('');
-  };
+  }, []);
 
-  // Jika hasil filter menyusut (mis. dokumen dihapus), turunkan halaman ke posisi valid.
   useEffect(() => {
     const tp = Math.ceil(visibleDocs.length / limit) || 1;
     if (page > tp) setPage(tp);
@@ -550,12 +682,12 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
     }
   };
 
-  // Muat riwayat saat dokumen dibuka agar tombolnya tampil hanya jika ada pengeditan.
+  // Load history when doc opens
   useEffect(() => {
     if (!activeDocId) {
       setHistoryData(null);
       setHistoryLoading(false);
-      return undefined;
+      return;
     }
     let cancelled = false;
     setHistoryData(null);
@@ -570,7 +702,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
   const activeDoc = documents.find((d) => d.id === activeDocId);
   const canEditDoc = !!activeDoc && ['officer', 'superadmin'].includes(user?.role);
 
-  // Riwayat ditampilkan dari entri CREATE pertama (dibuat oleh siapa, kapan).
+  // History: show CREATE entry
   const lastEdit = (historyData || []).find((h) => String(h.action).toUpperCase().includes('CREATE')) || (historyData || [])[0] || null;
   const formatHistoryStamp = (value) => {
     const d = new Date(value);
@@ -580,21 +712,69 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
     }).format(d);
   };
 
+  // Navigation helpers
+  const currentIndex = visibleDocs.findIndex((d) => d.id === activeDocId);
+  const canGoPrev = currentIndex > 0;
+  const canGoNext = currentIndex >= 0 && currentIndex < visibleDocs.length - 1;
+  const goPrev = useCallback(() => {
+    if (canGoPrev) setActiveDocId(visibleDocs[currentIndex - 1].id);
+  }, [visibleDocs, currentIndex, canGoPrev]);
+  const goNext = useCallback(() => {
+    if (canGoNext) setActiveDocId(visibleDocs[currentIndex + 1].id);
+  }, [visibleDocs, currentIndex, canGoNext]);
+
+  // ==================== RENDER ====================
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      {/* Desktop: two-column layout */}
-      <div className={`hidden lg:grid lg:gap-6 lg:px-6 lg:py-6 ${activeDoc ? 'lg:grid-cols-[360px_minmax(0,1fr)]' : 'lg:grid-cols-[minmax(0,1fr)]'}`}>
-        {/* Left: Document List */}
-        <section
-          className={`card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden ${
-            !activeDoc ? 'lg:col-span-2' : ''
-          }`}
-          aria-label="Daftar dokumen"
-        >
-          {/* Filters */}
-          <div className="p-6 border-b border-[var(--line)]" role="search" aria-label="Filter dokumen">
-            <DocFiltersBar
-              idPrefix="filter"
+      {/* ===== DESKTOP LAYOUT ===== */}
+      <div className="hidden lg:flex lg:flex-col lg:h-screen">
+        {/* Page Header + Top Filter Bar */}
+        <header className="sticky top-0 z-10 bg-[var(--bg)] border-b border-[var(--line)] px-6 py-4">
+          <div className="max-w-full">
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div>
+                <h1 className="text-[clamp(22px,2.5vw,26px)] font-bold tracking-[-0.02em] leading-[1.2]">
+                  Dokumen Tersimpan
+                </h1>
+                <p className="mt-1 text-[13px] text-[var(--ink-2)] leading-[1.5]">
+                  Cari, filter, dan buka dokumen lama untuk dilanjutkan.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={refreshList}
+                  disabled={refreshing}
+                  className="h-9 px-4 gap-1.5"
+                >
+                  {refreshing ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                      Memuat...
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="size-4" aria-hidden="true" />
+                      <span>Muat Ulang</span>
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  type="button"
+                  onClick={onNewDoc}
+                  className="h-9 px-4 gap-1.5"
+                >
+                  <Plus className="size-4" aria-hidden="true" />
+                  <span>Dokumen Baru</span>
+                </Button>
+              </div>
+            </div>
+
+            <TopFilterBar
               search={search} onSearch={setSearch}
               areaId={areaId} onArea={setAreaId}
               branchId={branchId} onBranch={setBranchId}
@@ -603,207 +783,235 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
               salesId={salesId} onSales={setSalesId} salesOptions={salesOptions}
               periodStart={periodStart} onPeriodStart={setPeriodStart}
               periodEnd={periodEnd} onPeriodEnd={setPeriodEnd}
+              onReset={resetFilters}
+              hasPeriod={hasPeriod}
             />
           </div>
+        </header>
 
-          {/* Document List */}
-          <div className="p-0" ref={listRef}>
-            {visibleDocs.length > 0 ? (
-              <div className="flex flex-col divide-y divide-[var(--line)]" id="docList" aria-label="Daftar dokumen tersimpan" role="list">
-                {paginatedDocs.map((doc) => {
-                  const isSelected = doc.id === activeDocId;
-                  const pos = positionByName.get(doc.salesman);
-                  const posType = doc.doc_kind === 'spv' ? 'SPV' : (pos?.position_type || '');
-                  return (
-                    <div
-                      key={doc.id}
-                      role="listitem"
-                      className={`group flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors ${
-                        isSelected
-                          ? 'bg-[var(--primary-soft)] ring-inset ring-2 ring-[var(--primary)]'
-                          : 'hover:bg-[var(--bg)]'
-                      }`}
-                      onClick={() => setActiveDocId((cur) => (cur === doc.id ? null : doc.id))}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId((cur) => (cur === doc.id ? null : doc.id)); }}}
-                      tabIndex={0}
-                      aria-current={isSelected ? 'true' : undefined}
-                      aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${docPeriodLabel(doc)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
-                    >
-                      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <p className="flex-1 min-w-0 font-medium text-[13px] leading-[1.3] text-[var(--ink)] truncate group-hover:text-[var(--primary)] transition-colors">
-                            {doc.salesman || 'Tanpa nama sales'}
-                          </p>
-                          <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{docPeriodLabel(doc)}</p>
-                        </div>
-                        <div className="flex items-center justify-between gap-2">
-                          {posType ? (
-                            <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${posType === 'BM' ? 'bg-blue-100 text-blue-700' : posType === 'SPV' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{posType}</span>
-                          ) : <span />}
-                          <div className="shrink-0">{makeBadge(doc.status)}</div>
-                        </div>
-                      </div>
-                      <ChevronRight className="shrink-0 size-4 mt-1 text-[var(--ink-3)] group-hover:text-[var(--primary)] transition-colors" aria-hidden="true" />
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-3 px-6 py-12 border-t border-[var(--line)]">
-                <FolderOpen className="size-11 text-[var(--ink-3)]" aria-hidden="true" />
-                <h3 className="text-[15px] font-semibold text-[var(--ink)]">
-                  {hasPeriod ? 'Tidak ada dokumen ditemukan' : 'Pilih periode terlebih dahulu'}
-                </h3>
-                <p className="text-[13px] text-[var(--ink-2)] text-center max-w-[340px] leading-[1.55]">
-                  {hasPeriod
-                    ? 'Coba ubah kata kunci pencarian atau filter yang dipilih untuk melihat dokumen lain.'
-                    : 'Isi Periode Awal dan Periode Akhir untuk menampilkan dokumen tersimpan.'}
-                </p>
-                <Button variant="outline" size="sm" onClick={resetFilters}>
-                  Hapus semua filter
-                </Button>
-              </div>
-            )}
-            {visibleDocs.length > 0 && (
-              <div className="p-4 border-t border-[var(--line)]">
-                <ListPager
-                  page={page}
-                  pages={totalPages}
-                  total={visibleDocs.length}
-                  limit={limit}
-                  onPage={setPage}
-                  onLimit={setLimit}
-                />
-              </div>
-            )}
-          </div>
-        </section>
+        {/* Main Content: Sidebar + Detail */}
+        <main className="flex-1 overflow-hidden flex min-h-0">
+          {/* LEFT: Collapsible Sidebar */}
+          <aside
+            className={`flex flex-col bg-white border-r border-[var(--line)] transition-all duration-300 ease-in-out overflow-hidden ${
+              sidebarCollapsed ? 'w-[48px] flex-shrink-0' : 'w-[280px] flex-shrink-0'
+            }`}
+            aria-label="Daftar dokumen"
+          >
+            <SidebarHeader
+              title="Daftar Dokumen"
+              count={visibleDocs.length}
+              collapsed={sidebarCollapsed}
+              onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+            />
 
-        {/* Right: Detail Panel (muncul setelah dokumen dibuka) */}
-        {activeDoc && (
-          <aside className="card min-w-0 bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden flex flex-col" aria-label="Halaman detail dokumen" ref={detailRef}>
-          {activeDoc ? (
-            <>
-              <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-[var(--line)] bg-[var(--bg)]">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  onClick={() => { window.dispatchEvent(new Event('insetif-expand')); setActiveDocId(null); }}
-                  className="gap-1.5 h-8 px-3"
-                >
-                  <ChevronLeft className="size-3.5" aria-hidden="true" />
-                  <span>Kembali</span>
-                </Button>
-                <p className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">Detail dokumen</p>
-              </div>
-              <div className="flex-1 overflow-y-auto p-6">
-                <header className="flex items-start gap-4 mb-6">
-                  <span className="flex shrink-0 items-center justify-center size-11 rounded-[12px] bg-[var(--primary-soft)] text-[var(--primary)]" aria-hidden="true">
-                    <FolderOpen className="size-5.5" />
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">{activeDoc.doc_kind === 'spv' ? 'Rekap Insentif SPV' : 'Dokumen penjualan'}</p>
-                    <h2 id="detailHeading" className="mt-1 text-[clamp(20px,2.4vw,24px)] font-bold tracking-[-0.02em] leading-[1.25] overflow-wrap-anywhere">
-                      {activeDoc.salesman || 'Tanpa nama sales'}
-                    </h2>
-                    <p className="mt-1 text-[13px] text-[var(--ink-2)]">{docPeriodLabel(activeDoc)}</p>
-                  </div>
-                  <div className="flex-shrink-0 mt-1 flex flex-col items-end gap-1.5">
-                    {activeDoc.doc_kind === 'spv' && (
-                      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1.5 px-2 py-0.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-700" aria-hidden="true" />
-                        SPV
-                      </Badge>
-                    )}
-                    {makeBadge(activeDoc.status)}
-                  </div>
-                </header>
-
-                <section className="border-t border-[var(--line)] pt-5 mt-6" aria-labelledby="detailInfoTitle">
-                  <h3 id="detailInfoTitle" className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)] mb-4">
-                    Pratinjau dokumen (input officer)
+            <div className="flex-1 overflow-y-auto p-0" ref={listRef}>
+              {visibleDocs.length > 0 ? (
+                <div className="flex flex-col" id="docList" aria-label="Daftar dokumen tersimpan" role="list">
+                  {paginatedDocs.map((doc, idx) => {
+                    const isSelected = doc.id === activeDocId;
+                    return (
+                      <DocumentCard
+                        key={doc.id}
+                        doc={doc}
+                        isSelected={isSelected}
+                        positionByName={positionByName}
+                        onClick={() => setActiveDocId(doc.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId(doc.id); }}}
+                        ref={(el) => { cardRefs.current.set(doc.id, el); }}
+                      />
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-3 px-4 py-12 border-t border-[var(--line)]">
+                  <FolderOpen className="size-11 text-[var(--ink-3)]" aria-hidden="true" />
+                  <h3 className="text-[15px] font-semibold text-[var(--ink)]">
+                    {hasPeriod ? 'Tidak ada dokumen ditemukan' : 'Pilih periode terlebih dahulu'}
                   </h3>
-                  {fullLoading ? (
-                    <p className="text-[13px] text-[var(--ink-2)] flex items-center gap-2"><Loader2 className="size-4 animate-spin" aria-hidden="true" /> Memuat isi dokumen…</p>
-                  ) : fullDoc ? (
-                    <FullDocPreview doc={fullDoc} />
-                  ) : (
-                    <dl className="grid grid-cols-2 gap-x-5 gap-y-4 mt-4">
-                      <div className="col-span-2">
-                        <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">Produk</dt>
-                        <dd className="mt-1 text-[14px] font-medium text-[var(--ink)] overflow-wrap-anywhere">{activeDoc.product || '-'}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">Periode</dt>
-                        <dd className="mt-1 text-[14px] font-medium text-[var(--ink)]">{docPeriodLabel(activeDoc)}</dd>
-                      </div>
-                    </dl>
-                  )}
-                </section>
+                  <p className="text-[13px] text-[var(--ink-2)] text-center max-w-[220px] leading-[1.55]">
+                    {hasPeriod
+                      ? 'Coba ubah kata kunci pencarian atau filter yang dipilih untuk melihat dokumen lain.'
+                      : 'Isi Periode Awal dan Periode Akhir untuk menampilkan dokumen tersimpan.'}
+                  </p>
+                  <Button variant="outline" size="sm" onClick={resetFilters}>
+                    Hapus semua filter
+                  </Button>
+                </div>
+              )}
 
-                <div className="flex flex-wrap items-center justify-between gap-3 mt-8 pt-4 border-t border-[var(--line)]">
-                  {lastEdit ? (
-                    <p className="text-[12px] text-[var(--ink-2)]">
-                      Dibuat {formatHistoryStamp(lastEdit.created_at)} oleh {lastEdit.actor_name}
-                    </p>
-                  ) : <span />}
-                  <div className="flex gap-2">
-                    {canEditDoc && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          type="button"
-                          onClick={() => onLoad?.(activeDoc)}
-                        >
-                          Edit
-                        </Button>
-                        {isDraft(activeDoc.status) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          type="button"
-                          className="bg-white text-red-600 border-red-200 hover:bg-red-50" style={{ borderColor: '#fecdd3' }}
-                          onClick={() => {
-                            if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${docPeriodLabel(activeDoc)}?`)) return;
-                            onDelete?.(activeDocId);
-                            window.dispatchEvent(new Event('insetif-expand'));
-                          }}
-                        >
-                          Hapus
-                        </Button>
-                        )}
-                      </>
-                    )}
+              {/* Pagination */}
+              {visibleDocs.length > 0 && (
+                <div className="p-3 border-t border-[var(--line)] flex-shrink-0">
+                  <ListPager
+                    page={page}
+                    pages={totalPages}
+                    total={visibleDocs.length}
+                    limit={limit}
+                    onPage={setPage}
+                    onLimit={setLimit}
+                  />
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {/* RIGHT: Detail Panel (always visible on desktop) */}
+          <section
+            className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden"
+            aria-label="Halaman detail dokumen"
+            ref={detailRef}
+          >
+            {activeDoc ? (
+              <>
+                {/* Detail Header with Navigation */}
+                <header className="flex items-center justify-between gap-4 px-5 py-3.5 border-b border-[var(--line)] bg-[var(--bg)] flex-shrink-0">
+                  <div className="flex items-center gap-2">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       type="button"
-                      onClick={() => setHistoryOpen(true)}
+                      onClick={goPrev}
+                      disabled={!canGoPrev}
+                      className="h-8 px-3 gap-1"
+                      aria-label="Sebelumnya"
                     >
-                      Riwayat
+                      <ChevronLeft className="size-3.5" aria-hidden="true" />
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      type="button"
+                      onClick={goNext}
+                      disabled={!canGoNext}
+                      className="h-8 px-3 gap-1"
+                      aria-label="Berikutnya"
+                    >
+                      <ChevronRight className="size-3.5" aria-hidden="true" />
+                    </Button>
+                    <span className="text-[12px] text-[var(--ink-2)] px-2 py-1 rounded bg-[var(--bg)] border border-[var(--line)] font-mono">
+                      {currentIndex + 1} / {visibleDocs.length}
+                    </span>
+                  </div>
+                  <p className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">
+                    Detail dokumen
+                  </p>
+                </header>
+
+                {/* Detail Content */}
+                <div className="flex-1 overflow-y-auto p-5 lg:p-6">
+                  <header className="flex items-start gap-4 mb-6">
+                    <span className="flex shrink-0 items-center justify-center size-11 rounded-[12px] bg-[var(--primary-soft)] text-[var(--primary)]" aria-hidden="true">
+                      <FolderOpen className="size-5.5" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">
+                        {activeDoc.doc_kind === 'spv' ? 'Rekap Insentif SPV' : 'Dokumen penjualan'}
+                      </p>
+                      <h2 id="detailHeading" className="mt-1 text-[clamp(20px,2.4vw,24px)] font-bold tracking-[-0.02em] leading-[1.25] overflow-wrap-anywhere">
+                        {activeDoc.salesman || 'Tanpa nama sales'}
+                      </h2>
+                      <p className="mt-1 text-[13px] text-[var(--ink-2)]">{docPeriodLabel(activeDoc)}</p>
+                    </div>
+                    <div className="flex-shrink-0 mt-1 flex flex-col items-end gap-1.5">
+                      {activeDoc.doc_kind === 'spv' && (
+                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1.5 px-2 py-0.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-700" aria-hidden="true" />
+                          SPV
+                        </Badge>
+                      )}
+                      {makeBadge(activeDoc.status)}
+                    </div>
+                  </header>
+
+                  {/* Document Preview */}
+                  <section className="border-t border-[var(--line)] pt-5 mt-6" aria-labelledby="detailInfoTitle">
+                    <h3 id="detailInfoTitle" className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)] mb-4">
+                      Pratinjau dokumen (input officer)
+                    </h3>
+                    {fullLoading ? (
+                      <p className="text-[13px] text-[var(--ink-2)] flex items-center gap-2">
+                        <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Memuat isi dokumen…
+                      </p>
+                    ) : fullDoc ? (
+                      <FullDocPreview doc={fullDoc} />
+                    ) : (
+                      <dl className="grid grid-cols-2 gap-x-5 gap-y-4 mt-4">
+                        <div className="col-span-2">
+                          <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">Produk</dt>
+                          <dd className="mt-1 text-[14px] font-medium text-[var(--ink)] overflow-wrap-anywhere">{activeDoc.product || '-'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-[11.5px] font-semibold tracking-[0.04em] uppercase text-[var(--ink-3)]">Periode</dt>
+                          <dd className="mt-1 text-[14px] font-medium text-[var(--ink)]">{docPeriodLabel(activeDoc)}</dd>
+                        </div>
+                      </dl>
+                    )}
+                  </section>
+
+                  {/* Action Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 mt-8 pt-4 border-t border-[var(--line)]">
+                    {lastEdit ? (
+                      <p className="text-[12px] text-[var(--ink-2)]">
+                        Dibuat {formatHistoryStamp(lastEdit.created_at)} oleh {lastEdit.actor_name}
+                      </p>
+                    ) : null}
+                    <div className="flex gap-2">
+                      {canEditDoc && (
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            onClick={() => onLoad?.(activeDoc)}
+                          >
+                            Edit
+                          </Button>
+                          {isDraft(activeDoc.status) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              type="button"
+                              className="bg-white text-red-600 border-red-200 hover:bg-red-50"
+                              style={{ borderColor: '#fecdd3' }}
+                              onClick={() => {
+                                if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${docPeriodLabel(activeDoc)}?`)) return;
+                                onDelete?.(activeDocId);
+                              }}
+                            >
+                              Hapus
+                            </Button>
+                          )}
+                        </>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => setHistoryOpen(true)}
+                      >
+                        Riwayat
+                      </Button>
+                    </div>
                   </div>
                 </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center flex-1 px-6 py-12 text-center">
+                <span className="flex items-center justify-center size-13 rounded-[14px] bg-[var(--line-soft)] text-[var(--ink-3)] mb-3" aria-hidden="true">
+                  <FolderOpen className="size-6" />
+                </span>
+                <h2 className="text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink)]">Belum ada dokumen dipilih</h2>
+                <p className="mt-1 text-[13px] text-[var(--ink-2)] max-w-[320px] leading-[1.6]">
+                  Klik salah satu dokumen di daftar untuk menampilkan halamannya di sini.
+                </p>
               </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center flex-1 px-6 py-12 text-center">
-              <span className="flex items-center justify-center size-13 rounded-[14px] bg-[var(--line-soft)] text-[var(--ink-3)] mb-3" aria-hidden="true">
-                <FolderOpen className="size-6" />
-              </span>
-              <h2 className="text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink)]">Belum ada dokumen dipilih</h2>
-              <p className="mt-1 text-[13px] text-[var(--ink-2)] max-w-[320px] leading-[1.6]">
-                Klik <strong className="text-[var(--ink)] font-semibold">Buka</strong> pada salah satu dokumen di daftar untuk menampilkan halamannya di sini.
-              </p>
-            </div>
-          )}
-        </aside>
-        )}
+            )}
+          </section>
+        </main>
       </div>
 
-      {/* Mobile: Single column with detail overlay */}
+      {/* ===== MOBILE LAYOUT ===== */}
       <div className="lg:hidden pb-20 px-4 py-4">
         <section className="card bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden" aria-labelledby="page-title-mobile">
           <div className="flex flex-col items-start justify-between gap-3 p-4 border-b border-[var(--line)]">
@@ -851,8 +1059,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
 
           {/* Filters Mobile */}
           <div className="p-4 border-b border-[var(--line)]" role="search" aria-label="Filter dokumen">
-            <DocFiltersBar
-              idPrefix="filter-m"
+            <TopFilterBar
               search={search} onSearch={setSearch}
               areaId={areaId} onArea={setAreaId}
               branchId={branchId} onBranch={setBranchId}
@@ -861,6 +1068,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
               salesId={salesId} onSales={setSalesId} salesOptions={salesOptions}
               periodStart={periodStart} onPeriodStart={setPeriodStart}
               periodEnd={periodEnd} onPeriodEnd={setPeriodEnd}
+              onReset={resetFilters}
+              hasPeriod={hasPeriod}
             />
           </div>
 
@@ -951,7 +1160,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
         >
           <div className="p-4 pb-20">
             <div className="card bg-white border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow)] overflow-hidden flex flex-col h-full min-h-[calc(100vh-32px)]">
-              <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-[var(--line)] bg-[var(--bg)] sticky top-0 z-10">
+              <header className="flex items-center justify-between gap-4 px-4 py-3 border-b border-[var(--line)] bg-[var(--bg)] sticky top-0 z-10">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -963,14 +1172,16 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                   <span>Kembali</span>
                 </Button>
                 <p className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">Detail dokumen</p>
-              </div>
+              </header>
               <div className="flex-1 overflow-y-auto p-4">
                 <header className="flex items-start gap-3 mb-5">
                   <span className="flex shrink-0 items-center justify-center size-11 rounded-[12px] bg-[var(--primary-soft)] text-[var(--primary)]" aria-hidden="true">
                     <FolderOpen className="size-5.5" />
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">{activeDoc.doc_kind === 'spv' ? 'Rekap Insentif SPV' : 'Dokumen penjualan'}</p>
+                    <p className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">
+                      {activeDoc.doc_kind === 'spv' ? 'Rekap Insentif SPV' : 'Dokumen penjualan'}
+                    </p>
                     <h2 id="mobile-detail-heading" className="mt-1 text-[clamp(20px,2.4vw,24px)] font-bold tracking-[-0.02em] leading-[1.25] overflow-wrap-anywhere">
                       {activeDoc.salesman || 'Tanpa nama sales'}
                     </h2>
@@ -1003,7 +1214,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                     <p className="text-[12px] text-[var(--ink-2)]">
                       Dibuat {formatHistoryStamp(lastEdit.created_at)} oleh {lastEdit.actor_name}
                     </p>
-                  ) : <span />}
+                  ) : null}
                   <div className="flex gap-2">
                     {canEditDoc && (
                       <>
@@ -1017,19 +1228,20 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                           Edit
                         </Button>
                         {isDraft(activeDoc.status) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          type="button"
-                          className="min-h-[44px] bg-white text-red-600 border-red-200 hover:bg-red-50" style={{ borderColor: '#fecdd3' }}
-                          onClick={() => {
-                            if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${docPeriodLabel(activeDoc)}?`)) return;
-                            onDelete?.(activeDocId);
-                            window.dispatchEvent(new Event('insetif-expand'));
-                          }}
-                        >
-                          Hapus
-                        </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            className="min-h-[44px] bg-white text-red-600 border-red-200 hover:bg-red-50"
+                            style={{ borderColor: '#fecdd3' }}
+                            onClick={() => {
+                              if (!window.confirm(`Hapus dokumen ${activeDoc.salesman || activeDoc.id} periode ${docPeriodLabel(activeDoc)}?`)) return;
+                              onDelete?.(activeDocId);
+                              window.dispatchEvent(new Event('insetif-expand'));
+                            }}
+                          >
+                            Hapus
+                          </Button>
                         )}
                       </>
                     )}
@@ -1049,7 +1261,7 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
         </div>
       )}
 
-      {/* Riwayat lengkap, dibuka dari tombol ringkas di baris aksi */}
+      {/* History Modal */}
       {historyOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
