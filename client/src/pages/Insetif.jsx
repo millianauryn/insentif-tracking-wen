@@ -17,7 +17,7 @@ import { docPeriodLabel, docMatchesSpv } from '../lib/docFilters';
 import { docMatchesScope, docMatchesPeriodeRange, positionBranchId, sortDocsByHierarchy } from '../lib/docHierarchy';
 import { branchRegionIds } from '../lib/orgTree';
 import MonthPicker from '../components/MonthPicker';
-import { errMsg, getDocument } from '../api';
+import { errMsg, getDocument, getDocumentHistory } from '../api';
 import ListPager from '../components/ListPager';
 import { Search, ChevronLeft, ChevronRight, Plus, Loader2, FolderOpen, RotateCcw } from 'lucide-react';
 
@@ -284,6 +284,9 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
   const [limit, setLimit] = useState(10);
 
   const [activeDocId, setActiveDocId] = useState(null);
+  const [historyDocId, setHistoryDocId] = useState(null);
+  const [historyData, setHistoryData] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [fullDoc, setFullDoc] = useState(null);
   const [fullLoading, setFullLoading] = useState(false);
 
@@ -409,6 +412,26 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
     } finally {
       setRefreshing(false);
     }
+  };
+
+  const openHistory = async (docId) => {
+    setHistoryDocId(docId);
+    setHistoryData(null);
+    setHistoryLoading(true);
+    try {
+      const { history } = await getDocumentHistory(docId);
+      setHistoryData(history || []);
+    } catch (err) {
+      toast('error', errMsg(err));
+      setHistoryData([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const closeHistory = () => {
+    setHistoryDocId(null);
+    setHistoryData(null);
   };
 
   const activeDoc = documents.find((d) => d.id === activeDocId);
@@ -579,6 +602,21 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                 <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-[var(--line)]">
                   {canEditDoc && (
                     <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => openHistory(activeDoc.id)}
+                        disabled={historyLoading}
+                      >
+                        {historyLoading && historyDocId === activeDoc.id ? (
+                          <>
+                            <span className="animate-spin mr-1">⏳</span> Riwayat
+                          </>
+                        ) : (
+                          'Riwayat'
+                        )}
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -848,6 +886,82 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal */}
+      {historyDocId && historyData !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          onClick={closeHistory}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="history-title"
+        >
+          <div
+            className="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-[var(--line)]">
+              <h2 id="history-title" className="text-[16px] font-semibold text-[var(--ink)]">
+                Riwayat Dokumen
+              </h2>
+              <button
+                className="p-2 rounded-lg hover:bg-[var(--line-soft)] text-[var(--ink-2)] transition-colors"
+                onClick={closeHistory}
+                aria-label="Tutup"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto p-4">
+              {historyLoading ? (
+                <div className="flex justify-center py-8 text-[var(--ink-2)]">
+                  <span className="animate-spin">⏳</span> Memuat riwayat...
+                </div>
+              ) : historyData.length === 0 ? (
+                <div className="text-center py-8 text-[var(--ink-2)]">
+                  <p>Belum ada riwayat untuk dokumen ini.</p>
+                  <p className="text-[13px] mt-1">Dokumen lama sebelum sistem audit aktif tidak memiliki riwayat.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {historyData.map((item, idx) => (
+                    <div
+                      key={`${item.id}-${idx}`}
+                      className="p-4 bg-[var(--bg)] rounded-xl border border-[var(--line)]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 text-[13px] font-medium text-[var(--ink)]">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--primary-soft)] text-[var(--primary)]">
+                              {item.action}
+                            </span>
+                            <span className="text-[var(--ink-2)]">oleh</span>
+                            <span className="font-semibold">{item.actor_name}</span>
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--ink-soft)] text-[var(--ink-2)]">
+                              {item.actor_role}
+                            </span>
+                          </div>
+                          <div className="mt-2 text-[12px] text-[var(--ink-2)]">
+                            {new Date(item.created_at).toLocaleString('id-ID', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

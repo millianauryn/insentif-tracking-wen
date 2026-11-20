@@ -99,6 +99,10 @@ export function getDocument(id) {
   return apiRequest(`/api/documents/${id}`)
 }
 
+export function getDocumentHistory(id) {
+  return apiRequest(`/api/documents/${id}/history`)
+}
+
 // Default batas 500: daftar tumbuh per bulan, muat 500 teratas cukup untuk bertahun-tahun kantor.
 export function listDocuments(params = { limit: 500 }) {
   return apiRequest('/api/documents', { params })

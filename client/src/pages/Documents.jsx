@@ -8,7 +8,7 @@ import MonthPicker from '../components/MonthPicker';
 import './CompactTable.css';
 import { isGugurCriteria } from '../lib/criteria';
 import { computeTotalFor, computeTotalAutoFor, computeGrandTotal, principalAutoValue, principalValueFor } from '../lib/golongan';
-import { deleteDocument } from '../api';
+import { deleteDocument, getDocumentHistory } from '../api';
 import { branchRegionIds } from '../lib/orgTree';
 import { parseMoney } from '../lib/money';
 import { terbilang } from '../lib/terbilang';
@@ -422,6 +422,30 @@ export default function Documents({
 }) {
   const canEdit = ['superadmin', 'officer'].includes(user.role);
 
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyData, setHistoryData] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  const openHistory = async () => {
+    if (!documentId) return;
+    setHistoryOpen(true);
+    setHistoryData(null);
+    setHistoryLoading(true);
+    try {
+      const { history } = await getDocumentHistory(documentId);
+      setHistoryData(history || []);
+    } catch (err) {
+      setHistoryData([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const closeHistory = () => {
+    setHistoryOpen(false);
+    setHistoryData(null);
+  };
+
   // Officer: wilayah auto-fills from own linked cabang (city → region fallback)
   const isSuper = user.role === 'superadmin';
   useEffect(() => {
@@ -605,6 +629,11 @@ export default function Documents({
           {documentId && documentStatus === 'Draft' && canEdit && onDelete && (
             <Button className="button secondary text-button danger" type="button" onClick={handleDelete}>Hapus Dokumen</Button>
           )}
+          {documentId && (
+            <Button className="button secondary" type="button" onClick={openHistory} disabled={historyLoading}>
+              {historyLoading ? 'Memuat...' : 'Riwayat'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -760,6 +789,83 @@ export default function Documents({
           )}
         </div>
       </footer>
+
+      {/* History Modal */}
+      {historyOpen && historyData !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          onClick={closeHistory}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="history-title"
+        >
+          <div
+            className="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-[var(--line)]">
+              <h2 id="history-title" className="text-[16px] font-semibold text-[var(--ink)]">
+                Riwayat Dokumen
+              </h2>
+              <button
+                className="p-2 rounded-lg hover:bg-[var(--line-soft)] text-[var(--ink-2)] transition-colors"
+                onClick={closeHistory}
+                aria-label="Tutup"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto p-4">
+              {historyLoading ? (
+                <div className="flex justify-center py-8 text-[var(--ink-2)]">
+                  <span className="animate-spin">⏳</span> Memuat riwayat...
+                </div>
+              ) : historyData.length === 0 ? (
+                <div className="text-center py-8 text-[var(--ink-2)]">
+                  <p>Belum ada riwayat untuk dokumen ini.</p>
+                  <p className="text-[13px] mt-1">Dokumen lama sebelum sistem audit aktif tidak memiliki riwayat.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {historyData.map((item, idx) => (
+                    <div
+                      key={`${item.id}-${idx}`}
+                      className="p-4 bg-[var(--bg)] rounded-xl border border-[var(--line)]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 text-[13px] font-medium text-[var(--ink)]">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--primary-soft)] text-[var(--primary)]">
+                              {item.action}
+                            </span>
+                            <span className="text-[var(--ink-2)]">oleh</span>
+                            <span className="font-semibold">{item.actor_name}</span>
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[var(--ink-soft)] text-[var(--ink-2)]">
+                              {item.actor_role}
+                            </span>
+                          </div>
+                          <div className="mt-2 text-[12px] text-[var(--ink-2)]">
+                            {new Date(item.created_at).toLocaleString('id-ID', {
+                              weekday: 'long',
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              second: '2-digit',
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 }
