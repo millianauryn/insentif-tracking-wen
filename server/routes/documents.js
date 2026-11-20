@@ -12,10 +12,11 @@ function createDocumentsRouter(db, options = {}) {
     const limitParam = req.query.limit === undefined ? null : Number(req.query.limit);
     const limit = limitParam === null ? null : Math.min(Math.max(Math.trunc(limitParam) || 1, 1), 500);
     const offset = Math.max(Math.trunc(Number(req.query.offset)) || 0, 0);
-    const where = wide ? '' : 'WHERE owner_id = ?';
+    const where = wide ? '' : 'WHERE d.owner_id = ?';
     const args = wide ? [] : [req.user.id];
-    const total = db.prepare(`SELECT COUNT(*) c FROM incentive_documents ${where}`).get(...args).c;
-    const sql = `SELECT * FROM incentive_documents ${where} ORDER BY updated_at DESC${limit === null ? '' : ' LIMIT ? OFFSET ?'}`;
+    const total = db.prepare(`SELECT COUNT(*) c FROM incentive_documents d ${where}`).get(...args).c;
+    // insentif_total NULL berarti gunakan auto-sum dari document_criteria_rows
+    const sql = `SELECT d.*, COALESCE(d.insentif_total, COALESCE((SELECT SUM(c.incentive_amount) FROM document_criteria_rows c WHERE c.document_id = d.id), 0)) AS insentif_total FROM incentive_documents d ${where} ORDER BY d.updated_at DESC${limit === null ? '' : ' LIMIT ? OFFSET ?'}`;
     const documents = limit === null
       ? db.prepare(sql).all(...args)
       : db.prepare(sql).all(...args, limit, offset);
