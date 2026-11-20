@@ -626,7 +626,7 @@ export default function Documents({
             <Icon size={16}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></Icon>
             {documentId ? 'Simpan Perubahan' : 'Simpan'}
           </Button>
-          {documentId && documentStatus === 'Draft' && canEdit && onDelete && (
+          {documentId && canEdit && onDelete && (
             <Button className="button secondary text-button danger" type="button" onClick={handleDelete}>Hapus Dokumen</Button>
           )}
           {documentId && (
@@ -784,7 +784,7 @@ export default function Documents({
             <Icon size={17}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></Icon>
             {documentId ? 'Simpan Perubahan' : 'Simpan'}
           </Button>
-          {documentId && documentStatus === 'Draft' && canEdit && onDelete && (
+          {documentId && canEdit && onDelete && (
             <Button className="button secondary text-button danger" type="button" onClick={handleDelete}>Hapus Dokumen</Button>
           )}
         </div>

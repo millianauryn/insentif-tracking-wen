@@ -5,7 +5,7 @@ import ComboSelect from '../components/ComboSelect';
 import MonthPicker from '../components/MonthPicker';
 import { useToast } from '../components/Toast';
 import { GolonganTable, KriteriaTable } from './Documents';
-import { createDocument, updateDocument, finalizeDocument, getDocument, previewSpvRows, errMsg, getDocumentHistory } from '../api';
+import { createDocument, updateDocument, finalizeDocument, getDocument, previewSpvRows, errMsg, getDocumentHistory, deleteDocument } from '../api';
 import { terbilang } from '../lib/terbilang';
 import { toApiPeriod, fromApiPeriod, currentPeriodLabel, periodRangeLabel } from '../lib/period';
 import { parseMoney } from '../lib/money';
@@ -121,6 +121,7 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
 
   const canEditDoc = ['officer', 'superadmin'].includes(user.role) && documentStatus === 'Draft';
   const canFinalize = ['observer', 'superadmin'].includes(user.role) && documentStatus === 'Draft' && !!documentId;
+  const canDeleteDoc = ['officer', 'superadmin'].includes(user.role) && !!documentId;
   // Total insentif: jumlah insentif per kriteria, boleh dioverride manual di baris TOTAL.
   const totalInsenitif = insentifTotal ?? criteriaRows.reduce((sum, r) => sum + (parseMoney(r.incentive_amount) ?? 0), 0);
   const updateCriteriaRow = (criteriaId, field, value) => {
@@ -307,6 +308,22 @@ export default function SpvDocument({ user, positions, masterData, setDocuments,
             {documentId ? 'Simpan Perubahan' : 'Simpan'}
           </Button>
           {canFinalize && <Button className="button secondary" type="button" onClick={submit}>Finalisasi</Button>}
+          {canDeleteDoc && (
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              className="bg-white text-red-600 border-red-200 hover:bg-red-50" style={{ borderColor: '#fecdd3' }}
+              onClick={() => {
+                if (!window.confirm(`Hapus dokumen ${spvName || documentId} periode ${periodLabel}?`)) return;
+                deleteDocument(documentId).then(() => {
+                  window.dispatchEvent(new Event('insetif-expand'));
+                });
+              }}
+            >
+              Hapus
+            </Button>
+          )}
           {documentId && (
             <Button className="button secondary" type="button" onClick={openHistory} disabled={historyLoading}>
               {historyLoading ? 'Memuat...' : 'Riwayat'}

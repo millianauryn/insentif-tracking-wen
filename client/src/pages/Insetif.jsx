@@ -472,8 +472,8 @@ export default function Insetif({ documents, setDocuments, onRefresh, positions 
   const activeDoc = documents.find((d) => d.id === activeDocId);
   const canEditDoc = !!activeDoc && ['officer', 'superadmin'].includes(user?.role);
 
-  // Tombol riwayat hanya berguna bila dokumen pernah diedit (ada entri UPDATE).
-  const lastEdit = (historyData || []).find((h) => String(h.action).toUpperCase().includes('UPDATE')) || null;
+  // Riwayat ditampilkan dari entri CREATE pertama (dibuat oleh siapa, kapan).
+  const lastEdit = (historyData || []).find((h) => String(h.action).toUpperCase().includes('CREATE')) || (historyData || [])[0] || null;
   const formatHistoryStamp = (value) => {
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return '';
