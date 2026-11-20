@@ -50,7 +50,9 @@ function TreeNode({ node, depth, expanded, onToggle, documentsFinal, year }) {
   const open = expanded.has(node.key);
   const isPosition = node.kind === 'position';
   const p = node.position;
-  const docFinal = isPosition ? (documentsFinal[p.name] || 0) : 0;
+  const docStat = isPosition ? (documentsFinal[p.name] || { count: 0, total: 0 }) : { count: 0, total: 0 };
+  const docFinal = docStat.count;
+  const docTotalRp = docStat.total;
   const displayName = isPosition && p.position_type === 'SALES' && p.sales_code
     ? `${p.sales_code} ${p.name}`
     : node.label;
@@ -87,9 +89,9 @@ function TreeNode({ node, depth, expanded, onToggle, documentsFinal, year }) {
           </span>
         )}
       </div>
-      {isPosition && (
+        {isPosition && (
         <div className="org-summary">
-          <span className="org-summary-item">Insentif yang diterima tahun {year}: <span className="org-summary-value">Rp {fmtNum(docFinal)}</span></span>
+          <span className="org-summary-item">Insentif yang diterima tahun {year}: <span className="org-summary-value">{docFinal} kali · Rp {fmtNum(docTotalRp)}</span></span>
         </div>
       )}
       {toggleable && open && (
@@ -171,14 +173,16 @@ export default function Dashboard({ documents = [], user, positions = [], users 
   const totalSales = countPositions(prunedTree, "SALES");
 
   const documentsFinal = useMemo(() => {
-    const totals = {};
+    const stats = {};
     documents.forEach((d) => {
       if (String(d.status).toLowerCase() === 'final' && docMatchesYear(d, year)) {
-        const insentif = Number(d.insentif_total || 0);
-        totals[d.salesman] = (totals[d.salesman] || 0) + insentif;
+        const s = stats[d.salesman] || { count: 0, total: 0 };
+        s.count += 1;
+        s.total += Number(d.insentif_total || 0);
+        stats[d.salesman] = s;
       }
     });
-    return totals;
+    return stats;
   }, [documents, year]);
 
   const hasFilter = Boolean(query.trim() || areaId || city || branchId);
