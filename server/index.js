@@ -12,6 +12,7 @@ const createUsersRouter = require('./routes/users.js');
 const createMasterDataRouter = require('./routes/master-data.js');
 const createCriteriaRouter = require('./routes/criteria.js');
 const createDocumentsRouter = require('./routes/documents.js');
+const createExportRouter = require('./routes/export.js');
 const createDevAuthRouter = require('./routes/dev-auth.js');
 const createPositionsRouter = require('./routes/positions.js');
 
@@ -158,6 +159,7 @@ app.use('/api/master-data', createMasterDataRouter(db));
 
 // Criteria and document format routes
 app.use('/api', createCriteriaRouter(db));
+app.use('/api/documents', createExportRouter(db));
 app.use('/api/documents', createDocumentsRouter(db));
 
 // Health check

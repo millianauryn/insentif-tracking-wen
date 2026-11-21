@@ -443,7 +443,7 @@ function App() {
         path="/insetif"
         element={
           user ? (
-            <Layout title="Dokumen Tersimpan" breadcrumb={['Dokumen Tersimpan']}>
+            <Layout title={null} breadcrumb={['Dokumen Tersimpan']}>
               <Suspense fallback={<div className="auth-shell" role="status">Memuat…</div>}>
               <Insetif
                 documents={documents}

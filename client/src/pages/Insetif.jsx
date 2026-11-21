@@ -17,9 +17,9 @@ import { docPeriodLabel, docMatchesSpv } from '../lib/docFilters';
 import { docMatchesScope, docMatchesPeriodeRange, positionBranchId, sortDocsByHierarchy } from '../lib/docHierarchy';
 import { branchRegionIds } from '../lib/orgTree';
 import MonthPicker from '../components/MonthPicker';
-import { errMsg, getDocument, getDocumentHistory } from '../api';
+import { downloadExcel, errMsg, getDocument, getDocumentHistory } from '../api';
 import ListPager from '../components/ListPager';
-import { Search, ChevronLeft, ChevronRight, Plus, Loader2, FolderOpen, RotateCcw, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Plus, Loader2, FolderOpen, RotateCcw, Download } from 'lucide-react';
 
 const fmtNum = (n) => (n === null || n === undefined || n === '' ? '-' : Number(n).toLocaleString('id-ID'));
 const parseMoney = (v) => { if (!v && v !== 0) return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
@@ -305,6 +305,7 @@ function TopFilterBar({
   search, onSearch,
   areaId, onArea,
   branchId, onBranch,
+  divisionId, onDivision, divisionOptions,
   areaOptions, branchOptions,
   spvId, onSpv, spvOptions,
   salesId, onSales, salesOptions,
@@ -319,10 +320,10 @@ function TopFilterBar({
   }, [onPeriodStart, onPeriodEnd, periodEnd]);
 
   return (
-    <div className="bg-white border border-[var(--line)] rounded-[var(--radius)] p-4 shadow-[var(--shadow)]">
-      <div className="flex flex-col gap-4">
+    <div className="bg-white border border-[var(--line)] rounded-[var(--radius)] p-2.5 shadow-[var(--shadow)]">
+      <div className="flex flex-col gap-2">
         {/* Search row */}
-        <div className="relative max-w-md">
+        <div className="relative w-full">
           <label htmlFor="top-search" className="sr-only">Cari dokumen</label>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--ink-3)]" aria-hidden="true" />
           <Input
@@ -338,9 +339,9 @@ function TopFilterBar({
         </div>
 
         {/* Filter dropdowns row */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
           <div>
-            <label htmlFor="top-area" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Area</label>
+            <label htmlFor="top-area" className="block text-[12px] font-medium text-[var(--ink-2)] mb-0.5">Area</label>
             <Select value={areaId} onValueChange={(v) => { onArea(v); onBranch(''); onSpv(''); onSales(''); }}>
               <SelectTrigger id="top-area" className="h-10 w-full">
                 <SelectValue placeholder="Semua area">{areaId ? areaOptions.find((a) => String(a.id) === areaId)?.name : 'Semua area'}</SelectValue>
@@ -352,7 +353,7 @@ function TopFilterBar({
             </Select>
           </div>
           <div>
-            <label htmlFor="top-cabang" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Cabang</label>
+            <label htmlFor="top-cabang" className="block text-[12px] font-medium text-[var(--ink-2)] mb-0.5">Cabang</label>
             <Select value={branchId} onValueChange={(v) => { onBranch(v); onSpv(''); onSales(''); }}>
               <SelectTrigger id="top-cabang" className="h-10 w-full">
                 <SelectValue placeholder="Semua cabang">{branchId ? branchOptions.find((b) => String(b.id) === branchId)?.name : 'Semua cabang'}</SelectValue>
@@ -364,7 +365,7 @@ function TopFilterBar({
             </Select>
           </div>
           <div>
-            <label htmlFor="top-spv" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">SPV</label>
+            <label htmlFor="top-spv" className="block text-[12px] font-medium text-[var(--ink-2)] mb-0.5">SPV</label>
             <Select value={spvId} onValueChange={(v) => { onSpv(v); onSales(''); }}>
               <SelectTrigger id="top-spv" className="h-10 w-full">
                 <SelectValue placeholder="Semua SPV">{spvId ? spvOptions.find((p) => String(p.id) === spvId)?.name : 'Semua SPV'}</SelectValue>
@@ -376,7 +377,7 @@ function TopFilterBar({
             </Select>
           </div>
           <div>
-            <label htmlFor="top-sales" className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Sales</label>
+            <label htmlFor="top-sales" className="block text-[12px] font-medium text-[var(--ink-2)] mb-0.5">Sales</label>
             <Select value={salesId} onValueChange={onSales}>
               <SelectTrigger id="top-sales" className="h-10 w-full">
                 <SelectValue placeholder="Semua sales">{salesId ? salesOptions.find((p) => String(p.id) === salesId)?.name : 'Semua sales'}</SelectValue>
@@ -387,19 +388,35 @@ function TopFilterBar({
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Periode row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
           <div>
-            <span className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode Awal</span>
+            <span className="block text-[12px] font-medium text-[var(--ink-2)] mb-0.5">Periode Awal</span>
             <MonthPicker value={periodStart} onChange={pickStart} placeholder="Pilih bulan awal" />
           </div>
           <div>
-            <span className="block text-[12px] font-medium text-[var(--ink-2)] mb-1">Periode Akhir</span>
+            <label htmlFor="top-divisi" className="block text-[12px] font-medium text-[var(--ink-2)] mb-0.5">Divisi</label>
+            <Select value={divisionId} onValueChange={onDivision}>
+              <SelectTrigger id="top-divisi" className="h-10 w-full">
+                <SelectValue placeholder="Semua divisi">{divisionId ? divisionOptions.find((d) => String(d.id) === divisionId)?.name : 'Semua divisi'}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Semua divisi</SelectItem>
+                {divisionOptions.map((d) => <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <span className="block text-[12px] font-medium text-[var(--ink-2)] mb-0.5">Periode Akhir</span>
             <MonthPicker value={periodEnd} onChange={onPeriodEnd} placeholder="Pilih bulan akhir" />
           </div>
         </div>
 
         {/* Reset button */}
-        {(search || areaId || branchId || spvId || salesId || periodStart || periodEnd) && (
-          <div className="pt-2 border-t border-[var(--line)] flex justify-end">
+        {(search || areaId || branchId || divisionId || spvId || salesId || periodStart || periodEnd) && (
+          <div className="pt-1.5 border-t border-[var(--line)] flex justify-end">
             <Button variant="ghost" size="sm" onClick={onReset} className="text-[var(--ink-2)] hover:text-[var(--ink)]">
               Hapus semua filter
             </Button>
@@ -410,29 +427,25 @@ function TopFilterBar({
   );
 }
 
-function SidebarHeader({ title, count, collapsed, onToggle }) {
+function SidebarHeader({ title, count, exportMode, allPageChecked, pageCount, onToggleAll }) {
   return (
-    <div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--line)] bg-[var(--bg)] flex-shrink-0">
-      {!collapsed && (
-        <h3 className="text-[12px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)] truncate">
-          {title} <span className="font-normal text-[var(--ink-2)]">({count})</span>
-        </h3>
+    <div className="px-4 py-2.5 border-b border-[var(--line)] bg-[var(--bg)] flex-shrink-0">
+      <h3 className="text-[12px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)] truncate">
+        {title} <span className="font-normal text-[var(--ink-2)]">({count})</span>
+      </h3>
+      {exportMode && pageCount > 0 && (
+        <label className="mt-2 flex items-center gap-2 text-[11px] text-[var(--ink-2)] cursor-pointer">
+          <input
+            type="checkbox"
+            checked={allPageChecked}
+            onChange={onToggleAll}
+            style={{ width: 14, height: 14, minHeight: 0, padding: 0 }}
+            className="shrink-0 accent-[var(--primary)]"
+            aria-label="Pilih semua dokumen di halaman ini"
+          />
+          Pilih semua di halaman ini ({pageCount})
+        </label>
       )}
-      <Button
-        variant="ghost"
-        size="sm"
-        type="button"
-        onClick={onToggle}
-        className="h-8 w-8 p-0 rounded-lg flex items-center justify-center transition-colors"
-        aria-label={collapsed ? 'Buka sidebar' : 'Tutup sidebar'}
-        aria-expanded={!collapsed}
-      >
-        {collapsed ? (
-          <ChevronsRight className="size-4" aria-hidden="true" />
-        ) : (
-          <ChevronsLeft className="size-4" aria-hidden="true" />
-        )}
-      </Button>
     </div>
   );
 }
@@ -440,20 +453,25 @@ function SidebarHeader({ title, count, collapsed, onToggle }) {
 function DocumentCard({
   doc,
   isSelected,
+  exportMode,
+  compact,
+  checked,
+  onCheck,
   positionByName,
+  divisionNameById,
   onClick,
   onKeyDown,
   ref,
 }) {
   const pos = positionByName.get(doc.salesman);
   const posType = doc.doc_kind === 'spv' ? 'SPV' : (pos?.position_type || '');
-  const product = doc.product || '';
+  const division = doc.divisi || (doc.division_id ? divisionNameById?.get(String(doc.division_id)) : '') || '';
 
   return (
     <div
       ref={ref}
       role="listitem"
-      className={`group relative flex flex-col p-3 cursor-pointer transition-all duration-200 border-b border-[var(--line)] last:border-b-0 ${
+      className={`group relative flex flex-col ${compact ? 'px-3 py-2' : 'p-3'} cursor-pointer transition-all duration-200 border-b border-[var(--line)] last:border-b-0 ${
         isSelected
           ? 'bg-[var(--primary-soft)] ring-inset ring-2 ring-[var(--primary)] shadow-[var(--shadow-sm)]'
           : 'hover:bg-[var(--bg)]'
@@ -464,18 +482,32 @@ function DocumentCard({
       aria-current={isSelected ? 'true' : undefined}
       aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${docPeriodLabel(doc)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
     >
-      {/* Baris 1: Nama lengkap */}
-      <p className="font-medium text-[13px] leading-[1.3] text-[var(--ink)] group-hover:text-[var(--primary)] transition-colors truncate max-w-full">
-        {doc.salesman || 'Tanpa nama sales'}
-      </p>
+      {/* Baris 1: Checkbox hanya saat mode export + nama lengkap */}
+      <div className="flex items-start gap-2">
+        {exportMode && (
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={() => onCheck(doc.id)}
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            style={{ width: 14, height: 14, minHeight: 0, padding: 0 }}
+            className="mt-0.5 shrink-0 accent-[var(--primary)]"
+            aria-label={`Pilih ${doc.salesman || 'dokumen'} untuk diekspor`}
+          />
+        )}
+        <p className="min-w-0 flex-1 font-medium text-[13px] leading-[1.3] text-[var(--ink)] group-hover:text-[var(--primary)] transition-colors truncate">
+          {doc.salesman || 'Tanpa nama sales'}
+        </p>
+      </div>
 
       {/* Baris 2: Periode */}
-      <p className="mt-1 text-[12px] text-[var(--ink-2)] whitespace-nowrap truncate">
+      <p className={`${compact ? 'mt-0.5' : 'mt-1'} text-[12px] text-[var(--ink-2)] whitespace-nowrap truncate`}>
         {docPeriodLabel(doc)}
       </p>
 
       {/* Baris 3: Badge role/produk kiri, status kanan */}
-      <div className="mt-1.5 flex items-center justify-between gap-2">
+      <div className={`${compact ? 'mt-1' : 'mt-1.5'} flex items-center justify-between gap-2`}>
         <div className="flex items-center gap-1.5 flex-1 min-w-0">
           {posType ? (
             <span className={`shrink-0 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
@@ -486,9 +518,9 @@ function DocumentCard({
               {posType}
             </span>
           ) : null}
-          {product && (
-            <span className="shrink-0 text-[10px] text-[var(--ink-2)] truncate max-w-[120px]">
-              {product}
+          {division && (
+            <span className="shrink-0 text-[10px] text-[var(--ink-2)] truncate max-w-[140px]">
+              {division}
             </span>
           )}
         </div>
@@ -520,6 +552,7 @@ export default function Insetif({
   const [search, setSearch] = useState(nameParam);
   const [areaId, setAreaId] = useState('');
   const [branchId, setBranchId] = useState('');
+  const [divisionId, setDivisionId] = useState('');
   const [spvId, setSpvId] = useState('');
   const [salesId, setSalesId] = useState('');
   const [periodStart, setPeriodStart] = useState('');
@@ -530,7 +563,10 @@ export default function Insetif({
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [activeDocId, setActiveDocId] = useState(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [detailClosed, setDetailClosed] = useState(false);
+  const [exportMode, setExportMode] = useState(false);
+  const [checkedIds, setCheckedIds] = useState([]);
+  const [exporting, setExporting] = useState(false);
   const [historyData, setHistoryData] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -548,7 +584,7 @@ export default function Insetif({
     const target = positions.find((p) => p.name === nameParam);
     if (!target) return;
     if (target.position_type === 'BM') {
-      setAreaId(''); setBranchId(''); setSpvId(''); setSalesId('');
+      setAreaId(''); setBranchId(''); setDivisionId(''); setSpvId(''); setSalesId('');
     } else if (target.position_type === 'SPV') {
       setSpvId(String(target.id));
       setSalesId('');
@@ -563,6 +599,7 @@ export default function Insetif({
   useEffect(() => {
     if (!openDocParam || !documents.length) return;
     if (documents.some((d) => String(d.id) === openDocParam)) {
+      setDetailClosed(false);
       setActiveDocId(openDocParam);
     }
   }, [openDocParam, documents]);
@@ -591,6 +628,11 @@ export default function Insetif({
   // Filter options
   const branches = useMemo(() => masterData.branches || [], [masterData.branches]);
   const areaOptions = useMemo(() => masterData.regions || [], [masterData.regions]);
+  const divisionOptions = useMemo(() => masterData.divisions || [], [masterData.divisions]);
+  const divisionNameById = useMemo(
+    () => new Map(divisionOptions.map((d) => [String(d.id), d.name])),
+    [divisionOptions],
+  );
   const branchOptions = useMemo(
     () => areaId ? branches.filter((b) => branchRegionIds(b).includes(Number(areaId))) : branches,
     [areaId, branches],
@@ -610,10 +652,34 @@ export default function Insetif({
   const endApi = periodEnd ? toApiPeriod(periodEnd) : '';
   const hasPeriod = !!(startApi && endApi && endApi >= startApi);
 
+  // Periode pertama kali lengkap: tampilkan daftar, jangan buka detail otomatis.
+  const closeDetailOnFirstPeriod = (nextStart, nextEnd) => {
+    if (periodStart && periodEnd) return;
+    if (nextStart && nextEnd) {
+      setDetailClosed(true);
+      setActiveDocId(null);
+    }
+  };
+  const updatePeriodStart = (value) => {
+    closeDetailOnFirstPeriod(value, periodEnd);
+    setPeriodStart(value);
+  };
+  const updatePeriodEnd = (value) => {
+    closeDetailOnFirstPeriod(periodStart, value);
+    setPeriodEnd(value);
+  };
+
   // Filtered & sorted documents
   const visibleDocs = useMemo(() => {
     if (!hasPeriod) return [];
     let rows = documents.filter((d) => docMatchesScope(d, { areaId, branchId }, { positions, branches, positionByName }));
+    if (divisionId) {
+      const name = divisionNameById.get(String(divisionId));
+      rows = rows.filter((d) => (
+        (d.division_id && String(d.division_id) === String(divisionId))
+        || (name && String(d.divisi || '').toLowerCase() === name.toLowerCase())
+      ));
+    }
     if (salesId) {
       const s = positions.find((p) => p.id === Number(salesId));
       if (s) rows = rows.filter((d) => d.salesman === s.name || d.salesman_position_id === s.id);
@@ -625,24 +691,32 @@ export default function Insetif({
     const q = search.trim().toLowerCase();
     if (q) {
       rows = rows.filter((d) =>
-        `${d.salesman || ''} ${d.product || ''} ${docPeriodLabel(d)}`.toLowerCase().includes(q),
+        `${d.salesman || ''} ${d.product || ''} ${d.divisi || ''} ${docPeriodLabel(d)}`.toLowerCase().includes(q),
       );
     }
     return sortDocsByHierarchy(rows, positions, positionByName);
-  }, [documents, positions, positionByName, branches, areaId, branchId, salesId, spvId, startApi, endApi, hasPeriod, search]);
+  }, [documents, positions, positionByName, branches, areaId, branchId, divisionId, divisionNameById, salesId, spvId, startApi, endApi, hasPeriod, search]);
 
   // Reset to page 1 on filter change
-  useEffect(() => { setPage(1); }, [search, areaId, branchId, spvId, salesId, periodStart, periodEnd]);
+  useEffect(() => { setPage(1); }, [search, areaId, branchId, divisionId, spvId, salesId, periodStart, periodEnd]);
 
-  // Auto-select first document when filter results change or on initial load
+  // Auto-select first document when filter results change or on initial load.
+  // Setelah tombol Kembali, biarkan daftar tetap tanpa dokumen aktif.
   useEffect(() => {
-    if (visibleDocs.length === 0) return;
+    if (visibleDocs.length === 0) {
+      if (activeDocId) {
+        setDetailClosed(true);
+        setActiveDocId(null);
+      }
+      return;
+    }
+    if (detailClosed) return;
     if (!activeDocId) {
       setActiveDocId(visibleDocs[0].id);
     } else if (!visibleDocs.some((d) => d.id === activeDocId)) {
       setActiveDocId(visibleDocs[0].id);
     }
-  }, [visibleDocs, activeDocId]);
+  }, [visibleDocs, activeDocId, detailClosed]);
 
   // Scroll selected item into view
   useEffect(() => {
@@ -653,8 +727,12 @@ export default function Insetif({
   }, [activeDocId]);
 
   const resetFilters = useCallback(() => {
-    setSearch(''); setAreaId(''); setBranchId(''); setSpvId(''); setSalesId('');
+    setSearch(''); setAreaId(''); setBranchId(''); setDivisionId(''); setSpvId(''); setSalesId('');
     setPeriodStart(''); setPeriodEnd('');
+    setDetailClosed(true);
+    setActiveDocId(null);
+    setCheckedIds([]);
+    setExportMode(false);
   }, []);
 
   useEffect(() => {
@@ -668,6 +746,43 @@ export default function Insetif({
   }, [visibleDocs, page, limit]);
 
   const totalPages = Math.ceil(visibleDocs.length / limit) || 1;
+
+  const pageIds = paginatedDocs.map((d) => d.id);
+  const allPageChecked = pageIds.length > 0 && pageIds.every((id) => checkedIds.includes(id));
+  const toggleCheck = (id) => setCheckedIds((prev) => (
+    prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+  ));
+  const togglePage = () => setCheckedIds((prev) => {
+    const next = new Set(prev);
+    pageIds.forEach((id) => (allPageChecked ? next.delete(id) : next.add(id)));
+    return [...next];
+  });
+  const startExport = () => {
+    setExportMode(true);
+    setCheckedIds([]);
+  };
+  const cancelExport = () => {
+    setExportMode(false);
+    setCheckedIds([]);
+  };
+  const exportSelected = async () => {
+    if (!exportMode) {
+      startExport();
+      return;
+    }
+    if (!checkedIds.length || exporting) return;
+    setExporting(true);
+    try {
+      await downloadExcel(checkedIds);
+      toast('success', `${checkedIds.length} dokumen diekspor ke Excel.`);
+      setExportMode(false);
+      setCheckedIds([]);
+    } catch (err) {
+      toast('error', errMsg(err));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const refreshList = async () => {
     setRefreshing(true);
@@ -712,35 +827,53 @@ export default function Insetif({
     }).format(d);
   };
 
-  // Navigation helpers
   const currentIndex = visibleDocs.findIndex((d) => d.id === activeDocId);
-  const canGoPrev = currentIndex > 0;
-  const canGoNext = currentIndex >= 0 && currentIndex < visibleDocs.length - 1;
-  const goPrev = useCallback(() => {
-    if (canGoPrev) setActiveDocId(visibleDocs[currentIndex - 1].id);
-  }, [visibleDocs, currentIndex, canGoPrev]);
-  const goNext = useCallback(() => {
-    if (canGoNext) setActiveDocId(visibleDocs[currentIndex + 1].id);
-  }, [visibleDocs, currentIndex, canGoNext]);
+
+  // Klik kartu yang sedang aktif menutup detailnya, sama seperti tombol Kembali.
+  const selectDoc = (id) => {
+    if (activeDocId === id) {
+      setDetailClosed(true);
+      setActiveDocId(null);
+    } else {
+      setDetailClosed(false);
+      setActiveDocId(id);
+    }
+  };
 
   // ==================== RENDER ====================
   return (
     <div className="min-h-screen bg-[var(--bg)]">
       {/* ===== DESKTOP LAYOUT ===== */}
-      <div className="hidden lg:flex lg:flex-col lg:h-screen">
+      <div className={`hidden lg:flex lg:flex-col ${activeDocId ? 'lg:h-screen' : 'lg:min-h-screen'}`}>
         {/* Page Header + Top Filter Bar */}
-        <header className="sticky top-0 z-10 bg-[var(--bg)] border-b border-[var(--line)] px-6 py-4">
+        <header className="sticky top-0 z-10 bg-[var(--bg)] border-b border-[var(--line)] px-0 py-2">
           <div className="max-w-full">
-            <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex items-center justify-between gap-4 mb-2">
               <div>
                 <h1 className="text-[clamp(22px,2.5vw,26px)] font-bold tracking-[-0.02em] leading-[1.2]">
                   Dokumen Tersimpan
                 </h1>
-                <p className="mt-1 text-[13px] text-[var(--ink-2)] leading-[1.5]">
+                <p className="mt-0.5 text-[13px] text-[var(--ink-2)] leading-[1.5]">
                   Cari, filter, dan buka dokumen lama untuk dilanjutkan.
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  onClick={exportSelected}
+                  disabled={exporting || (exportMode && !checkedIds.length)}
+                  className="h-9 px-4 gap-1.5"
+                >
+                  {exporting ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Download className="size-4" aria-hidden="true" />}
+                  <span>{exportMode ? `Export Excel (${checkedIds.length})` : 'Export Excel'}</span>
+                </Button>
+                {exportMode && (
+                  <Button variant="ghost" size="sm" type="button" onClick={cancelExport} className="h-9 px-3">
+                    Batal
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -778,34 +911,39 @@ export default function Insetif({
               search={search} onSearch={setSearch}
               areaId={areaId} onArea={setAreaId}
               branchId={branchId} onBranch={setBranchId}
+              divisionId={divisionId} onDivision={setDivisionId} divisionOptions={divisionOptions}
               areaOptions={areaOptions} branchOptions={branchOptions}
               spvId={spvId} onSpv={setSpvId} spvOptions={spvOptions}
               salesId={salesId} onSales={setSalesId} salesOptions={salesOptions}
-              periodStart={periodStart} onPeriodStart={setPeriodStart}
-              periodEnd={periodEnd} onPeriodEnd={setPeriodEnd}
+              periodStart={periodStart} onPeriodStart={updatePeriodStart}
+              periodEnd={periodEnd} onPeriodEnd={updatePeriodEnd}
               onReset={resetFilters}
               hasPeriod={hasPeriod}
             />
           </div>
         </header>
 
-        {/* Main Content: Sidebar + Detail */}
-        <main className="flex-1 overflow-hidden flex min-h-0">
-          {/* LEFT: Collapsible Sidebar */}
+        {/* Main Content: Sidebar + Detail (Master-Detail) */}
+        <main className={`flex-1 flex min-h-0 ${activeDocId ? 'overflow-hidden' : 'overflow-visible'}`}>
+          {/* LEFT: Daftar dokumen (full width in List-Only mode, 280px in Master-Detail) */}
           <aside
-            className={`flex flex-col bg-white border-r border-[var(--line)] transition-all duration-300 ease-in-out overflow-hidden ${
-              sidebarCollapsed ? 'w-[48px] flex-shrink-0' : 'w-[280px] flex-shrink-0'
+            className={`flex flex-col bg-white transition-all duration-300 ease-in-out ${
+              activeDocId
+                ? 'w-[280px] min-h-[360px] flex-shrink-0 overflow-hidden border-r border-[var(--line)]'
+                : 'min-h-[420px] flex-1 flex-shrink-0 overflow-hidden rounded-[var(--radius)] border border-[var(--line)] shadow-[var(--shadow)]'
             }`}
             aria-label="Daftar dokumen"
           >
             <SidebarHeader
               title="Daftar Dokumen"
               count={visibleDocs.length}
-              collapsed={sidebarCollapsed}
-              onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+              exportMode={exportMode}
+              allPageChecked={allPageChecked}
+              pageCount={pageIds.length}
+              onToggleAll={togglePage}
             />
 
-            <div className="flex-1 overflow-y-auto p-0" ref={listRef}>
+            <div className={`p-0 ${activeDocId ? 'flex-1 overflow-y-auto' : ''}`} ref={listRef}>
               {visibleDocs.length > 0 ? (
                 <div className="flex flex-col" id="docList" aria-label="Daftar dokumen tersimpan" role="list">
                   {paginatedDocs.map((doc, idx) => {
@@ -815,9 +953,14 @@ export default function Insetif({
                         key={doc.id}
                         doc={doc}
                         isSelected={isSelected}
+                        exportMode={exportMode}
+                        compact={!activeDocId}
+                        checked={checkedIds.includes(doc.id)}
+                        onCheck={toggleCheck}
                         positionByName={positionByName}
-                        onClick={() => setActiveDocId(doc.id)}
-                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId(doc.id); }}}
+                        divisionNameById={divisionNameById}
+                        onClick={() => selectDoc(doc.id)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectDoc(doc.id); }}}
                         ref={(el) => { cardRefs.current.set(doc.id, el); }}
                       />
                     );
@@ -856,47 +999,35 @@ export default function Insetif({
             </div>
           </aside>
 
-          {/* RIGHT: Detail Panel (always visible on desktop) */}
-          <section
-            className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden"
-            aria-label="Halaman detail dokumen"
-            ref={detailRef}
-          >
-            {activeDoc ? (
-              <>
-                {/* Detail Header with Navigation */}
-                <header className="flex items-center justify-between gap-4 px-5 py-3.5 border-b border-[var(--line)] bg-[var(--bg)] flex-shrink-0">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      onClick={goPrev}
-                      disabled={!canGoPrev}
-                      className="h-8 px-3 gap-1"
-                      aria-label="Sebelumnya"
-                    >
-                      <ChevronLeft className="size-3.5" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      type="button"
-                      onClick={goNext}
-                      disabled={!canGoNext}
-                      className="h-8 px-3 gap-1"
-                      aria-label="Berikutnya"
-                    >
-                      <ChevronRight className="size-3.5" aria-hidden="true" />
-                    </Button>
-                    <span className="text-[12px] text-[var(--ink-2)] px-2 py-1 rounded bg-[var(--bg)] border border-[var(--line)] font-mono">
-                      {currentIndex + 1} / {visibleDocs.length}
-                    </span>
-                  </div>
-                  <p className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">
-                    Detail dokumen
-                  </p>
-                </header>
+          {/* RIGHT: Detail Panel (only visible when a document is selected) */}
+          {activeDocId && (
+            <section
+              className="flex-1 flex flex-col min-w-0 bg-white overflow-hidden"
+              aria-label="Halaman detail dokumen"
+              ref={detailRef}
+            >
+              {/* Detail Header with Navigation */}
+              <header className="flex items-center justify-between gap-4 px-5 py-3.5 border-b border-[var(--line)] bg-[var(--bg)] flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    type="button"
+                    onClick={() => { setDetailClosed(true); setActiveDocId(null); }}
+                    className="h-8 px-3 gap-1"
+                    aria-label="Kembali ke daftar"
+                  >
+                    <ChevronLeft className="size-3.5" aria-hidden="true" />
+                    <span>Kembali</span>
+                  </Button>
+                  <span className="text-[12px] text-[var(--ink-2)] px-2 py-1 rounded bg-[var(--bg)] border border-[var(--line)] font-mono">
+                    {currentIndex + 1} / {visibleDocs.length}
+                  </span>
+                </div>
+                <p className="text-[11.5px] font-semibold tracking-[0.05em] uppercase text-[var(--ink-3)]">
+                  Detail dokumen
+                </p>
+              </header>
 
                 {/* Detail Content */}
                 <div className="flex-1 overflow-y-auto p-5 lg:p-6">
@@ -995,19 +1126,8 @@ export default function Insetif({
                     </div>
                   </div>
                 </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center flex-1 px-6 py-12 text-center">
-                <span className="flex items-center justify-center size-13 rounded-[14px] bg-[var(--line-soft)] text-[var(--ink-3)] mb-3" aria-hidden="true">
-                  <FolderOpen className="size-6" />
-                </span>
-                <h2 className="text-[16px] font-semibold tracking-[-0.01em] text-[var(--ink)]">Belum ada dokumen dipilih</h2>
-                <p className="mt-1 text-[13px] text-[var(--ink-2)] max-w-[320px] leading-[1.6]">
-                  Klik salah satu dokumen di daftar untuk menampilkan halamannya di sini.
-                </p>
-              </div>
-            )}
-          </section>
+              </section>
+        )}
         </main>
       </div>
 
@@ -1024,6 +1144,22 @@ export default function Insetif({
               </p>
             </div>
             <div className="flex flex-wrap gap-2 w-full">
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={exportSelected}
+                disabled={exporting || (exportMode && !checkedIds.length)}
+                className="flex-1 gap-1.5 h-9 justify-center"
+              >
+                {exporting ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Download className="size-4" aria-hidden="true" />}
+                {exportMode ? `Export (${checkedIds.length})` : 'Export'}
+              </Button>
+              {exportMode && (
+                <Button variant="ghost" size="sm" type="button" onClick={cancelExport} className="h-9 px-3">
+                  Batal
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"
@@ -1063,18 +1199,36 @@ export default function Insetif({
               search={search} onSearch={setSearch}
               areaId={areaId} onArea={setAreaId}
               branchId={branchId} onBranch={setBranchId}
+              divisionId={divisionId} onDivision={setDivisionId} divisionOptions={divisionOptions}
               areaOptions={areaOptions} branchOptions={branchOptions}
               spvId={spvId} onSpv={setSpvId} spvOptions={spvOptions}
               salesId={salesId} onSales={setSalesId} salesOptions={salesOptions}
-              periodStart={periodStart} onPeriodStart={setPeriodStart}
-              periodEnd={periodEnd} onPeriodEnd={setPeriodEnd}
+              periodStart={periodStart} onPeriodStart={updatePeriodStart}
+              periodEnd={periodEnd} onPeriodEnd={updatePeriodEnd}
               onReset={resetFilters}
               hasPeriod={hasPeriod}
             />
           </div>
 
+          {exportMode && pageIds.length > 0 && (
+            <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-[var(--line)] bg-[var(--bg)]">
+              <label className="flex items-center gap-2 text-[12px] text-[var(--ink-2)]">
+                <input
+                  type="checkbox"
+                  checked={allPageChecked}
+                  onChange={togglePage}
+                  style={{ width: 14, height: 14, minHeight: 0, padding: 0 }}
+                  className="shrink-0 accent-[var(--primary)]"
+                  aria-label="Pilih semua dokumen di halaman ini (mobile)"
+                />
+                Pilih semua di halaman ini ({pageIds.length})
+              </label>
+              <span className="text-[11px] text-[var(--ink-3)]">Terpilih: {checkedIds.length}</span>
+            </div>
+          )}
+
           {/* Document List Mobile */}
-          <div className="p-0">
+          <div className="min-h-[420px] p-0">
             {visibleDocs.length > 0 ? (
               <div className="flex flex-col gap-2 px-3 pb-4" id="docList" aria-label="Daftar dokumen tersimpan" role="list">
                 {paginatedDocs.map((doc) => {
@@ -1090,16 +1244,30 @@ export default function Insetif({
                           ? 'ring-2 ring-[var(--primary)] shadow-[var(--shadow-md)] bg-[var(--primary-soft)]'
                           : 'hover:ring-[var(--primary)]/50 hover:shadow-[var(--shadow-md)]'
                       }`}
-                      onClick={() => setActiveDocId((cur) => (cur === doc.id ? null : doc.id))}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveDocId((cur) => (cur === doc.id ? null : doc.id)); }}}
+                      onClick={() => selectDoc(doc.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectDoc(doc.id); }}}
                       tabIndex={0}
                       aria-current={isSelected ? 'true' : undefined}
                       aria-label={`Buka dokumen ${doc.salesman || 'Tanpa nama sales'}, periode ${docPeriodLabel(doc)}, status ${String(doc.status).toLowerCase() === 'final' ? 'Final' : 'Draft'}`}
                     >
-                      <div className="flex items-baseline justify-between gap-3 mb-2">
-                        <p className="flex-1 min-w-0 font-semibold text-[14px] text-[var(--ink)] truncate hover:text-[var(--primary)] transition-colors">
-                          {doc.salesman || 'Tanpa nama sales'}
-                        </p>
+                      <div className="flex items-center justify-between gap-3 mb-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          {exportMode && (
+                            <input
+                              type="checkbox"
+                              checked={checkedIds.includes(doc.id)}
+                              onChange={() => toggleCheck(doc.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              style={{ width: 14, height: 14, minHeight: 0, padding: 0 }}
+                              className="shrink-0 accent-[var(--primary)]"
+                              aria-label={`Pilih ${doc.salesman || 'dokumen'} untuk diekspor`}
+                            />
+                          )}
+                          <p className="min-w-0 font-semibold text-[14px] text-[var(--ink)] truncate hover:text-[var(--primary)] transition-colors">
+                            {doc.salesman || 'Tanpa nama sales'}
+                          </p>
+                        </div>
                         <p className="shrink-0 text-[12px] text-[var(--ink-2)] whitespace-nowrap">{docPeriodLabel(doc)}</p>
                       </div>
                       <div className="flex items-center justify-between gap-2">
@@ -1165,7 +1333,7 @@ export default function Insetif({
                   variant="ghost"
                   size="sm"
                   type="button"
-                  onClick={() => { window.dispatchEvent(new Event('insetif-expand')); setActiveDocId(null); }}
+                  onClick={() => { window.dispatchEvent(new Event('insetif-expand')); setDetailClosed(true); setActiveDocId(null); }}
                   className="gap-1.5 h-9 px-3 min-h-[44px]"
                 >
                   <ChevronLeft className="size-4" aria-hidden="true" />

@@ -58,6 +58,34 @@ export async function apiRequest(path, options = {}) {
   return raw(method, path, { params, data: body, ...rest });
 }
 
+export async function downloadExcel(ids) {
+  const res = await fetch(buildUrl('/api/documents/export-excel'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) {
+    let body = null;
+    try { body = await res.json(); } catch { body = null; }
+    const error = new Error(body?.error?.message || 'Gagal membuat file Excel');
+    error.response = { status: res.status, data: body || {} };
+    if (res.status === 401) window.location.href = LOGIN_PATH;
+    throw error;
+  }
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition') || '';
+  const filename = /filename="?([^";]+)"?/i.exec(disposition)?.[1] || 'insentif.xlsx';
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 export function errMsg(error) {
   if (!error?.response) {
     return 'Tidak dapat terhubung ke server. Pastikan API berjalan di port 3002.';

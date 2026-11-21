@@ -1,22 +1,22 @@
-# Graph Report - insetive tracking  (2026-11-20)
+# Graph Report - insetive tracking  (2026-11-21)
 
 ## Corpus Check
-- 267 files · ~993,795 words
+- 270 files · ~997,260 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 60 file(s) not represented in the graph (top: .csv 39, .css 11, (none) 7)
 
 ## Summary
-- 2006 nodes · 3715 edges · 142 communities (117 shown, 25 thin omitted)
-- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 275 edges (avg confidence: 0.87)
+- 2060 nodes · 3811 edges · 134 communities (117 shown, 17 thin omitted)
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 279 edges (avg confidence: 0.87)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `b3326608`
+- Built from commit: `5c9e1a5c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- App.jsx
+- SpvDocument.jsx
 - PRD: Aplikasi Pemantauan Insentif Penjualan Web
 - server/package.json
 - client/package.json
@@ -37,10 +37,9 @@
 - Master.jsx
 - Button
 - search
-- _domain_keywords
-- persist_design_system
+- lucide-react
 - search_stack
-- test_catalog_summary_line_endings.py
+- CatalogSummaryLineEndingsTest
 - Insetif.jsx
 - index.js
 - 6. Recipes
@@ -63,7 +62,7 @@
 - UI/UX Pro Max - Design Intelligence
 - positions.js
 - The study
-- test_core_data_quality.py
+- _select_palette_for_mode
 - lint.mjs
 - detect_domain
 - CatalogRefreshTest
@@ -71,18 +70,18 @@
 - Layout
 - Pre-Delivery Checklist (canonical — the only one)
 - Quick Reference
-- .generate
+- test_data_contracts.py
 - Colour
 - Scroll scenes
 - scenes.mjs
 - Deploy
-- Documents.jsx
+- App.jsx
 - App screens
 - Tells — the dated registry
 - Type
 - dependencies
 - Review Focus
-- Review Focus
+- excel-export.js
 - Stage
 - 7. Tables and lists
 - Words
@@ -94,23 +93,24 @@
 - rules.mjs
 - SQLite Auth and Incentive Documents Design
 - Hierarchical Sales Position Assignment
-- TestNativeDesktopStackFreshness
+- dependencies
+- card.jsx
 - Review Focus
 - Dev Quick-Login Buttons — Design
-- Dokumen Insentif SPV — Design Doc
+- terbilang
 - Design: Chakra removal + shadcn (21st.dev-style) component layer
 - Insetif document list layout
 - dev-auth.js
 - routes/criteria.js
-- core.py
+- design_system.py
 - tasteskill v2 (`design-taste-frontend`)
 - vite.config.js
-- Master Data Rename + User Row Actions Implementation Plan
+- Documents.jsx
 - seed-dummy-docs.js
 - app.json
 - 9. Type and colour
-- parse_decision_rules
 - test_skill_script_paths.py
+- Layout.jsx
 - kinds
 - 3. The shell
 - 4. The canvas and the page title
@@ -118,7 +118,7 @@
 - TestStackFlagWithDesignSystem
 - RtlCliTest
 - compilerOptions
-- spv.js
+- generate_design_system
 - builder
 - commerce
 - community
@@ -132,25 +132,19 @@
 - wallet
 - workspace
 - 8. Forms and settings
+- core.py
 - _normalize
-- TestStyleTaxonomy
-- Keputusan
-- terbilang
-- ._apply_reasoning
-- Task 1: Server — criteria_rows API + seed formats
-- TestFixtureValidation
-- TestTextLayoutRetrieval
-- Master Data Rename + User Row Actions — Design
-- _filter_anti_patterns_for_mode
-- _row_identities
+- export.js
+- docHierarchy.js
+- checkbox.jsx
+- Master Data Rename + User Row Actions Implementation Plan
 - read_rows
+- TestMetricMath
+- positionFilters.test.js
+- TestFixtureValidation
 - TestTextLayoutDataContracts
 - Review Focus
-- split_values
-- TestGeneratedCatalogContract
-- TestLandingAndStackContract
 - astryx-themes.js
-- TestDiagnosticsContracts
 
 ## God Nodes (most connected - your core abstractions)
 1. `search()` - 52 edges
@@ -160,9 +154,9 @@
 5. `App()` - 37 edges
 6. `search_stack()` - 36 edges
 7. `getOne()` - 31 edges
-8. `Button()` - 29 edges
-9. `SpvDocument()` - 26 edges
-10. `react` - 24 edges
+8. `Button()` - 30 edges
+9. `Insetif()` - 27 edges
+10. `SpvDocument()` - 27 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Task 4: Quick-login buttons on the login page` --references--> `App()`  [INFERRED]
@@ -179,19 +173,19 @@
 ## Import Cycles
 - None detected.
 
-## Communities (142 total, 25 thin omitted)
+## Communities (134 total, 17 thin omitted)
 
-### Community 0 - "App.jsx"
-Cohesion: 0.08
-Nodes (49): canManageAdmin(), createDocument(), errMsg(), finalizeDocument(), getDocument(), listDocumentFormats(), listDocuments(), listMasterData() (+41 more)
+### Community 0 - "SpvDocument.jsx"
+Cohesion: 0.11
+Nodes (35): createDocument(), deleteDocument(), errMsg(), finalizeDocument(), getDocumentHistory(), previewSpvRows(), ComboSelect(), Icon() (+27 more)
 
 ### Community 1 - "PRD: Aplikasi Pemantauan Insentif Penjualan Web"
 Cohesion: 0.08
 Nodes (23): 1. Penggunaan Akun, 2. Pembuatan Dokumen, 3. Draft & Final, 4. Penggantian Nama Sales, Alur Produk (Alur Insentif), Aturan Bisnis, BM (Branch Manager), Definisi Role (+15 more)
 
 ### Community 2 - "server/package.json"
-Cohesion: 0.07
-Nodes (26): cookie-parser, cors, helmet, author, dependencies, better-sqlite3, cookie-parser, cors (+18 more)
+Cohesion: 0.10
+Nodes (19): cookie-parser, cors, helmet, author, description, devDependencies, supertest, vitest (+11 more)
 
 ### Community 3 - "client/package.json"
 Cohesion: 0.10
@@ -218,8 +212,8 @@ Cohesion: 0.20
 Nodes (8): Architecture (current, as built 2026-11-09), Guardrails (do not change function), Run, Stack, Insentif Tracking, Jalankan, Login, Stack
 
 ### Community 9 - "Dashboard.jsx"
-Cohesion: 0.13
-Nodes (26): buttonVariants, SelectContent(), SelectItem(), SelectScrollDownButton(), SelectScrollUpButton(), SelectTrigger(), SelectValue(), branchRegionIds() (+18 more)
+Cohesion: 0.17
+Nodes (22): SelectContent(), SelectItem(), SelectScrollDownButton(), SelectScrollUpButton(), SelectTrigger(), SelectValue(), branchRegionIds(), buildOrgTree() (+14 more)
 
 ### Community 10 - ".oxlintrc.json"
 Cohesion: 0.33
@@ -237,53 +231,49 @@ Nodes (3): Expanding the Oxlint configuration, React Compiler, React + Vite
 Cohesion: 0.07
 Nodes (85): AIC_FIELDS, AIC_HEADERS, applyThumb(), ARCHIVE_LICENCE, args, argv, base(), clock() (+77 more)
 
+### Community 14 - "DesignSystemGenerator"
+Cohesion: 0.09
+Nodes (4): DesignSystemGenerator, _resolve_dial(), TestReasoningMatch, TestEndToEndCoherence
+
 ### Community 15 - "validate_data.py"
-Cohesion: 0.10
-Nodes (32): _catalog_date(), _check_app_interface_contract(), _check_catalog_contract(), _check_catalog_summary(), _check_color_contract(), _check_core_data_contract(), _check_file(), _check_font_catalog() (+24 more)
+Cohesion: 0.07
+Nodes (43): read_rows(), TestAccessibilityGuidance, TestChartsTypographyAndIcons, TestCurrentReactGuidance, TestSemanticColors, _catalog_date(), _check_app_interface_contract(), _check_catalog_contract() (+35 more)
 
 ### Community 16 - "format_ascii_box"
-Cohesion: 0.10
-Nodes (11): ansi_ljust(), format_ascii_box(), add_wrapped(), wrap_text(), format_markdown(), generate_design_system(), hex_to_ansi(), _mode_support_labels() (+3 more)
+Cohesion: 0.13
+Nodes (9): ansi_ljust(), format_ascii_box(), add_wrapped(), wrap_text(), format_markdown(), hex_to_ansi(), _mode_support_labels(), section_header() (+1 more)
 
 ### Community 17 - "draw.mjs"
 Cohesion: 0.10
 Nodes (41): adjustments(), argv, assetQueries(), ASSETS_PATH, briefStop(), briefWords(), deal(), dealHero() (+33 more)
 
 ### Community 18 - "Master.jsx"
-Cohesion: 0.11
-Nodes (44): apiRequest(), buildUrl(), createBranch(), createBrand(), createDivision(), createPosition(), createPrincipal(), createRegion() (+36 more)
+Cohesion: 0.14
+Nodes (38): apiRequest(), buildUrl(), createBranch(), createBrand(), createDivision(), createPosition(), createPrincipal(), createRegion() (+30 more)
 
 ### Community 19 - "Button"
-Cohesion: 0.06
-Nodes (36): api, Avatar(), ConfirmCtx, ConfirmProvider(), DOC_CHILDREN, Layout(), LiveClock(), NAV (+28 more)
+Cohesion: 0.14
+Nodes (14): Badge(), badgeVariants, Button(), buttonVariants, Dialog(), DialogContent(), DialogFooter(), DialogOverlay() (+6 more)
 
 ### Community 20 - "search"
-Cohesion: 0.11
-Nodes (6): _normalize_rtl_level(), _rtl_row_filter(), search(), _style_search_destination(), TestSearchDomains, RtlFilterTest
+Cohesion: 0.09
+Nodes (6): _rtl_row_filter(), search(), TestSearchDomains, RtlFilterTest, read_rows(), TestStyleTaxonomy
 
-### Community 21 - "_domain_keywords"
-Cohesion: 0.22
-Nodes (6): _domain_keywords(), _file_signature(), _load_csv(), _load_csv_snapshot(), _load_product_keywords(), _load_rows_or_empty()
-
-### Community 22 - "persist_design_system"
-Cohesion: 0.15
-Nodes (6): _detect_page_type(), format_page_override_md(), _generate_intelligent_overrides(), persist_design_system(), safe_slug(), _write_persisted_file()
+### Community 22 - "lucide-react"
+Cohesion: 0.16
+Nodes (11): ConfirmCtx, ConfirmProvider(), Modal(), ToastContext, ToastProvider(), base, masterData, positions (+3 more)
 
 ### Community 23 - "search_stack"
-Cohesion: 0.14
-Nodes (6): _exact_stack_identifier(), _project_row(), search_stack(), _valid_max_results(), _rows(), TestWebStackFreshness
-
-### Community 24 - "test_catalog_summary_line_endings.py"
-Cohesion: 0.12
-Nodes (3): CatalogSummaryLineEndingsTest, _load_generator(), TestMetricMath
+Cohesion: 0.07
+Nodes (10): _exact_stack_identifier(), _project_row(), search_stack(), _valid_max_results(), TestDiagnosticsContracts, _rows(), TestNativeDesktopStackFreshness, TestTextLayoutRetrieval (+2 more)
 
 ### Community 25 - "Insetif.jsx"
-Cohesion: 0.11
-Nodes (31): ListPager(), Badge(), badgeVariants, docMatchesPeriode(), docMatchesSpv(), docMatchesYear(), docPeriodLabel(), docMatchesPeriodeRange() (+23 more)
+Cohesion: 0.15
+Nodes (25): downloadExcel(), ListPager(), docMatchesPeriode(), docMatchesSpv(), docMatchesYear(), docPeriodLabel(), childrenOf(), displayLabel() (+17 more)
 
 ### Community 26 - "index.js"
 Cohesion: 0.07
-Nodes (25): express-rate-limit, allowedOrigins, app, { authLimiter }, clientDist, { configureAuthDatabase, requireAuth, requireRole }, cookieParser, cors (+17 more)
+Nodes (27): express-rate-limit, deleteSession(), allowedOrigins, app, { authLimiter }, clientDist, { configureAuthDatabase, requireAuth, requireRole }, cookieParser (+19 more)
 
 ### Community 27 - "6. Recipes"
 Cohesion: 0.06
@@ -306,12 +296,12 @@ Cohesion: 0.12
 Nodes (22): argv, deal(), dealScreen(), dealShell(), dealStyle(), fontLink(), HERE, kebab() (+14 more)
 
 ### Community 32 - "BM25"
-Cohesion: 0.13
-Nodes (5): BM25, _get_bm25(), _suggest_identities(), TestBm25CoreBehavior, TestTokenizer
+Cohesion: 0.14
+Nodes (4): BM25, _suggest_identities(), TestBm25CoreBehavior, TestTokenizer
 
 ### Community 33 - "test_design_system_mode.py"
-Cohesion: 0.08
-Nodes (13): _button_outline_text_color(), _contrast_ratio(), _derive_dark_palette(), format_master_md(), _palette_is_dark(), _query_wants_dark(), _relative_luminance(), _resolve_color_mode() (+5 more)
+Cohesion: 0.15
+Nodes (6): _filter_anti_patterns_for_mode(), _query_wants_dark(), _resolve_color_mode(), _style_is_dark_primary(), TestAntiPatternGating, TestModeResolution
 
 ### Community 34 - "dev.js"
 Cohesion: 0.09
@@ -326,12 +316,12 @@ Cohesion: 0.09
 Nodes (21): aliases, components, hooks, lib, ui, utils, iconLibrary, menuAccent (+13 more)
 
 ### Community 38 - "users.js"
-Cohesion: 0.20
-Nodes (14): createSession(), crypto, deleteSession(), hashPassword(), validatePassword(), validateUsername(), verifyPassword(), cleanAvatarColor() (+6 more)
+Cohesion: 0.21
+Nodes (13): createSession(), crypto, hashPassword(), validatePassword(), validateUsername(), verifyPassword(), cleanAvatarColor(), cleanAvatarKey() (+5 more)
 
 ### Community 39 - "documents.js"
-Cohesion: 0.20
-Nodes (20): resolveSalesmanPositionId(), createDocumentsRouter(), decodeKwitansi(), documentScalars(), express, findDuplicateDoc(), findDuplicateSpvDoc(), getDocument() (+12 more)
+Cohesion: 0.06
+Nodes (60): Global Constraints, Incentive Document Format Implementation Plan, Review Focus, Task 1: Server — criteria_rows API + seed formats, Task 2: Client — Documents.jsx rewrite with golongan hierarchy + kriteria table, Anti-goals, Approaches yang dipertimbangkan, Cakupan officer (diputuskan human partner) (+52 more)
 
 ### Community 40 - "cdp.mjs"
 Cohesion: 0.20
@@ -361,9 +351,9 @@ Nodes (6): createPositionsRouter(), express, hierarchyError(), { requireAuth, re
 Cohesion: 0.12
 Nodes (15): 10. The 25 highest-scored sites and their ideas, 11. How the skill was tested, 12. The October 2026 study: 100 Sites of the Day, 13. The app-screen study, 1. Method and its limits, 2. Scores, 3. Where the idea comes from, 4. Headlines (+7 more)
 
-### Community 47 - "test_core_data_quality.py"
-Cohesion: 0.15
-Nodes (11): read_rows(), TestAccessibilityGuidance, TestChartsTypographyAndIcons, TestCurrentReactGuidance, TestSemanticColors, _check_chart_contract(), _check_typography_contract(), _configured_font_names() (+3 more)
+### Community 47 - "_select_palette_for_mode"
+Cohesion: 0.10
+Nodes (9): _button_outline_text_color(), _contrast_ratio(), _derive_dark_palette(), format_master_md(), _palette_is_dark(), _relative_luminance(), _select_palette_for_mode(), TestLuminance (+1 more)
 
 ### Community 48 - "lint.mjs"
 Cohesion: 0.13
@@ -385,9 +375,9 @@ Nodes (12): Accessibility, Common Rules for Professional UI + Pre-Delivery Check
 Cohesion: 0.15
 Nodes (12): 10. Charts & Data (LOW), 1. Accessibility (CRITICAL), 2. Touch & Interaction (CRITICAL), 3. Performance (HIGH), 4. Style Selection (HIGH), 5. Layout & Responsive (HIGH), 6. Typography & Color (MEDIUM), 7. Animation (MEDIUM) (+4 more)
 
-### Community 55 - ".generate"
-Cohesion: 0.20
-Nodes (3): _resolve_dial(), read_rows(), TestReasoningContract
+### Community 55 - "test_data_contracts.py"
+Cohesion: 0.09
+Nodes (11): apply_decision_rules(), _object_without_duplicates(), parse_decision_rules(), _validate_action(), read_rows(), split_values(), style_identities(), TestGeneratedCatalogContract (+3 more)
 
 ### Community 56 - "Colour"
 Cohesion: 0.17
@@ -405,9 +395,9 @@ Nodes (9): args, go(), only, outDir, problems, rel(), run(), sheet() (+1 more)
 Cohesion: 0.17
 Nodes (11): 1. Clone + build, 2. User + environment, 3. Service API, 4. nginx + HTTPS, 5. Verifikasi, Catatan, Deploy, Docker (disarankan) (+3 more)
 
-### Community 60 - "Documents.jsx"
-Cohesion: 0.13
-Nodes (24): deleteDocument(), getDocumentHistory(), ComboSelect(), Icon(), MultipleSelect(), buildGolonganRowsPayload(), computeGrandTotal(), computeTotalAutoFor() (+16 more)
+### Community 60 - "App.jsx"
+Cohesion: 0.12
+Nodes (23): canManageAdmin(), getDocument(), listDocumentFormats(), listDocuments(), listMasterData(), listUsers(), updateDocument(), App() (+15 more)
 
 ### Community 61 - "App screens"
 Cohesion: 0.18
@@ -429,9 +419,9 @@ Nodes (16): dependencies, @astryxdesign/cli, @astryxdesign/core, @astryxdesign/t
 Cohesion: 0.18
 Nodes (10): Global Constraints, Review Focus, Rollback and migration notes, SQLite Auth and Incentive Documents Implementation Plan, Task 2: Add secure sessions and role authorization, Task 3: Add Super Admin user management and master data APIs, Task 4: Add formats and criteria snapshots, Task 5: Add document creation, flexible Golongan rows, finalization, and correction audit (+2 more)
 
-### Community 66 - "Review Focus"
-Cohesion: 0.18
-Nodes (10): Global Constraints, Insetif document list layout Implementation Plan, Review Focus, Task 1: Remove header buttons and restructure desktop header, Task 2: Restructure desktop filter grid — search on its own row, Task 3: Replace desktop document cards with horizontal rows, Task 4: Remove header buttons from mobile header, Task 5: Restructure mobile filter grid — search on its own row (+2 more)
+### Community 66 - "excel-export.js"
+Cohesion: 0.07
+Nodes (36): Global Constraints, Insetif document list layout Implementation Plan, Review Focus, Task 1: Remove header buttons and restructure desktop header, Task 2: Restructure desktop filter grid — search on its own row, Task 3: Replace desktop document cards with horizontal rows, Task 4: Remove header buttons from mobile header, Task 5: Restructure mobile filter grid — search on its own row (+28 more)
 
 ### Community 68 - "7. Tables and lists"
 Cohesion: 0.20
@@ -446,8 +436,8 @@ Cohesion: 0.20
 Nodes (9): Branch Protection, CI/CD Secrets Required (GitHub Repository Settings → Secrets → Actions), Environment Variables (.env on server), Manual Deploy Sequence, Manual Deployment Steps (Major Updates), PM2 Management, Prerequisites, Rollback (if needed) (+1 more)
 
 ### Community 71 - "Review Focus"
-Cohesion: 0.22
-Nodes (8): Chakra Removal + shadcn (21st.dev-style) Layer Implementation Plan, Global Constraints, Review Focus, Task 1: Checkpoint user WIP, Task 2: Install ui-ux-pro-max skill, Task 3: shadcn init + component set, Task 4: Palette bridge (theme.js → CSS variables), Task 6: Delete all remaining Chakra
+Cohesion: 0.20
+Nodes (9): Chakra Removal + shadcn (21st.dev-style) Layer Implementation Plan, Global Constraints, Review Focus, Task 1: Checkpoint user WIP, Task 2: Install ui-ux-pro-max skill, Task 3: shadcn init + component set, Task 4: Palette bridge (theme.js → CSS variables), Task 5: Layout.jsx off Chakra (+1 more)
 
 ### Community 72 - "Review Focus"
 Cohesion: 0.20
@@ -473,17 +463,25 @@ Nodes (8): API boundary, Data model, Document behavior, Intent, Migration, Non-g
 Cohesion: 0.22
 Nodes (8): Approaches, Constraints, Design, Goals, Hierarchical Sales Position Assignment, Intent, Non-goals, Verification
 
+### Community 78 - "dependencies"
+Cohesion: 0.25
+Nodes (8): dependencies, better-sqlite3, cookie-parser, cors, exceljs, express, express-rate-limit, helmet
+
+### Community 79 - "card.jsx"
+Cohesion: 0.12
+Nodes (7): Approaches considered, Goals, How it gets built (decided), Intent, Master Data Rename + User Row Actions — Design, Non-goals / anti-goals, Open items
+
 ### Community 80 - "Review Focus"
-Cohesion: 0.29
-Nodes (6): Dev Quick-Login Buttons Implementation Plan, Global Constraints, Review Focus, Task 2: Mount the router and verify against the live server, Task 3: Client `devLogin()` API function with test, Task 4: Quick-login buttons on the login page
+Cohesion: 0.33
+Nodes (5): Dev Quick-Login Buttons Implementation Plan, Global Constraints, Review Focus, Task 2: Mount the router and verify against the live server, Task 4: Quick-login buttons on the login page
 
 ### Community 81 - "Dev Quick-Login Buttons — Design"
 Cohesion: 0.25
 Nodes (7): Approaches considered, Dev Quick-Login Buttons — Design, Goals, How it gets built (decided), Intent, Non-goals / anti-goals, Open items
 
-### Community 82 - "Dokumen Insentif SPV — Design Doc"
-Cohesion: 0.14
-Nodes (13): Anti-goals, Approaches yang dipertimbangkan, Constraints, Dokumen Insentif SPV — Design Doc, Goals, Intent, Non-goals, Panggilan builder (diputuskan sendiri, boleh dibalik) (+5 more)
+### Community 82 - "terbilang"
+Cohesion: 0.47
+Nodes (4): terbilang(), TERBILANG_UNITS, terbilangWords(), Kwitansi (diputuskan human partner)
 
 ### Community 83 - "Design: Chakra removal + shadcn (21st.dev-style) component layer"
 Cohesion: 0.25
@@ -501,10 +499,6 @@ Nodes (7): createDevAuthRouter(), { createSession }, crypto, DEV_USERS, express,
 Cohesion: 0.43
 Nodes (6): createCriteriaRouter(), express, isValidText(), { requireAuth, requireRole }, createTestApp(), writeAudit()
 
-### Community 87 - "core.py"
-Cohesion: 0.11
-Nodes (4): _passes_threshold(), _query_coverage(), _suggest_terms(), format_output()
-
 ### Community 88 - "tasteskill v2 (`design-taste-frontend`)"
 Cohesion: 0.29
 Nodes (6): Contents, How it works, Install, Notes, Requirements, tasteskill v2 (`design-taste-frontend`)
@@ -513,9 +507,9 @@ Nodes (6): Contents, How it works, Install, Notes, Requirements, tasteskill v2 (
 Cohesion: 0.29
 Nodes (5): manualChunks(), Build config, @tailwindcss/vite, vite, @vitejs/plugin-react
 
-### Community 90 - "Master Data Rename + User Row Actions Implementation Plan"
-Cohesion: 0.29
-Nodes (6): Global Constraints, Master Data Rename + User Row Actions Implementation Plan, Review Focus, Task 1: Rename page to Master Data, Task 2: Reusable create/edit form + pencil icon, Task 3: Delete icon replacing Nonaktifkan
+### Community 90 - "Documents.jsx"
+Cohesion: 0.18
+Nodes (17): PickerChips(), MultipleSelect(), buildGolonganRowsPayload(), computeGrandTotal(), computeTotalAutoFor(), computeTotalFor(), principalAutoValue(), principalValueFor() (+9 more)
 
 ### Community 91 - "seed-dummy-docs.js"
 Cohesion: 0.18
@@ -529,13 +523,13 @@ Nodes (5): about, patterns, shells, styles, version
 Cohesion: 0.33
 Nodes (6): 9.1 Type, 9.2 Colour on light screens, 9.3 Colour on dark screens, 9.4 Surfaces, radius, icons, spacing, 9.5 Default tokens, 9. Type and colour
 
-### Community 94 - "parse_decision_rules"
-Cohesion: 0.27
-Nodes (4): apply_decision_rules(), _object_without_duplicates(), parse_decision_rules(), _validate_action()
-
-### Community 95 - "test_skill_script_paths.py"
-Cohesion: 0.38
+### Community 94 - "test_skill_script_paths.py"
+Cohesion: 0.32
 Nodes (3): resolve(), shipped_invocations(), SkillScriptPathsTest
+
+### Community 95 - "Layout.jsx"
+Cohesion: 0.14
+Nodes (16): api, DOC_CHILDREN, Layout(), LiveClock(), NAV, SideNav(), AuthContext, AuthProvider() (+8 more)
 
 ### Community 96 - "kinds"
 Cohesion: 0.40
@@ -557,9 +551,9 @@ Nodes (5): 6.1 Which chart for which question, 6.2 One question, one series, 6.3
 Cohesion: 0.40
 Nodes (4): compilerOptions, baseUrl, paths, include
 
-### Community 103 - "spv.js"
-Cohesion: 0.27
-Nodes (12): Task 2: Agregasi SPV di server, snapshotSpvRows(), withLiveRows(), branchesOfPosition(), computeSpvRows(), mergeIncentives(), parseMoney(), sourceDocuments() (+4 more)
+### Community 103 - "generate_design_system"
+Cohesion: 0.11
+Nodes (8): _detect_page_type(), format_page_override_md(), generate_design_system(), _generate_intelligent_overrides(), persist_design_system(), safe_slug(), _write_persisted_file(), TestPersistence
 
 ### Community 104 - "builder"
 Cohesion: 0.50
@@ -613,37 +607,37 @@ Nodes (4): workspace, note, screens, styles
 Cohesion: 0.50
 Nodes (4): 8.1 Fields, 8.2 Settings layout, 8.3 Buttons, 8. Forms and settings
 
-### Community 117 - "_normalize"
+### Community 117 - "core.py"
+Cohesion: 0.10
+Nodes (16): _contains_phrase(), _domain_keywords(), _file_signature(), _get_bm25(), _load_csv(), _load_csv_snapshot(), _load_product_keywords(), _load_rows_or_empty() (+8 more)
+
+### Community 120 - "_normalize"
 Cohesion: 0.13
-Nodes (9): _contains_phrase(), _exact_match_diagnostic(), _legacy_successor_guidance(), _normalize(), _rewrite_query_for_domain(), _search_csv(), _search_csv_detailed(), _stack_query_requests_legacy() (+1 more)
+Nodes (8): _exact_match_diagnostic(), _exact_row_identity(), _legacy_successor_guidance(), _normalize(), _row_identities(), _stack_query_requests_legacy(), _stack_row_filter(), _style_identity()
 
-### Community 121 - "Keputusan"
-Cohesion: 0.20
-Nodes (10): Cakupan officer (diputuskan human partner), Golongan, Identitas dokumen, Insentif, Keputusan, Kriteria, Peran, Periode (+2 more)
+### Community 121 - "export.js"
+Cohesion: 0.14
+Nodes (11): createExportRouter(), crypto, { execFile }, express, fs, os, path, { promisify } (+3 more)
 
-### Community 122 - "terbilang"
-Cohesion: 0.32
-Nodes (6): terbilang(), TERBILANG_UNITS, terbilangWords(), Kwitansi (diputuskan human partner), Perubahan API, encodeKwitansi()
+### Community 122 - "docHierarchy.js"
+Cohesion: 0.23
+Nodes (11): docMatchesPeriodeRange(), docMatchesScope(), docPosition(), hierarchyKey(), positionBranchId(), sameCity(), sortDocsByHierarchy(), branches (+3 more)
 
-### Community 124 - "Task 1: Server — criteria_rows API + seed formats"
-Cohesion: 0.33
-Nodes (5): Global Constraints, Incentive Document Format Implementation Plan, Review Focus, Task 1: Server — criteria_rows API + seed formats, Task 2: Client — Documents.jsx rewrite with golongan hierarchy + kriteria table
+### Community 123 - "checkbox.jsx"
+Cohesion: 0.31
+Nodes (5): Checkbox(), checkboxVariants, TabsList(), tabsListVariants, class-variance-authority
 
-### Community 127 - "Master Data Rename + User Row Actions — Design"
-Cohesion: 0.25
-Nodes (7): Approaches considered, Goals, How it gets built (decided), Intent, Master Data Rename + User Row Actions — Design, Non-goals / anti-goals, Open items
+### Community 124 - "Master Data Rename + User Row Actions Implementation Plan"
+Cohesion: 0.29
+Nodes (6): Global Constraints, Master Data Rename + User Row Actions Implementation Plan, Review Focus, Task 1: Rename page to Master Data, Task 2: Reusable create/edit form + pencil icon, Task 3: Delete icon replacing Nonaktifkan
 
-### Community 129 - "_row_identities"
-Cohesion: 0.33
-Nodes (3): _exact_row_identity(), _row_identities(), _style_identity()
+### Community 127 - "positionFilters.test.js"
+Cohesion: 0.60
+Nodes (3): keepValidParent(), parentOptionsFor(), positions
 
 ### Community 132 - "Review Focus"
 Cohesion: 0.25
 Nodes (7): Dashboard Home Implementation Plan, Global Constraints, Review Focus, Task 1: Add dashboard metric derivation, Task 2: Add dashboard and navigation composition, Task 3: Restyle dashboard for supplied visual direction, Task 4: Verify local runtime and branch
-
-### Community 133 - "split_values"
-Cohesion: 0.47
-Nodes (3): split_values(), style_identities(), TestStyleIdentityContract
 
 ### Community 138 - "astryx-themes.js"
 Cohesion: 0.50
@@ -651,22 +645,22 @@ Nodes (3): defaultThemeSlug, themes, @astryxdesign/theme-neutral
 
 ## Knowledge Gaps
 - **15 isolated node(s):** `@astryxdesign/cli`, `@astryxdesign/core`, `@fontsource/inter`, `@stylexjs/stylex`, `framer-motion` (+10 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 961 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **25 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 989 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `search()` connect `search` to `BM25`, `_row_identities`, `read_rows`, `._multi_domain_search`, `TestDiagnosticsContracts`, `test_core_data_quality.py`, `detect_domain`, `search_stack`, `_domain_keywords`, `_normalize`, `core.py`, `.generate`, `persist_design_system`, `TestStyleTaxonomy`, `TestTextLayoutRetrieval`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
+- **Why does `Button()` connect `Button` to `SpvDocument.jsx`, `excel-export.js`, `Review Focus`, `Dashboard.jsx`, `Master.jsx`, `Pre-Delivery Checklist (canonical — the only one)`, `lucide-react`, `Insetif.jsx`, `Documents.jsx`, `Layout.jsx`?**
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
 - **Are the 27 inferred relationships involving `search()` (e.g. with `.generate()` and `._multi_domain_search()`) actually correct?**
   _`search()` has 27 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `@astryxdesign/cli`, `@astryxdesign/core`, `@fontsource/inter` to the rest of the system?**
   _15 weakly-connected nodes found - possible documentation gaps or missing edges._
-- **Should `App.jsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.08038914490527393 - nodes in this community are weakly interconnected._
-- **Why does `Button()` connect `Button` to `App.jsx`, `Review Focus`, `Dashboard.jsx`, `Master.jsx`, `Pre-Delivery Checklist (canonical — the only one)`, `Insetif.jsx`, `Documents.jsx`?**
-  _High betweenness centrality (0.010) - this node is a cross-community bridge._
+- **Should `SpvDocument.jsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.10993657505285412 - nodes in this community are weakly interconnected._
+- **Why does `react` connect `Documents.jsx` to `SpvDocument.jsx`, `client/package.json`, `Dashboard.jsx`, `card.jsx`, `Master.jsx`, `Button`, `breadcrumb.jsx`, `lucide-react`, `Insetif.jsx`, `checkbox.jsx`, `App.jsx`, `Layout.jsx`?**
+  _High betweenness centrality (0.018) - this node is a cross-community bridge._
 - **Are the 20 inferred relationships involving `DesignSystemGenerator` (e.g. with `TestReasoningMatch` and `.test_known_category_matches_exactly()`) actually correct?**
   _`DesignSystemGenerator` has 20 INFERRED edges - model-reasoned connections that need verification._
 - **Should `PRD: Aplikasi Pemantauan Insentif Penjualan Web` be split into smaller, more focused modules?**
